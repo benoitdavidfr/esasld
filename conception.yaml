@@ -5,7 +5,7 @@ idéesDObjectifs:
   - définir cette représentation au moyen d'un contexte JSON-LD
 
 bugs:
-  - la valeur prise par la propriété language n'est pas convenablement structurée
+  - la valeur prise par la propriété language est parfois mal structurée
     ex:
       <https://preprod.data.developpement-durable.gouv.fr> a dcat:Catalog ;
           dct:issued "2022-10-01T00:00:00"^^xsd:dateTime ;
@@ -21,7 +21,7 @@ bugs:
           dct:language "{'uri': 'http://publications.europa.eu/resource/authority/language/FRA'}" ;
           dct:modified "2018-06-28T00:00:00"^^xsd:dateTime ;
       
-  - la propriété issued semble contenir parfois la date de publication dans Ecosphères qui n'a aucun intérêt
+  - la propriété issued semble contenir parfois la date de publication dans Ecosphères qui n'a pas d'intérêt
     ex:
       <https://preprod.data.developpement-durable.gouv.fr/dataset/1e2c6c65-b5d7-4fcd-89d6-364ff460c620>
         a dcat:Dataset ;
@@ -40,7 +40,7 @@ bugs:
         dct:provenance "{'fr': [], 'en': []}" ;
         adms:versionNotes "{'fr': '', 'en': ''}" .
       
-  - le prédicat http://www.w3.org/ns/dcat#publisher est utilisé alors qu'il n'est pas défini
+  - le prédicat http://www.w3.org/ns/dcat#publisher est utilisé sans être défini
     ex:
       <https://preprod.data.developpement-durable.gouv.fr>
         a dcat:Catalog ;
@@ -72,20 +72,3 @@ bugs:
             "Table décrivant les Zones de dépassement des valeurs limites de Bruit de nuit sur les voies communales d'Orléans-Métropole dans le Loiret (C_LN)"@fr ;
         foaf:page <http://catalogue.geo-ide.developpement-durable.gouv.fr/catalogue/srv/fre/catalog.search#/metadata/fr-120066022-ca-jdd-04a0c8b6-49f5-4ab1-b909-eefc2e100b3b> .
     
-
-datasets:
-  0b5c47e3-6acd-40f5-9290-3d087c42031a:
-    title: 'Unités morphosédimentaires du littoral'
-    description: |
-      Cette couche représente le découpage du littoral en unités morphosédimentaires en métropole et sur quatre 
-      territoires d'outre-mer (Guadeloupe, Martinique, Guyane et Mayotte).
-      Ces unités morphosédimentaires ont été définies dans le cadre du projet
-        "Dynamiques et évolution du littoral : synthèse des connaissances des côtes françaises".
-      Les unités morphosédimentaires reposent sur un découpage du littoral en homogénéité de forme, nature
-      et exposition de la côte.
-    issued: '2023-04-26T03:52:59.799171'
-    modified: '2020-05-10T00:00:00'
-    publisher: '[DGALN](https://preprod.data.developpement-durable.gouv.fr/organization/4f8b4eb9-8667-4fbf-9151-047c30296e26)'
-    identifier: 'https://catalogue.karugeo.fr/geonetwork/srv/a6c6fc24-4e24-4207-a03b-57457840d5c8'
-    language: '{''uri'': ''http://publications.europa.eu/resource/authority/language/FRA''}'
-    spatial: POLYGON ((-61.9490 16.6470, -61.9490 15.6480, -60.9150 15.6480, -60.9150 16.6470, -61.9490 16.6470))
