@@ -1,5 +1,7 @@
 <?php
 /* export.php - script d'export du catalogue Ecosphères - 10/5/2023
+ 12/5/2023:
+  - ajout de la rectifications des accessRights
  10/5/2023:
   - ajout d'une phase de rectifications après le chargement
  9/5/2023:
