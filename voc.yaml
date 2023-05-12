@@ -1,4 +1,5 @@
 title: vocabulaire RDF
+source:
 rdf:
   dataModel:
     intro: |
@@ -46,7 +47,6 @@ json-ld:
     from it and to make data structures more regular.
   Compaction: |
     While expansion removes context from a given input, compaction's primary function is to perform the opposite operation: to express a given input according to a particular context. Compaction applies a context that specifically tailors the way information is expressed for a particular person or application. This simplifies applications that consume JSON or JSON-LD by expressing the data in application-specific terms, and it makes the data easier to read by humans.
-
     Compaction uses a developer-supplied context to shorten IRIs to terms or compact IRIs and JSON-LD values expressed in expanded form to simple values such as strings or numbers.
   Flattening: |
     While expansion ensures that a document is in a uniform structure, flattening goes a step further to ensure that the shape of the data is deterministic. In expanded documents, the properties of a single node may be spread across a number of different node objects. By flattening a document, all properties of a node are collected in a single node object and all blank nodes are labeled with a blank node identifier. This may drastically simplify the code required to process JSON-LD data in certain applications.

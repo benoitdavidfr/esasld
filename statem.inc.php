@@ -1,5 +1,5 @@
 <?php
-/* rigtsstat.inc.php - déf. des classes RightsStatement et MLString - 12/5/2023
+/* statemen.inc.php - déf. des classes RightsStatement et MLString - 12/5/2023
 */
 use Symfony\Component\Yaml\Yaml;
 use Symfony\Component\Yaml\Exception\ParseException;

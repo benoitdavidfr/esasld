@@ -10,7 +10,7 @@
   - refonte de l'aechitecture
 */
 require_once __DIR__.'/vendor/autoload.php';
-require_once __DIR__.'/rightsstat.inc.php';
+require_once __DIR__.'/statem.inc.php';
 
 use Symfony\Component\Yaml\Yaml;
 use Symfony\Component\Yaml\Exception\ParseException;
@@ -53,18 +53,31 @@ abstract class RdfClass {
     'accessService' => 'DataService',
   ];
   
-  protected string $id; // le champ '@id' de l'objet en repr. JSON-LD, cad l'URI de l'objet et l'id blank node
-  protected array $types; // le champ '@type' de l'objet en repr. JSON-LD, cad la liste des URI des classes
-  /* $props est le dict. des propriétés de l'objet en repr. JSON-LD
+  protected string $id; // le champ '@id' de la repr. JSON-LD, cad l'URI de la ressource ou l'id blank node
+  protected array $types; // le champ '@type' de la repr. JSON-LD, cad la liste des URI des classes de la ressource
+  /* $props est le dict. des propriétés de la ressource en repr. JSON-LD
   ** pour chaque objet de RdfClass, $props est de la forme [{propUri} => [{propVal}]] / {propVal} ::= [{key} => {val}] /
   **  - {propUri} est l'URI de la propriété
-  **  - {propVal} correspond à une valeur pour la propriété
+  **  - {propVal} correspond à une des valeurs pour la propriété
   **  - {key} contient une des valeurs
-  **    - '@id' indique que {val} contient un URI ou un id de blank node
-  **    - '@type' indique le type de {val}
-  **    - '@value' indique que {val} contient la valeur elle-même
-  **    - '@language' indique la langue du libellé dans {val}
+  **    - '@id' indique que {val} correspond à un URI ou un id de blank node
+  **    - '@type' définit que {val} correspond au type de @value
+  **    - '@value' indique que {val} correspond à la valeur elle-même
+  **    - '@language' définit dans {val} la langue du libellé dans @value
   **  - {val} est la valeur associée encodée comme chaine de caractères UTF8
+  ** Exemples de valeurs:
+      // un libellé en français
+      "http://purl.org/dc/terms/title": [
+        { "@language": "fr", "@value": "GéoIDE Catalogue" }
+      ]
+      // un URI
+      "http://xmlns.com/foaf/0.1/homepage": [
+        { "@id": "http://catalogue.geo-ide.developpement-durable.gouv.fr" }
+      ]
+      // une date
+      "http://purl.org/dc/terms/modified": [
+        { "@type": "http://www.w3.org/2001/XMLSchema#dateTime", "@value": "2022-09-21T13:31:46.000249" }
+      ],
   */
   protected array $props;
   
@@ -139,6 +152,15 @@ abstract class RdfClass {
         }
       }
       
+      { // certaines proprités contiennent des chaines sans information
+        // '{''fr'': [], ''en'': []}' ou '{''fr'': '''', ''en'': ''''}'
+        if ((count($pvals)==1) && isset($pvals[0]['@value'])
+          && in_array($pvals[0]['@value'], ["{'fr': [], 'en': []}", "{'fr': '', 'en': ''}"])) {
+          //echo "suppression2 de \"{'fr': [], 'en': []}\" ou \"{'fr': '', 'en': ''}\"\n";
+          unset($this->props[$pUri]);
+        }
+      }
+      
       { // les chaines de caractères comme celles du titre sont dupliquées avec un élément avec langue et l'autre sans
         if ((count($pvals)==2) && isset($pvals[0]['@value']) && isset($pvals[1]['@value'])
          && ($pvals[0]['@value'] == $pvals[1]['@value'])) {
@@ -185,17 +207,25 @@ abstract class RdfClass {
     // SI $pval ne contient qu'un champ '@value' alors simplif par cette valeur
     if ((count($pval) == 1) && isset($pval['@value']))
       return $pval['@value'];
-    // SI $pval contient exactement 2 champ '@value' et '@language' alors simplif dans cette valeur concaténée avec '@' et la langue
+    // SI $pval contient exactement les 2 champs '@value' et '@language' alors simplif dans cette valeur concaténée avec '@' et la langue
     if ((count($pval) == 2) && isset($pval['@value']) && isset($pval['@language']))
       return $pval['@value'].'@'.$pval['@language'];
     // SI $pval ne contient qu'un seul champ '@id' alors
     if ((count($pval) == 1) && isset($pval['@id'])) {
       $id = $pval['@id'];
-      if (substr($id, 0, 2) <> '_:') // si PAS blank node retourne l'URI
-        return $id;
+      if (substr($id, 0, 2) <> '_:') {// si PAS blank node alors retourne l'URI + evt. déref.
+        if (!($class = (RdfClass::PROP_RANGE[$pKey] ?? null)))
+          return "<$id>";
+        try {
+          $simple = $class::get($id)->simplify();
+        } catch (Exception $e) {
+          return "<$id>";
+        }
+        return array_merge(['@id'=> $id], $simple);
+      }
       // si le pointeur pointe sur un blank node alors déréférencement du pointeur
       if (!($class = (RdfClass::PROP_RANGE[$pKey] ?? null)))
-        die("Erreur $pKey absent de RdfClass::PROP_RANGE\n");
+        throw new Exception("Erreur $pKey absent de RdfClass::PROP_RANGE");
       return $class::get($id)->simplify();
     }
     // SI $pval est une date ou une date+time ALORS simplif par cette valeur
@@ -224,10 +254,6 @@ abstract class RdfClass {
     foreach ($pvals as $pval) {
       $list[] = $this->simplifPval($pval, $pKey);
     }
-    
-    /*if ($pKey == 'language') {
-      print_r($pvals);
-    }*/
     return $list;
   }
   
@@ -238,9 +264,7 @@ abstract class RdfClass {
     $propConstUri = (get_called_class())::PROP_KEY_URI;
     foreach ($propConstUri as $uri => $key) {
       if (isset($this->props[$uri])) {
-        $p = $this->simplifPvals($this->props[$uri], $key);
-        if (!in_array($p, ["{'fr': [], 'en': []}", "{'fr': '', 'en': ''}"]))
-          $simple[$key] = $p;
+        $simple[$key] = $this->simplifPvals($this->props[$uri], $key);
         unset($jsonld[$uri]);
       }
     }
@@ -277,6 +301,7 @@ class Dataset extends RdfClass {
     'http://xmlns.com/foaf/0.1/isPrimaryTopicOf' => 'isPrimaryTopicOf',
     'http://www.w3.org/ns/dcat#dataset' => 'dataset',
     'http://www.w3.org/ns/dcat#inSeries' => 'inSeries',
+    'http://www.w3.org/ns/dcat#seriesMember' => 'seriesMember',
     'http://www.w3.org/ns/dcat#distribution' => 'distribution',
     
   ];
@@ -296,7 +321,7 @@ class Dataset extends RdfClass {
     }
   }
 
-  static function rectifAccessRights(): void { // rectifie la propriété accessRights 
+  static function rectifStatements(): void { // rectifie la propriété accessRights 
     foreach (self::$all as $id => $dataset) {
       foreach ($dataset->props as $pUri => &$pvals) {
         // Dans la propriété http://purl.org/dc/terms/accessRights, les ressources RightsStatement sont parfois dupliquées
@@ -307,7 +332,7 @@ class Dataset extends RdfClass {
             $pvals = RightsStatement::rectifAccessRights($pvals);
           } catch (Exception $e) {
             echo '$dataset = '; var_dump($dataset);
-            throw new Exception("Erreur dans RightsStatements::rectification()");
+            throw new Exception("Erreur dans RightsStatements::rectifAccessRights()");
           }
         }
       }
@@ -374,6 +399,9 @@ class Distribution extends RdfClass {
     'http://purl.org/dc/terms/title' => 'title',
     'http://purl.org/dc/terms/format' => 'format',
     'http://purl.org/dc/terms/license' => 'license',
+    'http://purl.org/dc/terms/issued' => 'issued',
+    'http://purl.org/dc/terms/created' => 'created',
+    'http://purl.org/dc/terms/modified' => 'modified',
     'http://www.w3.org/ns/dcat#accessService' => 'accessService',
     'http://www.w3.org/ns/dcat#accessURL' => 'accessURL',
     'http://www.w3.org/ns/dcat#downloadURL' => 'downloadURL',
@@ -487,7 +515,7 @@ function import(string $urlPrefix, bool $skip=false, int $lastPage=0, int $first
         throw new Exception("Types $types non traité");
     }
   }
-  Dataset::rectifAccessRights(); // correction des propriétés accessRights qui nécessite que tous les objets soient chargés 
+  Dataset::rectifStatements(); // correction des propriétés accessRights qui nécessite que tous les objets soient chargés 
   return $errors;
 }
 

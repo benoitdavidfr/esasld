@@ -4,6 +4,32 @@ idéesDObjectifs:
   - en construire une représentation plus facile à consulter
   - définir cette représentation au moyen d'un contexte JSON-LD
 
+provenance:
+  
+  dcterms:accessRights:
+    Definition: Information about who can access the resource or an indication of its security status.
+    Range: dcterms:RightsStatement
+    
+  dcterms:RightsStatement:
+    
+    
+    ex:myDatabase dcterms:title "Data from my last evaluation" ;
+                  dcterms:accessRights [ rdfs:label "My colleagues only" ] .
+    
+
+questions:
+  - pour accessRights et provenance, est-ce que j'accepte de mettre un literal à la place d'un statement
+    ou est-ce que je force les littéraux en statement ?
+    - la spec DCAT semble imposer des Statements et tous les ex forcent des Statements
+    - la spec DCMI semble plus cool
+  - pour les ressources de second niveau (embedding)
+    - si blank node alors intégration au père comme en Turtle
+    - possibilité d'intégrer des ressources avec id propre en utilisant '@id'
+      - attention aux cycles, y en a t'il ?
+      - exemple intégration des Organization dans un Dataset
+      - faut-il le faire systématiquement ou uniquement pour certaines propriétés ?
+    
+  
 bugs:
   - la valeur prise par la propriété language est parfois mal structurée
     ex:
