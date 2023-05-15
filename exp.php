@@ -1,5 +1,7 @@
 <?php
 /* export.php - script d'export du catalogue Ecosphères - 10/5/2023
+ 15/5/2023:
+  - amélioration des rectifications sur les textes encodées en Yaml
  12/5/2023:
   - ajout de la rectifications des accessRights
  10/5/2023:
@@ -35,6 +37,7 @@ abstract class RdfClass {
     'http://purl.org/dc/terms/ProvenanceStatement' => 'ProvenanceStatement',
     'http://purl.org/dc/terms/MediaTypeOrExtent' => 'MediaTypeOrExtent',
     'http://purl.org/dc/terms/PeriodOfTime' => 'PeriodOfTime',
+    'http://purl.org/dc/terms/Frequency' => 'Frequency',
     'http://xmlns.com/foaf/0.1/Organization' => 'Organization',
     'http://www.w3.org/2006/vcard/ns#Kind' => 'Kind',
   ];
@@ -51,6 +54,7 @@ abstract class RdfClass {
     'provenance' => 'ProvenanceStatement',
     'format' => 'MediaTypeOrExtent',
     'accessService' => 'DataService',
+    'accrualPeriodicity' => 'Frequency',
   ];
   
   protected string $id; // le champ '@id' de la repr. JSON-LD, cad l'URI de la ressource ou l'id blank node
@@ -150,16 +154,29 @@ abstract class RdfClass {
             //echo 'language rectifié = '; print_r($pvals);
           }
         }
+        continue;
       }
       
-      { // certaines proprités contiennent des chaines sans information
-        // '{''fr'': [], ''en'': []}' ou '{''fr'': '''', ''en'': ''''}'
-        if ((count($pvals)==1) && isset($pvals[0]['@value'])
-          && in_array($pvals[0]['@value'], ["{'fr': [], 'en': []}", "{'fr': '', 'en': ''}"])) {
-          //echo "suppression2 de \"{'fr': [], 'en': []}\" ou \"{'fr': '', 'en': ''}\"\n";
-          unset($this->props[$pUri]);
+      // les licences contiennent parfois une chaine structurée en Yaml avec un URI
+      // https://preprod.data.developpement-durable.gouv.fr/dataset/606123c6-d537-485d-ba99-182b0b54d971:
+      //  license: '[{''label'': {''fr'': '''', ''en'': ''''}, ''type'': [], ''uri'': ''https://spdx.org/licenses/etalab-2.0''}]'
+      if (($pUri == 'http://purl.org/dc/terms/license') && (count($pvals)==1) && isset($pvals[0]['@value'])) {
+        if (substr($pvals[0]['@value'], 0, 2)=='[{') {
+          try {
+            $elts = Yaml::parse($pvals[0]['@value']);
+            //echo '$elts = '; print_r($elts);
+            if ((count($elts)==1) && isset($elts[0]) && isset($elts[0]['label']) && ($elts[0]['label'] == ['fr'=>'', 'en'=>''])
+             && isset($elts[0]['uri']) && $elts[0]['uri']) {
+              $pvals = [['@id'=> $elts[0]['uri']]];
+            }
+          } catch (ParseException $e) {
+            var_dump($pvals[0]['@value']);
+            throw new Exception("Erreur de Yaml::parse() dans RdfClass::rectification()");
+          }
+          continue;
         }
       }
+      
       
       { // les chaines de caractères comme celles du titre sont dupliquées avec un élément avec langue et l'autre sans
         if ((count($pvals)==2) && isset($pvals[0]['@value']) && isset($pvals[1]['@value'])
@@ -169,15 +186,62 @@ abstract class RdfClass {
             //print_r($pvals);
             $pvals = [$pvals[0]];
             //echo "rectification -> "; print_r($this->props[$pUri]);
+            continue;
           }
           elseif (!isset($pvals[0]['@language']) && isset($pvals[1]['@language'])) {
             //echo "pUri=$pUri\n";
             //print_r($pvals);
             $pvals = [$pvals[1]];
             //echo "rectification -> "; print_r($this->props[$pUri]);
+            continue;
           }
         }
       }
+      
+      { // certaines propriétés contiennent des chaines encodées en Yaml et sans information
+        // '{''fr'': [], ''en'': []}' ou '{''fr'': '''', ''en'': ''''}'
+        if ((count($pvals)==1) && (count($pvals[0])==1) && isset($pvals[0]['@value'])
+          && in_array($pvals[0]['@value'], ["{'fr': [], 'en': []}", "{'fr': '', 'en': ''}"])) {
+          //echo "suppression2 de \"{'fr': [], 'en': []}\" ou \"{'fr': '', 'en': ''}\"\n";
+          unset($this->props[$pUri]);
+          //echo "count(props) = ",count($this->props),", @id=",$this->id,"\n";
+          continue;
+        }
+      }
+      
+      { // chaines de caractères encodées en Yaml, comme le titre
+        //     title: '{''fr'': ''Accès au lien ATOM de téléchargement'', ''en'': ''''}'
+        if ((count($pvals)==1) && (count($pvals[0])==1) && isset($pvals[0]['@value'])
+         && (substr($pvals[0]['@value'], 0, 1)=='{')) {
+          try {
+            //echo '$pvals[0][@value] = ',$pvals[0]['@value'],"\n";
+            $elts = Yaml::parse($pvals[0]['@value']);
+            //echo '$elts = '; print_r($elts);
+            if ((count($elts)==2) && isset($elts['fr']) && $elts['fr'] && isset($elts['en']) && !$elts['en']) {
+              if (is_string($elts['fr'])) {
+                $pvals = [['@value'=> $elts['fr'], '@language'=> 'fr']];
+              }
+              elseif (is_array($elts['fr']) && (count($elts['fr'])==1) && is_string($elts['fr'][0])) {
+                $pvals = [['@value'=> $elts['fr'][0], '@language'=> 'fr']];
+              }
+              else {
+                echo '$elts non interprété, $elts = '; print_r($elts);
+                die();
+              }
+              //echo "Test ok\n";
+              //echo '$pvals = '; print_r($pvals);
+            }
+            else {
+              //echo "Test KO\n";
+            }
+          } catch (ParseException $e) {
+            var_dump($pvals[0]['@value']);
+            throw new Exception("Erreur de Yaml::parse() dans RdfClass::rectification()");
+          }
+          continue;
+        }
+      }
+
       
       { // certaines dates sont dupliquées avec un élément dateTime et l'autre date
         if ((count($pvals)==2) && isset($pvals[0]['@type']) && isset($pvals[1]['@type'])
@@ -208,8 +272,12 @@ abstract class RdfClass {
     if ((count($pval) == 1) && isset($pval['@value']))
       return $pval['@value'];
     // SI $pval contient exactement les 2 champs '@value' et '@language' alors simplif dans cette valeur concaténée avec '@' et la langue
-    if ((count($pval) == 2) && isset($pval['@value']) && isset($pval['@language']))
+    if ((count($pval) == 2) && isset($pval['@value']) && isset($pval['@language'])) {
+      if (!is_string($pval['@value']) || !is_string($pval['@language'])) {
+        echo '$pval = '; print_r($pval);
+      }
       return $pval['@value'].'@'.$pval['@language'];
+    }
     // SI $pval ne contient qu'un seul champ '@id' alors
     if ((count($pval) == 1) && isset($pval['@id'])) {
       $id = $pval['@id'];
@@ -298,6 +366,7 @@ class Dataset extends RdfClass {
     'http://purl.org/dc/terms/provenance' => 'provenance',
     'http://www.w3.org/ns/adms#versionNotes' => 'versionNotes',
     'http://www.w3.org/ns/adms#status' => 'status',
+    'http://purl.org/dc/terms/accrualPeriodicity' => 'accrualPeriodicity',
     'http://xmlns.com/foaf/0.1/isPrimaryTopicOf' => 'isPrimaryTopicOf',
     'http://www.w3.org/ns/dcat#dataset' => 'dataset',
     'http://www.w3.org/ns/dcat#inSeries' => 'inSeries',
@@ -321,7 +390,7 @@ class Dataset extends RdfClass {
     }
   }
 
-  static function rectifStatements(): void { // rectifie la propriété accessRights 
+  static function rectifStatements(): void { // rectifie les propriétés accessRights et provenance
     foreach (self::$all as $id => $dataset) {
       foreach ($dataset->props as $pUri => &$pvals) {
         // Dans la propriété http://purl.org/dc/terms/accessRights, les ressources RightsStatement sont parfois dupliquées
@@ -329,10 +398,10 @@ class Dataset extends RdfClass {
         // Dans d'autre cas il y a juste une chaine et pas de ressource RightsStatement
         if ($pUri == 'http://purl.org/dc/terms/accessRights') {
           try {
-            $pvals = RightsStatement::rectifAccessRights($pvals);
+            $pvals = Statement::rectifStatements($pvals, 'RightsStatement');
           } catch (Exception $e) {
             echo '$dataset = '; var_dump($dataset);
-            throw new Exception("Erreur dans RightsStatements::rectifAccessRights()");
+            throw new Exception("Erreur dans Statement::rectifStatements()");
           }
         }
       }
@@ -410,14 +479,6 @@ class Distribution extends RdfClass {
   static array $all;
 };
 
-class ProvenanceStatement extends RdfClass {
-  const PROP_KEY_URI = [
-    'http://www.w3.org/2000/01/rdf-schema#label' => 'label',
-  ];
-
-  static array $all;
-};
-
 class MediaTypeOrExtent extends RdfClass {
   const PROP_KEY_URI = [
     'http://www.w3.org/2000/01/rdf-schema#label' => 'label',
@@ -434,6 +495,15 @@ class PeriodOfTime extends RdfClass {
 
   static array $all;
 };
+
+class Frequency extends RdfClass {
+  const PROP_KEY_URI = [
+    'http://www.w3.org/2000/01/rdf-schema#label' => 'label',
+  ];
+
+  static array $all;
+};
+
 
 class Kind extends RdfClass {
   const PROP_KEY_URI = [

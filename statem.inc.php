@@ -69,9 +69,21 @@ class RightsStatement extends RdfClass { // Correspond à une ressource RightsSt
   function label(): array { // retourne la propriété label comme [[{key} => {val}]]
     return $this->props['http://www.w3.org/2000/01/rdf-schema#label'];
   }
+};
 
-  // corrige si nécessaire une liste de valeurs correspondant à une propriété accessRights
-  static function rectifAccessRights(array $pvals): array {
+class ProvenanceStatement extends RdfClass {
+  const PROP_KEY_URI = [
+    'http://www.w3.org/2000/01/rdf-schema#label' => 'label',
+  ];
+
+  static array $all;
+};
+
+// classe portant la méthode statique rectifStatements()
+class Statement {
+
+  // corrige si nécessaire une liste de valeurs correspondant à une propriété accessRights ou provenance
+  static function rectifStatements(array $pvals, string $statementClass): array {
     $arrayOfMLStrings = []; // [{md5} => ['mlStr'=> MLString, 'bn'=>{bn}]] - liste de chaines correspondant au $pvals
     
     //echo 'accessRights (input) = '; var_dump($pvals);
@@ -88,11 +100,11 @@ class RightsStatement extends RdfClass { // Correspond à une ressource RightsSt
         //echo '$labels = '; print_r($labels);
         foreach ($elts as $elt) {
           if (isset($elt['uri'])) { // l'URI est défini
-            if (!isset(self::REGISTRE[$elt['uri']])) {
+            if (!isset($statementClass::REGISTRE[$elt['uri']])) {
               echo "URI '$elt[uri]' absent du registre RightsStatements::REGISTRE\n";
               throw new Exception("URI '$elt[uri]' absent du registre RightsStatements::REGISTRE");
             }
-            $mlStr = new MLString(self::REGISTRE[$elt['uri']]);
+            $mlStr = new MLString($statementClass::REGISTRE[$elt['uri']]);
           }
           elseif (isset($elt['label'])) {
             $mlStr = new MLString($elt['label']);
@@ -106,7 +118,7 @@ class RightsStatement extends RdfClass { // Correspond à une ressource RightsSt
         }
       }
       elseif (isset($pval['@id'])) { // défini comme blank node vers un RightsStatement
-        $rightsStatement = RightsStatement::get($pval['@id']);
+        $rightsStatement = $statementClass::get($pval['@id']);
         //echo '$rightsStatement = '; print_r($rightsStatement);
         $mlStr = MLString::fromRightsStatementLabel($rightsStatement->label());
         $arrayOfMLStrings[$mlStr->md5()] = ['mlStr'=> $mlStr, 'bn'=>$pval['@id']];
@@ -126,7 +138,7 @@ class RightsStatement extends RdfClass { // Correspond à une ressource RightsSt
           '@type'=> ['http://purl.org/dc/terms/RightsStatement'],
           'http://www.w3.org/2000/01/rdf-schema#label'=> $mlStrAndBn['mlStr']->toRightsStatementLabel(),
         ];
-        RightsStatement::$all[$id] = new RightsStatement($resource);
+        $statementClass::$all[$id] = new $statementClass($resource);
         $pvals[] = ['@id'=> $id];
       }
     }

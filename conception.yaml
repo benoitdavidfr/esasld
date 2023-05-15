@@ -20,8 +20,9 @@ provenance:
 questions:
   - pour accessRights et provenance, est-ce que j'accepte de mettre un literal à la place d'un statement
     ou est-ce que je force les littéraux en statement ?
-    - la spec DCAT semble imposer des Statements et tous les ex forcent des Statements
-    - la spec DCMI semble plus cool
+    - la spec DCAT semble imposer des Statements et tous les ex présentent des Statements
+    - la spec DCMI est claire sur le fait d'imposer des Statements
+    - choix: accessRights et provenance sont hétérogènes, je transforme tout en statements
   - pour les ressources de second niveau (embedding)
     - si blank node alors intégration au père comme en Turtle
     - possibilité d'intégrer des ressources avec id propre en utilisant '@id'
@@ -29,8 +30,46 @@ questions:
       - exemple intégration des Organization dans un Dataset
       - faut-il le faire systématiquement ou uniquement pour certaines propriétés ?
     
-  
 bugs:
+  distribution:
+    '@id': 'https://preprod.data.developpement-durable.gouv.fr/dataset/606123c6-d537-485d-ba99-182b0b54d971/resource/cd15f448-f833-4479-aed5-39d329d3778e'
+    title: '{''fr'': ''Accès au lien ATOM de téléchargement'', ''en'': ''''}'
+    license: '[{''label'': {''fr'': '''', ''en'': ''''}, ''type'': [], ''uri'': ''https://spdx.org/licenses/etalab-2.0''}]'
+    issued: '2023-04-26T03:36:52.196836'
+    modified: '2023-04-26T03:36:52.188384'
+    downloadURL: '<https://catalogue.datara.gouv.fr/rss/atomfeed/atomdataset/68f05974-ca80-4d21-9ef6-9c85a60276d0>'
+    
+  provenance: '{''fr'': [''Gestion et entretien du réseau routier''], ''en'': []}'
+  
+  spatial:
+    - '<http://id.insee.fr/geo/commune/45270>'
+    - '<http://id.insee.fr/geo/commune/45039>'
+    -
+      geometry: 'POLYGON ((3.1285 48.3449, 3.1285 47.4832, 1.5141 47.4832, 1.5141 48.3449, 3.1285 48.3449))'
+    - '<http://id.insee.fr/geo/commune/45122>'
+    - '<http://id.insee.fr/geo/commune/45244>'
+    - '<http://id.insee.fr/geo/departement/45>'
+    - '<http://id.insee.fr/geo/commune/45184>'
+    - '<http://id.insee.fr/geo/commune/45315>'
+    -
+      '@id': '_:N96b53139513a468a8958138b6ec486fa'
+      '@type':
+        - 'http://purl.org/dc/terms/Location'
+      'http://www.w3.org/2004/02/skos/core#prefLabel':
+        -
+          '@language': fr
+          '@value': '45267'
+    - '<http://id.insee.fr/geo/commune/45051>'
+    - '<http://id.insee.fr/geo/commune/45042>'
+    -
+      bbox: 'POLYGON((3.12849689 48.34494400,3.12849689 47.48318481,1.51405132 47.48318481,1.51405132 48.34494400,3.12849689 48.34494400))'
+    - '<http://id.insee.fr/geo/commune/45297>'
+    - '<http://id.insee.fr/geo/commune/45268>'
+  
+bugsCorrigésDansExp.php:
+  https://preprod.data.developpement-durable.gouv.fr/dataset/606123c6-d537-485d-ba99-182b0b54d971:
+    license: '[{''label'': {''fr'': '''', ''en'': ''''}, ''type'': [], ''uri'': ''https://spdx.org/licenses/etalab-2.0''}]'
+  
   - la valeur prise par la propriété language est parfois mal structurée
     ex:
       <https://preprod.data.developpement-durable.gouv.fr> a dcat:Catalog ;
