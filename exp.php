@@ -21,11 +21,8 @@ use Symfony\Component\Yaml\Exception\ParseException;
 
 ini_set('memory_limit', '1G');
 
-/* Chaque objet de la classe PropVal correspond à une valeur RDF d'une propriété RDF
-** la prop. $props est le dict. des propriétés de la ressource en repr. JSON-LD
-** pour chaque objet de RdfClass, $props est de la forme [{propUri} => [{propVal}]] / {propVal} ::= [{key} => {val}] /
-**  - {propUri} est l'URI de la propriété
-**  - {propVal} correspond à une des valeurs pour la propriété
+{/* Chaque objet de la classe PropVal correspond à une valeur RDF d'une propriété RDF
+** En JSON-LD une PropVal est structurée sous la forme [{key} => {val}]
 **  - {key} contient une des valeurs
 **    - '@id' indique que {val} correspond à un URI ou un id de blank node
 **    - '@type' définit que {val} correspond au type de @value
@@ -54,7 +51,7 @@ ini_set('memory_limit', '1G');
     "http://purl.org/dc/terms/modified": [
       { "@type": "http://www.w3.org/2001/XMLSchema#dateTime", "@value": "2022-09-21T13:31:46.000249" }
     ],
-*/
+*/}
 class PropVal {
   public readonly array $keys; // liste des clés de la représentation JSON-LD
   public readonly ?string $id;
@@ -84,7 +81,7 @@ class PropVal {
     }
   }
   
-  function asJsonLd(): array {
+  function asJsonLd(): array { // regénère une structure JSON-LD 
     if ($this->id)
       return ['@id'=> $this->id];
     elseif ($this->language)
@@ -215,9 +212,9 @@ abstract class RdfClass {
   static function show(): void { // affiche les ressources de la classe hors blank nodes 
     //echo "Appel de ",get_called_class(),"::show()\n";
     //var_dump((get_called_class())::$all); die();
-    foreach ((get_called_class())::$all as $id => $elt) {
+    foreach ((get_called_class())::$all as $id => $resource) {
       if (substr($id, 0, 2) <> '_:') {
-        echo Yaml::dump([$id => $elt->simplify()], 7, 2, Yaml::DUMP_MULTI_LINE_LITERAL_BLOCK);
+        echo Yaml::dump([$id => $resource->simplify()], 7, 2, Yaml::DUMP_MULTI_LINE_LITERAL_BLOCK);
       }
     }
   }
@@ -242,62 +239,59 @@ abstract class RdfClass {
   
   // corrections d'erreurs ressource par ressource et pas celles qui nécessittent un accès à d'autres ressources
   function rectification(): void {
-    return;
     foreach ($this->props as $pUri => &$pvals) {
     
       // Dans la propriété language l'URI est souvent dupliqué avec une chaine encodée en Yaml
       // Dans certains cas seule cette chaine est présente et l'URI est absent
       if ($pUri == 'http://purl.org/dc/terms/language') {
         //echo 'language = '; print_r($pvals);
-        if ((count($pvals)==2) && isset($pvals[0]['@id']) && isset($pvals[1]['@value'])) {
+        if ((count($pvals)==2) && ($pvals[0]->keys == ['@id']) && ($pvals[1]->keys == ['@value'])) {
           $pvals = [$pvals[0]]; // si URI et chaine alors je ne conserve que l'URI
           //echo 'language rectifié = '; print_r($pvals);
         }
-        elseif ((count($pvals)==2) && isset($pvals[0]['@value']) && isset($pvals[1]['@id'])) {
+        elseif ((count($pvals)==2) && ($pvals[0]->keys == ['@value']) && ($pvals[1]->keys == ['@id'])) {
           $pvals = [$pvals[1]]; // si URI et chaine alors je ne conserve que l'URI
           //echo 'language rectifié = '; print_r($pvals);
         }
-        elseif ((count($pvals)==1) && isset($pvals[0]['@value'])) { // si chaine encodée en Yaml avec URI alors URI
-          if ($pvals[0]['@value'] == "{'uri': 'http://publications.europa.eu/resource/authority/language/FRA'}") {
-            $pvals = [['@id'=> 'http://publications.europa.eu/resource/authority/language/FRA']];
+        elseif ((count($pvals)==1) && ($pvals[0]->keys == ['@value'])) { // si chaine encodée en Yaml avec URI alors URI
+          if ($pvals[0]->value == "{'uri': 'http://publications.europa.eu/resource/authority/language/FRA'}") {
+            $pvals = [new PropVal(['@id'=> 'http://publications.europa.eu/resource/authority/language/FRA'])];
             //echo 'language rectifié = '; print_r($pvals);
           }
         }
         continue;
       }
       
-      // les licences contiennent parfois une chaine structurée en Yaml avec un URI
-      // https://preprod.data.developpement-durable.gouv.fr/dataset/606123c6-d537-485d-ba99-182b0b54d971:
-      //  license: '[{''label'': {''fr'': '''', ''en'': ''''}, ''type'': [], ''uri'': ''https://spdx.org/licenses/etalab-2.0''}]'
-      if (($pUri == 'http://purl.org/dc/terms/license') && (count($pvals)==1) && isset($pvals[0]['@value'])) {
-        if (substr($pvals[0]['@value'], 0, 2)=='[{') {
+      { // les licences contiennent parfois une chaine structurée en Yaml avec un URI
+        // https://preprod.data.developpement-durable.gouv.fr/dataset/606123c6-d537-485d-ba99-182b0b54d971:
+        //  license: '[{''label'': {''fr'': '''', ''en'': ''''}, ''type'': [], ''uri'': ''https://spdx.org/licenses/etalab-2.0''}]'
+        if (($pUri == 'http://purl.org/dc/terms/license') && (count($pvals)==1) && ($pvals[0]->keys == ['@value'])
+         && (substr($pvals[0]->value, 0, 2)=='[{')) {
           try {
-            $elts = Yaml::parse($pvals[0]['@value']);
+            $elts = Yaml::parse($pvals[0]->value);
             //echo '$elts = '; print_r($elts);
             if ((count($elts)==1) && isset($elts[0]) && isset($elts[0]['label']) && ($elts[0]['label'] == ['fr'=>'', 'en'=>''])
              && isset($elts[0]['uri']) && $elts[0]['uri']) {
-              $pvals = [['@id'=> $elts[0]['uri']]];
+              $pvals = [new PropVal(['@id'=> $elts[0]['uri']])];
             }
           } catch (ParseException $e) {
-            var_dump($pvals[0]['@value']);
-            throw new Exception("Erreur de Yaml::parse() dans RdfClass::rectification()");
+            var_dump($pvals[0]->value);
+            throw new Exception("Erreur de Yaml::parse() dans RdfClass::rectification() dans license");
           }
           continue;
         }
       }
       
-      
       { // les chaines de caractères comme celles du titre sont dupliquées avec un élément avec langue et l'autre sans
-        if ((count($pvals)==2) && isset($pvals[0]['@value']) && isset($pvals[1]['@value'])
-         && ($pvals[0]['@value'] == $pvals[1]['@value'])) {
-          if (isset($pvals[0]['@language']) && !isset($pvals[1]['@language'])) {
+        if ((count($pvals)==2) && ($pvals[0]->value == $pvals[1]->value)) {
+          if ($pvals[0]->language && !$pvals[1]->language) {
             //echo "pUri=$pUri\n";
             //print_r($pvals);
             $pvals = [$pvals[0]];
             //echo "rectification -> "; print_r($this->props[$pUri]);
             continue;
           }
-          elseif (!isset($pvals[0]['@language']) && isset($pvals[1]['@language'])) {
+          elseif (!$pvals[0]->language && $pvals[1]->language) {
             //echo "pUri=$pUri\n";
             //print_r($pvals);
             $pvals = [$pvals[1]];
@@ -308,82 +302,100 @@ abstract class RdfClass {
       }
       
       { // certaines dates sont dupliquées avec un élément dateTime et l'autre date
-        if ((count($pvals)==2) && isset($pvals[0]['@type']) && isset($pvals[1]['@type'])
-         && isset($pvals[0]['@value']) && isset($pvals[1]['@value'])) {
-          if (($pvals[0]['@type'] == 'http://www.w3.org/2001/XMLSchema#date')
-           && ($pvals[1]['@type'] == 'http://www.w3.org/2001/XMLSchema#dateTime')) {
+        if ((count($pvals)==2) && $pvals[0]->value && $pvals[1]->value) {
+          if (($pvals[0]->type == 'http://www.w3.org/2001/XMLSchema#date')
+           && ($pvals[1]->type == 'http://www.w3.org/2001/XMLSchema#dateTime')) {
             //echo "pUri=$pUri\n";
             //print_r($pvals);
             $pvals = [$pvals[0]];
             //echo "rectification -> "; print_r($this->props[$pUri]);
+            continue;
           }
-          elseif (($pvals[0]['@type'] == 'http://www.w3.org/2001/XMLSchema#dateTime')
-           && ($pvals[1]['@type'] == 'http://www.w3.org/2001/XMLSchema#date')) {
+          elseif (($pvals[0]->type == 'http://www.w3.org/2001/XMLSchema#dateTime')
+           && ($pvals[1]->type == 'http://www.w3.org/2001/XMLSchema#date')) {
             //echo "pUri=$pUri\n";
             //print_r($pvals);
             $pvals = [$pvals[1]];
             //echo "rectification -> "; print_r($this->props[$pUri]);
+            continue;
           }
         }
-        
       }
       
       { // certaines propriétés contiennent des chaines encodées en Yaml
-        if ((count($pvals)==1) && (count($pvals[0])==1) && isset($pvals[0]['@value'])
-         && in_array(substr($pvals[0]['@value'], 0, 1), ['{','['])) {
-          if ($yaml = self::cleanYaml($pvals[0]['@value'])) {
-            $pvals = [$yaml];
+        if ((count($pvals)==1) && ($pvals[0]->keys == ['@value']) && $pvals[0]->value
+         && ((substr($pvals[0]->value, 0, 1) == '{') || (substr($pvals[0]->value, 0, 2) == '[{'))) {
+          if ($yaml = self::cleanYaml($pvals[0]->value)) {
+            $pvals = $yaml;
           }
           else {
             unset($this->props[$pUri]);
           }
         }
       }
+    }
+  }
+  
+  function yamlToPropVal(array $yaml): PropVal {
+    // Le Yaml est un label avec uniquement la langue française de fournie
+    if ((array_keys($yaml) == ['label']) && is_array($yaml['label'])
+      && (array_keys($yaml['label']) == ['fr','en']) && $yaml['label']['fr'] && !$yaml['label']['en'])
+        return new PropVal(['@language'=> 'fr', '@value'=> $yaml['label']['fr']]);
+    
+    // Le Yaml est un label sans le champ label avec uniquement la langue française de fournie
+    if ((array_keys($yaml) == ['fr','en']) && $yaml['fr'] && !$yaml['en'] && is_string($yaml['fr'])) {
+        //echo "Dans yamlToPropVal2: "; print_r($yaml);
+        return new PropVal(['@language'=> 'fr', '@value'=> $yaml['fr']]);
+    }
+    
+    // Le Yaml est un label sans le champ label avec uniquement la langue française de fournie et $yaml['fr] est un array
+    if ((array_keys($yaml) == ['fr','en']) && $yaml['fr'] && !$yaml['en']
+      && is_array($yaml['fr']) && array_is_list($yaml['fr']) && (count($yaml['fr']) == 1)) {
+        //echo "Dans yamlToPropVal2: "; print_r($yaml);
+        return new PropVal(['@language'=> 'fr', '@value'=> $yaml['fr'][0]]);
+    }
+    
+    // Le Yaml définit un URI
+    if ((array_keys($yaml)== ['label','uri']) && $yaml['uri'])
+      return new PropVal(['@id'=> $yaml['uri']]);
+    
+    echo "Dans yamlToPropVal: "; print_r($yaml);
+    throw new Exception("Cas non traité dans yamlToPropVal()");
+  }
+  
+  // nettoie une valeur codée en Yaml, renvoie un [PropVal] ou []
+  // Certaines chaines sont mal encodées en yaml
+  function cleanYaml(string $value): array {
+    // certaines propriétés contiennent des chaines encodées en Yaml et sans information
+    //        '{''fr'': [], ''en'': []}' ou '{''fr'': '''', ''en'': ''''}'
+    if (in_array($value, ["{'fr': [], 'en': []}", "{'fr': '', 'en': ''}"])) {
+      return [];
+    }
+    try {
+      $yaml = Yaml::parse($value);
+      //echo "value=$value\n";
+    } catch (ParseException $e) {
+      //fwrite(STDERR, "Erreur de Yaml::parse() dans RdfClass::rectification() sur $value\n");
+      $value2 = str_replace("\\'", "''", $value);
+      //fwrite(STDERR, "value=$value\n\n");
+      try {
+        $yaml = Yaml::parse($value2);
+        //echo "value=$value\n";
+      } catch (ParseException $e) {
+        fwrite(STDERR, "Erreur2 de Yaml::parse() dans RdfClass::rectification() sur $value\n");
+        return [new PropVal(['@value'=> "Erreur de yaml::parse() sur $value"])];
+      }
+    }
       
-      /*{ // certaines propriétés contiennent des chaines encodées en Yaml et sans information
-        // '{''fr'': [], ''en'': []}' ou '{''fr'': '''', ''en'': ''''}'
-        if ((count($pvals)==1) && (count($pvals[0])==1) && isset($pvals[0]['@value'])
-          && in_array($pvals[0]['@value'], ["{'fr': [], 'en': []}", "{'fr': '', 'en': ''}"])) {
-          //echo "suppression2 de \"{'fr': [], 'en': []}\" ou \"{'fr': '', 'en': ''}\"\n";
-          unset($this->props[$pUri]);
-          //echo "count(props) = ",count($this->props),", @id=",$this->id,"\n";
-          continue;
-        }
-      }*/
-      
-      /*{ // chaines de caractères encodées en Yaml, comme le titre
-        //     title: '{''fr'': ''Accès au lien ATOM de téléchargement'', ''en'': ''''}'
-        if ((count($pvals)==1) && (count($pvals[0])==1) && isset($pvals[0]['@value'])
-         && (substr($pvals[0]['@value'], 0, 1)=='{')) {
-          try {
-            //echo '$pvals[0][@value] = ',$pvals[0]['@value'],"\n";
-            $elts = Yaml::parse($pvals[0]['@value']);
-            //echo '$elts = '; print_r($elts);
-            if ((count($elts)==2) && isset($elts['fr']) && $elts['fr'] && isset($elts['en']) && !$elts['en']) {
-              if (is_string($elts['fr'])) {
-                $pvals = [['@value'=> $elts['fr'], '@language'=> 'fr']];
-              }
-              elseif (is_array($elts['fr']) && (count($elts['fr'])==1) && is_string($elts['fr'][0])) {
-                $pvals = [['@value'=> $elts['fr'][0], '@language'=> 'fr']];
-              }
-              else {
-                echo '$elts non interprété, $elts = '; print_r($elts);
-                die();
-              }
-              //echo "Test ok\n";
-              //echo '$pvals = '; print_r($pvals);
-            }
-            else {
-              //echo "Test KO\n";
-            }
-          } catch (ParseException $e) {
-            var_dump($pvals[0]['@value']);
-            throw new Exception("Erreur de Yaml::parse() dans RdfClass::rectification()");
-          }
-          continue;
-        }
-      }*/
-
+    if (array_is_list($yaml)) {
+      $list = [];
+      foreach ($yaml as $elt) {
+        $list[] = self::yamlToPropVal($elt);
+      }
+      return $list;
+    }
+    else {
+      return [self::yamlToPropVal($yaml)];
     }
   }
   
@@ -661,9 +673,9 @@ function import(string $urlPrefix, bool $skip=false, int $lastPage=0, int $first
   return $errors;
 }
 
-$firstPage = 1;
-$lastPage = 0; // non définie
+$firstPage = 1; $lastPage = 0; // non définie
 //$firstPage = 2; $lastPage = 2; // on se limite à la page 2 qui contient des fiches Géo-IDE
+//$firstPage = 1; $lastPage = 1; // on se limite à la page 1
 
 switch ($argv[1]) {
   case 'import': {
