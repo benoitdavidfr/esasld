@@ -2,6 +2,7 @@
 /* export.php - script d'export du catalogue Ecosphères - 10/5/2023
  16/5/2023:
   - définition de la classe PropVal
+  - définition des mathodes cleanYml() et yamlToPropVal()
  15/5/2023:
   - amélioration des rectifications sur les textes encodées en Yaml
  12/5/2023:
@@ -336,6 +337,7 @@ abstract class RdfClass {
     }
   }
   
+  // construit un PropVal à partir d'une structure Yaml en excluant les listes
   function yamlToPropVal(array $yaml): PropVal {
     // Le Yaml est un label avec uniquement la langue française de fournie
     if ((array_keys($yaml) == ['label']) && is_array($yaml['label'])
