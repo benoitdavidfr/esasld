@@ -3,6 +3,7 @@
  16/5/2023:
   - définition de la classe PropVal
   - définition des mathodes cleanYml() et yamlToPropVal()
+  - ajout ed qqs prop. / disparition eds json-ld
  15/5/2023:
   - amélioration des rectifications sur les textes encodées en Yaml
  12/5/2023:
@@ -169,14 +170,17 @@ abstract class RdfClass {
   // indique par propriété sa classe d'arrivée (range), nécessaire pour le déréférencement
   const PROP_RANGE = [
     'publisher' => 'Organization',
+    'creator' => 'Organization',
     'rightsHolder' => 'Organization',
     'spatial' => 'Location',
+    'temporal' => 'PeriodOfTime',
     'isPrimaryTopicOf' => 'CatalogRecord',
     'inCatalog' => 'Catalog',
     'contactPoint' => 'Kind',
     'accessRights' => 'RightsStatement',
     'provenance' => 'ProvenanceStatement',
     'format' => 'MediaTypeOrExtent',
+    'mediaType' => 'MediaType',
     'accrualPeriodicity' => 'Frequency',
     'accessService' => 'DataService',
     'distribution' => 'Distribution',
@@ -413,7 +417,7 @@ abstract class RdfClass {
       }
     }
     foreach ($jsonld as $puri => $pvals) {
-      foreach ($vals as $pval) {
+      foreach ($pvals as $pval) {
         $simple['json-ld'][$puri][] = $pval->asJsonLd();
       }
     }
@@ -430,17 +434,20 @@ class Dataset extends RdfClass {
     'http://purl.org/dc/terms/modified' => 'modified',
     'http://purl.org/dc/terms/publisher' => 'publisher',
     'http://www.w3.org/ns/dcat#publisher' => 'publisher', // semble une erreur
+    'http://purl.org/dc/terms/creator' => 'creator',
     'http://www.w3.org/ns/dcat#contactPoint' => 'contactPoint',
     'http://purl.org/dc/terms/identifier' => 'identifier',
     'http://www.w3.org/ns/dcat#theme' => 'theme',
     'http://www.w3.org/ns/dcat#keyword' => 'keyword',
     'http://purl.org/dc/terms/language' => 'language',
     'http://purl.org/dc/terms/spatial' => 'spatial',
+    'http://purl.org/dc/terms/temporal' => 'temporal',
     'http://purl.org/dc/terms/accessRights' => 'accessRights',
     'http://purl.org/dc/terms/rights_holder' => 'rightsHolder', // ERREUR
     'http://xmlns.com/foaf/0.1/homepage' => 'homepage',
     'http://www.w3.org/ns/dcat#landingPage' => 'landingPage',
     'http://xmlns.com/foaf/0.1/page' => 'page',
+    'http://purl.org/dc/terms/MediaType' => 'MediaType',
     'http://purl.org/dc/terms/conformsTo' => 'conformsTo',
     'http://purl.org/dc/terms/provenance' => 'provenance',
     'http://www.w3.org/ns/adms#versionNotes' => 'versionNotes',
@@ -553,6 +560,7 @@ class Distribution extends RdfClass {
     'http://purl.org/dc/terms/title' => 'title',
     'http://purl.org/dc/terms/description' => 'description',
     'http://purl.org/dc/terms/format' => 'format',
+    'http://www.w3.org/ns/dcat#mediaType' => 'mediaType',
     'http://purl.org/dc/terms/rights' => 'rights',
     'http://purl.org/dc/terms/license' => 'license',
     'http://purl.org/dc/terms/issued' => 'issued',
@@ -569,6 +577,13 @@ class Distribution extends RdfClass {
 class MediaTypeOrExtent extends RdfClass {
   const PROP_KEY_URI = [
     'http://www.w3.org/2000/01/rdf-schema#label' => 'label',
+  ];
+
+  static array $all;
+};
+
+class MediaType extends RdfClass {
+  const PROP_KEY_URI = [
   ];
 
   static array $all;
