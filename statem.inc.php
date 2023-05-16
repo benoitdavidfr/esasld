@@ -84,6 +84,7 @@ class Statement {
 
   // corrige si nécessaire une liste de valeurs correspondant à une propriété accessRights ou provenance
   static function rectifStatements(array $pvals, string $statementClass): array {
+    return $pvals;
     $arrayOfMLStrings = []; // [{md5} => ['mlStr'=> MLString, 'bn'=>{bn}]] - liste de chaines correspondant au $pvals
     
     //echo 'accessRights (input) = '; var_dump($pvals);

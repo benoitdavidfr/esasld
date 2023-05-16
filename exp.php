@@ -1,5 +1,7 @@
 <?php
 /* export.php - script d'export du catalogue Ecosphères - 10/5/2023
+ 16/5/2023:
+  - définition de la classe PropVal
  15/5/2023:
   - amélioration des rectifications sur les textes encodées en Yaml
  12/5/2023:
@@ -19,9 +21,134 @@ use Symfony\Component\Yaml\Exception\ParseException;
 
 ini_set('memory_limit', '1G');
 
-// Classe abstraite portant les méthodes communes à toutes les classes RDF
-// ainsi que les constantes CLASS_URI_TO_PHP_NAME définissant le mapping URI -> nom Php
-// et PROP_RANGE indiquant le range de certaines propriétés afin de permettre le déréférencement
+/* Chaque objet de la classe PropVal correspond à une valeur RDF d'une propriété RDF
+** la prop. $props est le dict. des propriétés de la ressource en repr. JSON-LD
+** pour chaque objet de RdfClass, $props est de la forme [{propUri} => [{propVal}]] / {propVal} ::= [{key} => {val}] /
+**  - {propUri} est l'URI de la propriété
+**  - {propVal} correspond à une des valeurs pour la propriété
+**  - {key} contient une des valeurs
+**    - '@id' indique que {val} correspond à un URI ou un id de blank node
+**    - '@type' définit que {val} correspond au type de @value
+**    - '@language' définit dans {val} la langue du libellé dans @value
+**    - '@value' indique que {val} correspond à la valeur elle-même
+**  - {val} est la valeur associée encodée comme chaine de caractères UTF-8
+** La liste des combinaisons possibles de {key} est:
+**  - ["@id"] - pour un URI
+**  - ["@value"] - pour une valeur ni typée ni définie dans une langue
+**  - ["@type","@value"] - pour une valeur typée
+**  - ["@language","@value"] - pour une chaine définie dans une langue
+** Exemples de valeurs:
+    // un URI
+    "http://xmlns.com/foaf/0.1/homepage": [
+      { "@id": "http://catalogue.geo-ide.developpement-durable.gouv.fr" }
+    ]
+    // une valeur non typée
+    "http://www.w3.org/ns/hydra/core#itemsPerPage": [
+      { "@value": 100 }
+    ]
+    // un libellé en français
+    "http://purl.org/dc/terms/title": [
+      { "@language": "fr", "@value": "GéoIDE Catalogue" }
+    ]
+    // une date
+    "http://purl.org/dc/terms/modified": [
+      { "@type": "http://www.w3.org/2001/XMLSchema#dateTime", "@value": "2022-09-21T13:31:46.000249" }
+    ],
+*/
+class PropVal {
+  public readonly array $keys; // liste des clés de la représentation JSON-LD
+  public readonly ?string $id;
+  public readonly ?string $value;
+  public readonly ?string $language;
+  public readonly ?string $type;
+  
+  function __construct(array $pval) {
+    $this->keys = array_keys($pval);
+    switch ($this->keys) {
+      case ['@id'] : {
+        $this->id = $pval['@id']; $this->value = null; $this->language = null; $this->type = null; break;
+      }
+      case ['@value'] : {
+        $this->id = null; $this->value = $pval['@value']; $this->language = null; $this->type = null; break;
+      }
+      case ['@type','@value'] : {
+        $this->id = null; $this->value = $pval['@value']; $this->language = null; $this->type = $pval['@type']; break;
+      }
+      case ['@language','@value'] : {
+        $this->id = null; $this->value = $pval['@value']; $this->language = $pval['@language']; $this->type = null; break;
+      }
+      default: {
+        print_r(array_keys($pval));
+        throw new Exception("Dans PropVal::__construct() keys='".implode(',',$this->keys)."' inconnu");
+      }
+    }
+  }
+  
+  function asJsonLd(): array {
+    if ($this->id)
+      return ['@id'=> $this->id];
+    elseif ($this->language)
+      return ['@language'=> $this->language, '@value'=> $this->value];
+    elseif ($this->type)
+      return ['@type'=> $this->type, '@value'=> $this->value];
+    else
+      return ['@value'=> $this->value];
+  }
+
+  // simplification d'une des valeurs d'une propriété, $pKey est le nom court de la prop.
+  function simplifPval(string $pKey): string|array {
+    switch ($this->keys) {
+      case ['@id'] : { // SI $pval ne contient qu'un seul champ '@id' alors
+        $id = $this->id;
+        if (substr($id, 0, 2) <> '_:') {// si PAS blank node alors retourne l'URI + evt. déref.
+          if (!($class = (RdfClass::PROP_RANGE[$pKey] ?? null)))
+            return "<$id>";
+          try {
+            $simple = $class::get($id)->simplify();
+          } catch (Exception $e) {
+            return "<$id>";
+          }
+          return array_merge(['@id'=> $id], $simple);
+        }
+        // si le pointeur pointe sur un blank node alors déréférencement du pointeur
+        if (!($class = (RdfClass::PROP_RANGE[$pKey] ?? null)))
+          throw new Exception("Erreur $pKey absent de RdfClass::PROP_RANGE");
+        return $class::get($id)->simplify();
+      }
+      case ['@value'] : { // SI $pval ne contient qu'un champ '@value' alors simplif par cette valeur
+        return $this->value;
+      }
+      case ['@type','@value'] : {
+        if (in_array($this->type, ['http://www.w3.org/2001/XMLSchema#dateTime','http://www.w3.org/2001/XMLSchema#date']))
+          return $this->value;
+        else
+          return $this->value.'['.$this->type.']';
+      }
+      case ['@language','@value'] : { // SI $pval contient exactement les 2 champs '@value' et '@language' alors simplif dans cette valeur concaténée avec '@' et la langue
+        return $this->value.'@'.$this->language;
+      }
+    }
+  }
+  
+  // simplification des valeurs de propriété $pvals de la forme [[{key} => {value}]], $pKey est le nom court de la prop.
+  static function simplifPvals(array $pvals, string $pKey): string|array {
+    // $pvals ne contient qu'un seul $pval alors simplif de cette valeur
+    if (count($pvals) == 1)
+      return $pvals[0]->simplifPval($pKey);
+    
+    // SI $pvals est une liste de $pval alors simplif de chaque valeur
+    $list = [];
+    foreach ($pvals as $pval) {
+      $list[] = $pval->simplifPval($pKey);
+    }
+    return $list;
+  }
+};
+
+/* Classe abstraite portant les méthodes communes à toutes les classes RDF
+** ainsi que les constantes CLASS_URI_TO_PHP_NAME définissant le mapping URI -> nom Php
+** et PROP_RANGE indiquant le range de certaines propriétés afin de permettre le déréférencement
+*/
 abstract class RdfClass {
   // Dict. [{URI de classe RDF ou liste d'URI} => {Nom de classe Php}]
   const CLASS_URI_TO_PHP_NAME = [
@@ -50,40 +177,16 @@ abstract class RdfClass {
     'inCatalog' => 'Catalog',
     'contactPoint' => 'Kind',
     'accessRights' => 'RightsStatement',
-    'distribution' => 'Distribution',
     'provenance' => 'ProvenanceStatement',
     'format' => 'MediaTypeOrExtent',
-    'accessService' => 'DataService',
     'accrualPeriodicity' => 'Frequency',
+    'accessService' => 'DataService',
+    'distribution' => 'Distribution',
   ];
   
   protected string $id; // le champ '@id' de la repr. JSON-LD, cad l'URI de la ressource ou l'id blank node
   protected array $types; // le champ '@type' de la repr. JSON-LD, cad la liste des URI des classes de la ressource
-  /* $props est le dict. des propriétés de la ressource en repr. JSON-LD
-  ** pour chaque objet de RdfClass, $props est de la forme [{propUri} => [{propVal}]] / {propVal} ::= [{key} => {val}] /
-  **  - {propUri} est l'URI de la propriété
-  **  - {propVal} correspond à une des valeurs pour la propriété
-  **  - {key} contient une des valeurs
-  **    - '@id' indique que {val} correspond à un URI ou un id de blank node
-  **    - '@type' définit que {val} correspond au type de @value
-  **    - '@value' indique que {val} correspond à la valeur elle-même
-  **    - '@language' définit dans {val} la langue du libellé dans @value
-  **  - {val} est la valeur associée encodée comme chaine de caractères UTF8
-  ** Exemples de valeurs:
-      // un libellé en français
-      "http://purl.org/dc/terms/title": [
-        { "@language": "fr", "@value": "GéoIDE Catalogue" }
-      ]
-      // un URI
-      "http://xmlns.com/foaf/0.1/homepage": [
-        { "@id": "http://catalogue.geo-ide.developpement-durable.gouv.fr" }
-      ]
-      // une date
-      "http://purl.org/dc/terms/modified": [
-        { "@type": "http://www.w3.org/2001/XMLSchema#dateTime", "@value": "2022-09-21T13:31:46.000249" }
-      ],
-  */
-  protected array $props;
+  protected array $props=[]; // dict. des propriétés de la ressource de la forme [{propUri} => [PropVal]]
   
   // ajout d'une ressource à la classe
   static function add(array $resource): void {
@@ -130,25 +233,31 @@ abstract class RdfClass {
     unset($resource['@id']);
     $this->types = $resource['@type'];
     unset($resource['@type']);
-    $this->props = $resource;
+    foreach ($resource as $pUri => $pvals) {
+      foreach ($pvals as $pval) {
+        $this->props[$pUri][] = new PropVal($pval);
+      }
+    }
   }
   
-  // corrections d'erreurs objet par objet sauf celles qui nécessittent un accès à d'autres ressources
+  // corrections d'erreurs ressource par ressource et pas celles qui nécessittent un accès à d'autres ressources
   function rectification(): void {
+    return;
     foreach ($this->props as $pUri => &$pvals) {
-      // Dans la propriété language l'URI est souvent dupliqué avec une chaine bizarrement formée
+    
+      // Dans la propriété language l'URI est souvent dupliqué avec une chaine encodée en Yaml
       // Dans certains cas seule cette chaine est présente et l'URI est absent
       if ($pUri == 'http://purl.org/dc/terms/language') {
         //echo 'language = '; print_r($pvals);
         if ((count($pvals)==2) && isset($pvals[0]['@id']) && isset($pvals[1]['@value'])) {
-          $pvals = [$pvals[0]];
+          $pvals = [$pvals[0]]; // si URI et chaine alors je ne conserve que l'URI
           //echo 'language rectifié = '; print_r($pvals);
         }
         elseif ((count($pvals)==2) && isset($pvals[0]['@value']) && isset($pvals[1]['@id'])) {
-          $pvals = [$pvals[1]];
+          $pvals = [$pvals[1]]; // si URI et chaine alors je ne conserve que l'URI
           //echo 'language rectifié = '; print_r($pvals);
         }
-        elseif ((count($pvals)==1) && isset($pvals[0]['@value'])) {
+        elseif ((count($pvals)==1) && isset($pvals[0]['@value'])) { // si chaine encodée en Yaml avec URI alors URI
           if ($pvals[0]['@value'] == "{'uri': 'http://publications.europa.eu/resource/authority/language/FRA'}") {
             $pvals = [['@id'=> 'http://publications.europa.eu/resource/authority/language/FRA']];
             //echo 'language rectifié = '; print_r($pvals);
@@ -198,7 +307,40 @@ abstract class RdfClass {
         }
       }
       
-      { // certaines propriétés contiennent des chaines encodées en Yaml et sans information
+      { // certaines dates sont dupliquées avec un élément dateTime et l'autre date
+        if ((count($pvals)==2) && isset($pvals[0]['@type']) && isset($pvals[1]['@type'])
+         && isset($pvals[0]['@value']) && isset($pvals[1]['@value'])) {
+          if (($pvals[0]['@type'] == 'http://www.w3.org/2001/XMLSchema#date')
+           && ($pvals[1]['@type'] == 'http://www.w3.org/2001/XMLSchema#dateTime')) {
+            //echo "pUri=$pUri\n";
+            //print_r($pvals);
+            $pvals = [$pvals[0]];
+            //echo "rectification -> "; print_r($this->props[$pUri]);
+          }
+          elseif (($pvals[0]['@type'] == 'http://www.w3.org/2001/XMLSchema#dateTime')
+           && ($pvals[1]['@type'] == 'http://www.w3.org/2001/XMLSchema#date')) {
+            //echo "pUri=$pUri\n";
+            //print_r($pvals);
+            $pvals = [$pvals[1]];
+            //echo "rectification -> "; print_r($this->props[$pUri]);
+          }
+        }
+        
+      }
+      
+      { // certaines propriétés contiennent des chaines encodées en Yaml
+        if ((count($pvals)==1) && (count($pvals[0])==1) && isset($pvals[0]['@value'])
+         && in_array(substr($pvals[0]['@value'], 0, 1), ['{','['])) {
+          if ($yaml = self::cleanYaml($pvals[0]['@value'])) {
+            $pvals = [$yaml];
+          }
+          else {
+            unset($this->props[$pUri]);
+          }
+        }
+      }
+      
+      /*{ // certaines propriétés contiennent des chaines encodées en Yaml et sans information
         // '{''fr'': [], ''en'': []}' ou '{''fr'': '''', ''en'': ''''}'
         if ((count($pvals)==1) && (count($pvals[0])==1) && isset($pvals[0]['@value'])
           && in_array($pvals[0]['@value'], ["{'fr': [], 'en': []}", "{'fr': '', 'en': ''}"])) {
@@ -207,9 +349,9 @@ abstract class RdfClass {
           //echo "count(props) = ",count($this->props),", @id=",$this->id,"\n";
           continue;
         }
-      }
+      }*/
       
-      { // chaines de caractères encodées en Yaml, comme le titre
+      /*{ // chaines de caractères encodées en Yaml, comme le titre
         //     title: '{''fr'': ''Accès au lien ATOM de téléchargement'', ''en'': ''''}'
         if ((count($pvals)==1) && (count($pvals[0])==1) && isset($pvals[0]['@value'])
          && (substr($pvals[0]['@value'], 0, 1)=='{')) {
@@ -240,89 +382,9 @@ abstract class RdfClass {
           }
           continue;
         }
-      }
+      }*/
 
-      
-      { // certaines dates sont dupliquées avec un élément dateTime et l'autre date
-        if ((count($pvals)==2) && isset($pvals[0]['@type']) && isset($pvals[1]['@type'])
-         && isset($pvals[0]['@value']) && isset($pvals[1]['@value'])) {
-          if (($pvals[0]['@type'] == 'http://www.w3.org/2001/XMLSchema#date')
-           && ($pvals[1]['@type'] == 'http://www.w3.org/2001/XMLSchema#dateTime')) {
-            //echo "pUri=$pUri\n";
-            //print_r($pvals);
-            $pvals = [$pvals[0]];
-            //echo "rectification -> "; print_r($this->props[$pUri]);
-          }
-          elseif (($pvals[0]['@type'] == 'http://www.w3.org/2001/XMLSchema#dateTime')
-           && ($pvals[1]['@type'] == 'http://www.w3.org/2001/XMLSchema#date')) {
-            //echo "pUri=$pUri\n";
-            //print_r($pvals);
-            $pvals = [$pvals[1]];
-            //echo "rectification -> "; print_r($this->props[$pUri]);
-          }
-        }
-        
-      }
     }
-  }
-  
-  // simplification d'une des valeurs d'une propriété $pval de la forme [{key} => {value}], $pKey est le nom court de la prop.
-  function simplifPval(array $pval, string $pKey): string|array {
-    // SI $pval ne contient qu'un champ '@value' alors simplif par cette valeur
-    if ((count($pval) == 1) && isset($pval['@value']))
-      return $pval['@value'];
-    // SI $pval contient exactement les 2 champs '@value' et '@language' alors simplif dans cette valeur concaténée avec '@' et la langue
-    if ((count($pval) == 2) && isset($pval['@value']) && isset($pval['@language'])) {
-      if (!is_string($pval['@value']) || !is_string($pval['@language'])) {
-        echo '$pval = '; print_r($pval);
-      }
-      return $pval['@value'].'@'.$pval['@language'];
-    }
-    // SI $pval ne contient qu'un seul champ '@id' alors
-    if ((count($pval) == 1) && isset($pval['@id'])) {
-      $id = $pval['@id'];
-      if (substr($id, 0, 2) <> '_:') {// si PAS blank node alors retourne l'URI + evt. déref.
-        if (!($class = (RdfClass::PROP_RANGE[$pKey] ?? null)))
-          return "<$id>";
-        try {
-          $simple = $class::get($id)->simplify();
-        } catch (Exception $e) {
-          return "<$id>";
-        }
-        return array_merge(['@id'=> $id], $simple);
-      }
-      // si le pointeur pointe sur un blank node alors déréférencement du pointeur
-      if (!($class = (RdfClass::PROP_RANGE[$pKey] ?? null)))
-        throw new Exception("Erreur $pKey absent de RdfClass::PROP_RANGE");
-      return $class::get($id)->simplify();
-    }
-    // SI $pval est une date ou une date+time ALORS simplif par cette valeur
-    if ((count($pval) == 2) && isset($pval['@type'])
-      && in_array($pval['@type'], [
-        'http://www.w3.org/2001/XMLSchema#dateTime',
-        'http://www.w3.org/2001/XMLSchema#date'
-        ]))
-      return $pval['@value'];
-    // SI $pval est de type http://www.w3.org/1999/02/22-rdf-syntax-ns#langString ALORS simplif par cette valeur concaténée
-    // avec le type entouré de []
-    if ((count($pval) == 2) && isset($pval['@type'])
-     && ($pval['@type'] == 'http://www.w3.org/1999/02/22-rdf-syntax-ns#langString'))
-      return $pval['@value'].'['.$pval['@type'].']';
-    return $pval;
-  }
-  
-  // simplification des valeurs de propriété $pvals de la forme [[{key} => {value}]], $pKey est le nom court de la prop.
-  function simplifPvals(array $pvals, string $pKey): string|array {
-    // $pvals ne contient qu'un seul $pval alors simplif de cette valeur
-    if (count($pvals) == 1)
-      return $this->simplifPval($pvals[0], $pKey);
-    
-    // SI $pvals est une liste de $pval alors simplif de chaque valeur
-    $list = [];
-    foreach ($pvals as $pval) {
-      $list[] = $this->simplifPval($pval, $pKey);
-    }
-    return $list;
   }
   
   // simplification des valeurs des propriétés 
@@ -332,12 +394,15 @@ abstract class RdfClass {
     $propConstUri = (get_called_class())::PROP_KEY_URI;
     foreach ($propConstUri as $uri => $key) {
       if (isset($this->props[$uri])) {
-        $simple[$key] = $this->simplifPvals($this->props[$uri], $key);
+        $simple[$key] = PropVal::simplifPvals($this->props[$uri], $key);
         unset($jsonld[$uri]);
       }
     }
-    if ($jsonld)
-      $simple['json-ld'] = $jsonld;
+    foreach ($jsonld as $puri => $pvals) {
+      foreach ($vals as $pval) {
+        $simple['json-ld'][$puri][] = $pval->asJsonLd();
+      }
+    }
     return $simple;
   }
 };
@@ -391,6 +456,7 @@ class Dataset extends RdfClass {
   }
 
   static function rectifStatements(): void { // rectifie les propriétés accessRights et provenance
+    return;
     foreach (self::$all as $id => $dataset) {
       foreach ($dataset->props as $pUri => &$pvals) {
         // Dans la propriété http://purl.org/dc/terms/accessRights, les ressources RightsStatement sont parfois dupliquées
@@ -449,24 +515,31 @@ class Location extends RdfClass {
   function simplify(): string|array {
     if (isset($this->props['http://www.w3.org/ns/locn#geometry'])) {
       foreach ($this->props['http://www.w3.org/ns/locn#geometry'] as $geom) {
-        if ($geom['@type'] == 'http://www.opengis.net/ont/geosparql#wktLiteral')
-          return ['geometry' => $geom['@value']];
+        if ($geom->type == 'http://www.opengis.net/ont/geosparql#wktLiteral')
+          return ['geometry' => $geom->value];
       }
     }
     if (isset($this->props['http://www.w3.org/ns/dcat#bbox'])) {
       foreach ($this->props['http://www.w3.org/ns/dcat#bbox'] as $bbox) {
-        if ($bbox['@type'] == 'http://www.opengis.net/ont/geosparql#wktLiteral')
-          return ['bbox' => $bbox['@value']];
+        if ($bbox->type == 'http://www.opengis.net/ont/geosparql#wktLiteral')
+          return ['bbox' => $bbox->value];
       }
     }
-    return array_merge(['@id'=> $this->id, '@type'=> $this->types], $this->props);
+    $simple = ['@id'=> $this->id, '@type'=> $this->types];
+    foreach ($this->props as $pUri => $pvals) {
+      foreach ($pvals as $pval)
+        $simple[$pUri][] = $pval->asJsonLd();
+    }
+    return $simple;
   }
 };
 
 class Distribution extends RdfClass {
   const PROP_KEY_URI = [
     'http://purl.org/dc/terms/title' => 'title',
+    'http://purl.org/dc/terms/description' => 'description',
     'http://purl.org/dc/terms/format' => 'format',
+    'http://purl.org/dc/terms/rights' => 'rights',
     'http://purl.org/dc/terms/license' => 'license',
     'http://purl.org/dc/terms/issued' => 'issued',
     'http://purl.org/dc/terms/created' => 'created',
@@ -503,7 +576,6 @@ class Frequency extends RdfClass {
 
   static array $all;
 };
-
 
 class Kind extends RdfClass {
   const PROP_KEY_URI = [
