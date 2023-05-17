@@ -53,9 +53,29 @@ ini_set('memory_limit', '1G');
     "http://purl.org/dc/terms/modified": [
       { "@type": "http://www.w3.org/2001/XMLSchema#dateTime", "@value": "2022-09-21T13:31:46.000249" }
     ],
+** et PROP_RANGE indiquant le range de certaines propriétés afin de permettre le déréférencement
 */}
 class PropVal {
-  public readonly array $keys; // liste des clés de la représentation JSON-LD
+  // indique par propriété sa classe d'arrivée (range), nécessaire pour le déréférencement
+  const PROP_RANGE = [
+    'publisher' => 'Organization',
+    'creator' => 'Organization',
+    'rightsHolder' => 'Organization',
+    'spatial' => 'Location',
+    'temporal' => 'PeriodOfTime',
+    'isPrimaryTopicOf' => 'CatalogRecord',
+    'inCatalog' => 'Catalog',
+    'contactPoint' => 'Kind',
+    'accessRights' => 'RightsStatement',
+    'provenance' => 'ProvenanceStatement',
+    'format' => 'MediaTypeOrExtent',
+    'mediaType' => 'MediaType',
+    'accrualPeriodicity' => 'Frequency',
+    'accessService' => 'DataService',
+    'distribution' => 'Distribution',
+  ];
+
+  public readonly array $keys; // liste des clés de la représentation JSON-LD définissant le type de PropVal
   public readonly ?string $id;
   public readonly ?string $value;
   public readonly ?string $language;
@@ -100,17 +120,18 @@ class PropVal {
       case ['@id'] : { // SI $pval ne contient qu'un seul champ '@id' alors
         $id = $this->id;
         if (substr($id, 0, 2) <> '_:') {// si PAS blank node alors retourne l'URI + evt. déref.
-          if (!($class = (RdfClass::PROP_RANGE[$pKey] ?? null)))
+          if (!($class = (self::PROP_RANGE[$pKey] ?? null)))
             return "<$id>";
           try {
             $simple = $class::get($id)->simplify();
           } catch (Exception $e) {
+            fwrite(STDERR, "Alerte, ressource $id non trouvée dans $class\n");
             return "<$id>";
           }
           return array_merge(['@id'=> $id], $simple);
         }
         // si le pointeur pointe sur un blank node alors déréférencement du pointeur
-        if (!($class = (RdfClass::PROP_RANGE[$pKey] ?? null)))
+        if (!($class = (self::PROP_RANGE[$pKey] ?? null)))
           throw new Exception("Erreur $pKey absent de RdfClass::PROP_RANGE");
         return $class::get($id)->simplify();
       }
@@ -144,10 +165,9 @@ class PropVal {
   }
 };
 
-/* Classe abstraite portant les méthodes communes à toutes les classes RDF
+{/* Classe abstraite portant les méthodes communes à toutes les classes RDF
 ** ainsi que les constantes CLASS_URI_TO_PHP_NAME définissant le mapping URI -> nom Php
-** et PROP_RANGE indiquant le range de certaines propriétés afin de permettre le déréférencement
-*/
+*/}
 abstract class RdfClass {
   // Dict. [{URI de classe RDF ou liste d'URI} => {Nom de classe Php}]
   const CLASS_URI_TO_PHP_NAME = [
@@ -166,24 +186,6 @@ abstract class RdfClass {
     'http://purl.org/dc/terms/Frequency' => 'Frequency',
     'http://xmlns.com/foaf/0.1/Organization' => 'Organization',
     'http://www.w3.org/2006/vcard/ns#Kind' => 'Kind',
-  ];
-  // indique par propriété sa classe d'arrivée (range), nécessaire pour le déréférencement
-  const PROP_RANGE = [
-    'publisher' => 'Organization',
-    'creator' => 'Organization',
-    'rightsHolder' => 'Organization',
-    'spatial' => 'Location',
-    'temporal' => 'PeriodOfTime',
-    'isPrimaryTopicOf' => 'CatalogRecord',
-    'inCatalog' => 'Catalog',
-    'contactPoint' => 'Kind',
-    'accessRights' => 'RightsStatement',
-    'provenance' => 'ProvenanceStatement',
-    'format' => 'MediaTypeOrExtent',
-    'mediaType' => 'MediaType',
-    'accrualPeriodicity' => 'Frequency',
-    'accessService' => 'DataService',
-    'distribution' => 'Distribution',
   ];
   
   protected string $id; // le champ '@id' de la repr. JSON-LD, cad l'URI de la ressource ou l'id blank node
@@ -328,14 +330,33 @@ abstract class RdfClass {
       }
       
       { // certaines propriétés contiennent des chaines encodées en Yaml
-        if ((count($pvals)==1) && ($pvals[0]->keys == ['@value']) && $pvals[0]->value
-         && ((substr($pvals[0]->value, 0, 1) == '{') || (substr($pvals[0]->value, 0, 2) == '[{'))) {
-          if ($yaml = self::cleanYaml($pvals[0]->value)) {
-            $pvals = $yaml;
+        if ($pUri == 'http://purl.org/dc/terms/accessRightsxx') {
+          echo '$pvals au début = '; print_r($pvals);
+        }
+        $rectifiedPvals = []; // [ PropVal ]
+        foreach ($pvals as $pval) {
+          if (($pval->keys == ['@value']) && $pval->value
+           && ((substr($pval->value, 0, 1) == '{') || (substr($pval->value, 0, 2) == '[{'))) {
+            if ($yaml = self::cleanYaml($pval->value)) {
+              if ($pUri == 'http://purl.org/dc/terms/accessRightsxx') {
+                echo '$yaml = '; print_r($yaml);
+              }
+              $rectifiedPvals = array_merge($rectifiedPvals, $yaml);
+            }
           }
           else {
-            unset($this->props[$pUri]);
+            $rectifiedPvals[] = $pval;
           }
+          if ($pUri == 'http://purl.org/dc/terms/accessRightsxx') {
+            echo '$rectifiedPvals = '; print_r($rectifiedPvals);
+          }
+        }
+        if ($rectifiedPvals)
+          $pvals = $rectifiedPvals;
+        else
+          unset($this->props[$pUri]);
+        if ($pUri == 'http://purl.org/dc/terms/accessRightsxx') {
+          echo '$pvals à la fin = '; print_r($pvals);
         }
       }
     }
@@ -477,19 +498,18 @@ class Dataset extends RdfClass {
   }
 
   static function rectifStatements(): void { // rectifie les propriétés accessRights et provenance
-    return;
     foreach (self::$all as $id => $dataset) {
       foreach ($dataset->props as $pUri => &$pvals) {
         // Dans la propriété http://purl.org/dc/terms/accessRights, les ressources RightsStatement sont parfois dupliquées
         // dans une chaine bizarrement formattée ;
         // Dans d'autre cas il y a juste une chaine et pas de ressource RightsStatement
         if ($pUri == 'http://purl.org/dc/terms/accessRights') {
-          try {
-            $pvals = Statement::rectifStatements($pvals, 'RightsStatement');
-          } catch (Exception $e) {
+          //try {
+          $pvals = Statement::rectifStatements($pvals, 'RightsStatement');
+            /*} catch (Exception $e) {
             echo '$dataset = '; var_dump($dataset);
             throw new Exception("Erreur dans Statement::rectifStatements()");
-          }
+          }*/
         }
       }
     }
@@ -690,9 +710,10 @@ function import(string $urlPrefix, bool $skip=false, int $lastPage=0, int $first
   return $errors;
 }
 
-$firstPage = 1; $lastPage = 0; // non définie
+//$firstPage = 1; $lastPage = 0; // non définie
 //$firstPage = 2; $lastPage = 2; // on se limite à la page 2 qui contient des fiches Géo-IDE
 //$firstPage = 1; $lastPage = 1; // on se limite à la page 1
+$firstPage = 1002; $lastPage = 1002; // on se limite à la page 1002 de test
 
 switch ($argv[1]) {
   case 'import': {
