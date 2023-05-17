@@ -206,12 +206,23 @@ abstract class RdfClass {
   }
 
   static function get(string $id) { // retourne la ressource de la classe get_called_class() ayant cet $id 
-    if (isset((get_called_class())::$all[$id]))
-      return (get_called_class())::$all[$id];
+    $statementClass = get_called_class();
+    if (isset($statementClass::$all[$id]))
+      return $statementClass::$all[$id];
+    elseif (defined($statementClass.'::REGISTRE') && ($res = $statementClass::REGISTRE[$id] ?? null)) {
+      return new $statementClass([
+        '@id'=> $id, 
+        '@type'=> ["http://purl.org/dc/terms/$statementClass"],
+        'http://www.w3.org/2000/01/rdf-schema#label' => [
+          ['@language'=> 'fr', '@value'=> $res['fr']],
+          ['@language'=> 'en', '@value'=> $res['en']],
+        ],
+      ]);
+    }
     else
       throw new Exception("DEREF_ERROR on $id");
   }
-    
+  
   static function show(): void { // affiche les ressources de la classe hors blank nodes 
     //echo "Appel de ",get_called_class(),"::show()\n";
     //var_dump((get_called_class())::$all); die();
@@ -582,6 +593,13 @@ class MediaTypeOrExtent extends RdfClass {
 };
 
 class MediaType extends RdfClass {
+  const REGISTRE = [
+    'https://www.iana.org/assignments/media-types/text/html' => [
+      'en' => "HTML text",
+      'fr' => "Texte HTML",
+    ],
+  ];
+
   const PROP_KEY_URI = [
   ];
 
@@ -598,6 +616,33 @@ class PeriodOfTime extends RdfClass {
 };
 
 class Frequency extends RdfClass {
+  const REGISTRE = [
+    'http://inspire.ec.europa.eu/metadata-codelist/MaintenanceFrequency/continual' => [
+      'en' => "Continual", // source inspire
+      'fr' => "En continu",
+    ],
+    'http://inspire.ec.europa.eu/metadata-codelist/MaintenanceFrequency/asNeeded' => [
+      'en' => "As needed", // source inspire
+      'fr' => "Comme requis",
+    ],
+    'http://inspire.ec.europa.eu/metadata-codelist/MaintenanceFrequency/notPlanned' => [
+      'en' => "Not planned", // source inspire
+      'fr' => "Pas prévu",
+    ],
+    'http://inspire.ec.europa.eu/metadata-codelist/MaintenanceFrequency/irregular' => [
+      'en' => "Irregular", // source inspire
+      'fr' => "Irrégulier",
+    ],
+    
+    'http://inspire.ec.europa.eu/metadata-codelist/MaintenanceFrequency/annually' => [
+      'en' => "Annually", // source inspire
+      'fr' => "Annuel",
+    ],
+    'http://inspire.ec.europa.eu/metadata-codelist/MaintenanceFrequency/quarterly' => [
+      'en' => "Quarterly", // source inspire
+      'fr' => "Trimestriel",
+    ],
+  ];
   const PROP_KEY_URI = [
     'http://www.w3.org/2000/01/rdf-schema#label' => 'label',
   ];

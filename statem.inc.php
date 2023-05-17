@@ -77,24 +77,6 @@ class ProvenanceStatement extends Statement {
 
 // classe portant la méthode statique rectifStatements()
 class Statement extends RdfClass {
-  
-  static function get(string $id) { // retourne la ressource de la classe get_called_class() ayant cet $id 
-    $statementClass = get_called_class();
-    if (isset($statementClass::$all[$id]))
-      return $statementClass::$all[$id];
-    elseif ($res = $statementClass::REGISTRE[$id] ?? null) {
-      return new $statementClass([
-        '@id'=> $id, 
-        '@type'=> ["http://purl.org/dc/terms/$statementClass"],
-        'http://www.w3.org/2000/01/rdf-schema#label' => [
-          ['@language'=> 'fr', '@value'=> $res['fr']],
-          ['@language'=> 'en', '@value'=> $res['en']],
-        ],
-      ]);
-    }
-    else
-      throw new Exception("DEREF_ERROR on $id");
-  }
 
   // corrige si nécessaire une liste de valeurs correspondant à une propriété accessRights ou provenance
   static function rectifStatements(array $pvals, string $statementClass): array {
