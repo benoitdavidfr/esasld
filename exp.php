@@ -106,8 +106,6 @@ class PropVal {
     }
   }
   
-  function keys(): array { return $this->keys; }
-  
   function asJsonLd(): array { // regénère une structure JSON-LD 
     if ($this->id)
       return ['@id'=> $this->id];
@@ -197,14 +195,7 @@ abstract class RdfClass {
   protected array $types; // le champ '@type' de la repr. JSON-LD, cad la liste des URI des classes de la ressource
   protected array $props=[]; // dict. des propriétés de la ressource de la forme [{propUri} => [PropVal]]
   
-  // ajout d'une ressource à la classe
-  static function add(array $resource): void {
-    /*$titleOrName = 
-      isset($elt['http://purl.org/dc/terms/title']) ? $elt['http://purl.org/dc/terms/title'][0]['@value'] :
-      (isset($elt['http://xmlns.com/foaf/0.1/name']) ? $elt['http://xmlns.com/foaf/0.1/name'][0]['@value'] :
-       'NoTitleAndNoName');
-    echo "Appel de ",get_called_class(),"::add(\"",$titleOrName,"\")\n";*/
-    //print_r($elt);
+  static function add(array $resource): void { // ajout d'une ressource à la classe
     if (!isset((get_called_class())::$all[$resource['@id']])) {
       (get_called_class())::$all[$resource['@id']] = new (get_called_class())($resource);
     }
@@ -337,33 +328,19 @@ abstract class RdfClass {
       { // certaines propriétés contiennent des chaines encodées en Yaml
         $rectifiedPvals = []; // [ PropVal ]
         foreach ($pvals as $pval) {
-          if (!is_object($pval)) {
-            echo '$pval = '; print_r($pval);
-            print_r($this);
-            die();
-          }
           if (($pval->keys == ['@value']) && ((substr($pval->value, 0, 1) == '{') || (substr($pval->value, 0, 2) == '[{'))) {
             if ($yaml = self::cleanYaml($pval->value)) {
-              if ($pUri == 'http://purl.org/dc/terms/accessRightsxx') {
-                echo '$yaml = '; print_r($yaml);
-              }
               $rectifiedPvals = array_merge($rectifiedPvals, $yaml);
             }
           }
           else {
             $rectifiedPvals[] = $pval;
           }
-          if ($pUri == 'http://purl.org/dc/terms/accessRightsxx') {
-            echo '$rectifiedPvals = '; print_r($rectifiedPvals);
-          }
         }
         if ($rectifiedPvals)
           $pvals = $rectifiedPvals;
         else
           unset($this->props[$pUri]);
-        if ($pUri == 'http://purl.org/dc/terms/accessRightsxx') {
-          echo '$pvals à la fin = '; print_r($pvals);
-        }
       }
     }
   }
