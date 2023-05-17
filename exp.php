@@ -206,16 +206,16 @@ abstract class RdfClass {
   }
 
   static function get(string $id) { // retourne la ressource de la classe get_called_class() ayant cet $id 
-    $statementClass = get_called_class();
-    if (isset($statementClass::$all[$id]))
-      return $statementClass::$all[$id];
-    elseif (defined($statementClass.'::REGISTRE') && ($res = $statementClass::REGISTRE[$id] ?? null)) {
-      return new $statementClass([
+    $class = get_called_class();
+    if (isset($class::$all[$id]))
+      return $class::$all[$id];
+    elseif (defined($class.'::REGISTRE') && ($resource = $class::REGISTRE[$id] ?? null)) {
+      return new $class([
         '@id'=> $id, 
-        '@type'=> ["http://purl.org/dc/terms/$statementClass"],
+        '@type'=> ["http://purl.org/dc/terms/$class"],
         'http://www.w3.org/2000/01/rdf-schema#label' => [
-          ['@language'=> 'fr', '@value'=> $res['fr']],
-          ['@language'=> 'en', '@value'=> $res['en']],
+          ['@language'=> 'fr', '@value'=> $resource['fr']],
+          ['@language'=> 'en', '@value'=> $resource['en']],
         ],
       ]);
     }
@@ -276,31 +276,11 @@ abstract class RdfClass {
         continue;
       }
       
-      { // les licences contiennent parfois une chaine structurée en Yaml avec un URI
-        // https://preprod.data.developpement-durable.gouv.fr/dataset/606123c6-d537-485d-ba99-182b0b54d971:
-        //  license: '[{''label'': {''fr'': '''', ''en'': ''''}, ''type'': [], ''uri'': ''https://spdx.org/licenses/etalab-2.0''}]'
-        if (($pUri == 'http://purl.org/dc/terms/license') && (count($pvals)==1) && ($pvals[0]->keys == ['@value'])
-         && (substr($pvals[0]->value, 0, 2)=='[{')) {
-          try {
-            $elts = Yaml::parse($pvals[0]->value);
-            //echo '$elts = '; print_r($elts);
-            if ((count($elts)==1) && isset($elts[0]) && isset($elts[0]['label']) && ($elts[0]['label'] == ['fr'=>'', 'en'=>''])
-             && isset($elts[0]['uri']) && $elts[0]['uri']) {
-              $pvals = [new PropVal(['@id'=> $elts[0]['uri']])];
-            }
-          } catch (ParseException $e) {
-            var_dump($pvals[0]->value);
-            throw new Exception("Erreur de Yaml::parse() dans RdfClass::rectification() dans license");
-          }
-          continue;
-        }
-      }
-      
       { // les chaines de caractères comme celles du titre sont dupliquées avec un élément avec langue et l'autre sans
         if ((count($pvals)==2) && ($pvals[0]->value == $pvals[1]->value)) {
           if ($pvals[0]->language && !$pvals[1]->language) {
             //echo "pUri=$pUri\n";
-            //print_r($pvals);
+            //print_r($pvals); print_r($this);
             $pvals = [$pvals[0]];
             //echo "rectification -> "; print_r($this->props[$pUri]);
             continue;
@@ -320,7 +300,7 @@ abstract class RdfClass {
           if (($pvals[0]->type == 'http://www.w3.org/2001/XMLSchema#date')
            && ($pvals[1]->type == 'http://www.w3.org/2001/XMLSchema#dateTime')) {
             //echo "pUri=$pUri\n";
-            //print_r($pvals);
+            //print_r($pvals); print_r($this);
             $pvals = [$pvals[0]];
             //echo "rectification -> "; print_r($this->props[$pUri]);
             continue;
@@ -363,6 +343,11 @@ abstract class RdfClass {
       && (array_keys($yaml['label']) == ['fr','en']) && $yaml['label']['fr'] && !$yaml['label']['en'])
         return new PropVal(['@language'=> 'fr', '@value'=> $yaml['label']['fr']]);
     
+    // Le Yaml est un label avec uniquement la langue française de fournie + un type vide
+    if ((array_keys($yaml) == ['label','type']) && !$yaml['type'] && is_array($yaml['label'])
+      && (array_keys($yaml['label']) == ['fr','en']) && $yaml['label']['fr'] && !$yaml['label']['en'])
+        return new PropVal(['@language'=> 'fr', '@value'=> $yaml['label']['fr']]);
+    
     // Le Yaml est un label sans le champ label avec uniquement la langue française de fournie
     if ((array_keys($yaml) == ['fr','en']) && $yaml['fr'] && !$yaml['en'] && is_string($yaml['fr'])) {
         //echo "Dans yamlToPropVal2: "; print_r($yaml);
@@ -377,7 +362,9 @@ abstract class RdfClass {
     }
     
     // Le Yaml définit un URI
-    if ((array_keys($yaml)== ['label','uri']) && $yaml['uri'])
+    // https://preprod.data.developpement-durable.gouv.fr/dataset/606123c6-d537-485d-ba99-182b0b54d971:
+    //  license: '[{''label'': {''fr'': '''', ''en'': ''''}, ''type'': [], ''uri'': ''https://spdx.org/licenses/etalab-2.0''}]'
+    if (isset($yaml['uri']) && $yaml['uri'])
       return new PropVal(['@id'=> $yaml['uri']]);
     
     echo "Dans yamlToPropVal: "; print_r($yaml);
@@ -710,7 +697,7 @@ function import(string $urlPrefix, bool $skip=false, int $lastPage=0, int $first
     $content = json_decode($content, true, 512, JSON_THROW_ON_ERROR);
     
     //echo "content of page $page = "; print_r($content);
-    echo "nbelts of page $page = ",count($content),"\n";
+    fwrite(STDERR, "Info: nbelts de la page $page = ".count($content)."\n");
     
     foreach ($content as $no => $resource) {
       $types = implode(', ', $resource['@type']); 
@@ -723,7 +710,7 @@ function import(string $urlPrefix, bool $skip=false, int $lastPage=0, int $first
           if (!preg_match('!\?page=(\d+)$!', $lastPage, $m))
             throw new Exception("erreur de preg_match sur $lastPage");
           $lastPage = $m[1];
-          echo "lastPage=$lastPage\n";
+          fwrite(STDERR, "Info: lastPage=$lastPage\n");
         }
       }
       else
