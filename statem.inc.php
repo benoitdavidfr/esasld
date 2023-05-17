@@ -1,5 +1,5 @@
 <?php
-/* statemen.inc.php - déf. des classes RightsStatement et MLString - 12/5/2023
+/* statemen.inc.php - déf. des classes RightsStatement et MLString - 17/5/2023
 */
 use Symfony\Component\Yaml\Yaml;
 use Symfony\Component\Yaml\Exception\ParseException;
@@ -65,10 +65,6 @@ class RightsStatement extends Statement { // Correspond à une ressource RightsS
   ];
 
   static array $all; // stocke les ressources RightsStatement [{id} => RightsStatement]
-  
-  function label(): array { // retourne la propriété label comme [[{key} => {val}]]
-    return $this->props['http://www.w3.org/2000/01/rdf-schema#label'];
-  }
 };
 
 class ProvenanceStatement extends Statement {
@@ -112,7 +108,8 @@ class Statement extends RdfClass {
         case ['@language','@value'] : {
           if ($pval->language == 'fr') {
             $md5 = md5($pval->value);
-            $arrayOfMLStrings[$md5] = ['mlStr'=> new MLString(['fr'=> $pval->value])];
+            if (!isset($arrayOfMLStrings[$md5]))
+              $arrayOfMLStrings[$md5] = ['mlStr'=> new MLString(['fr'=> $pval->value])];
           }
           else {
             throw new Exception("Langue ".$pval->language." non traitée");
@@ -139,8 +136,9 @@ class Statement extends RdfClass {
       if (isset($mlStrAndBn['bn']))
         $pvals[] = new PropVal(['@id'=> $mlStrAndBn['bn']]);
       else {
+        $id = '_:md5-'.$md5; // définition d'un id de BN à partir du MD5
         $resource = [
-          '@id'=> '_:md5-'.$md5, // définition d'un id de BN à partir du MD5
+          '@id'=> $id,
           '@type'=> ["http://purl.org/dc/terms/$statementClass"],
           'http://www.w3.org/2000/01/rdf-schema#label'=> $mlStrAndBn['mlStr']->toStatementLabel(),
         ];
@@ -152,67 +150,7 @@ class Statement extends RdfClass {
     return $pvals;
   }
   
-  /*static function rectifStatements(array $pvals, string $statementClass): array {
-    //return $pvals;
-    $arrayOfMLStrings = []; // [{md5} => ['mlStr'=> MLString, 'bn'=>{bn}]] - liste de chaines correspondant au $pvals
-    
-    //echo 'accessRights (input) = '; var_dump($pvals);
-    
-    foreach ($pvals as $pval) {
-      if (isset($pval['@value'])) { // défini comme liste de labels
-        try {
-          $elts = Yaml::parse($pval['@value']);
-        } catch (ParseException $e) {
-          //var_dump($pval['@value']);
-          //throw new Exception("Erreur de Yaml::parse() dans RightsStatements::rectification()");
-          $elts = [['label'=> ['fr'=> "ERREUR DE DECODAGE YAML SUR accessRights"]]];
-        }
-        //echo '$labels = '; print_r($labels);
-        foreach ($elts as $elt) {
-          if (isset($elt['uri'])) { // l'URI est défini
-            if (!isset($statementClass::REGISTRE[$elt['uri']])) {
-              echo "URI '$elt[uri]' absent du registre RightsStatements::REGISTRE\n";
-              throw new Exception("URI '$elt[uri]' absent du registre RightsStatements::REGISTRE");
-            }
-            $mlStr = new MLString($statementClass::REGISTRE[$elt['uri']]);
-          }
-          elseif (isset($elt['label'])) {
-            $mlStr = new MLString($elt['label']);
-          }
-          else {
-            echo '$elts = '; print_r($elts);
-            throw new Eception("ERREUR");
-          }
-          if (!isset($arrayOfMLStrings[$mlStr->md5()]))
-            $arrayOfMLStrings[$mlStr->md5()] = ['mlStr'=> $mlStr];
-        }
-      }
-      elseif (isset($pval['@id'])) { // défini comme blank node vers un RightsStatement
-        $rightsStatement = $statementClass::get($pval['@id']);
-        //echo '$rightsStatement = '; print_r($rightsStatement);
-        $mlStr = MLString::fromRightsStatementLabel($rightsStatement->label());
-        $arrayOfMLStrings[$mlStr->md5()] = ['mlStr'=> $mlStr, 'bn'=>$pval['@id']];
-      }
-    }
-    
-    //echo '$arrayOfMLStrings = '; print_r($arrayOfMLStrings);
-    
-    $pvals = [];
-    foreach ($arrayOfMLStrings as $md5 => $mlStrAndBn) {
-      if (isset($mlStrAndBn['bn']))
-        $pvals[] = ['@id'=> $mlStrAndBn['bn']];
-      else {
-        $id = '_:md5-'.$md5; // définition d'un id de BN à partir du MD5
-        $resource = [
-          '@id'=> $id,
-          '@type'=> ['http://purl.org/dc/terms/RightsStatement'],
-          'http://www.w3.org/2000/01/rdf-schema#label'=> $mlStrAndBn['mlStr']->toRightsStatementLabel(),
-        ];
-        $statementClass::$all[$id] = new $statementClass($resource);
-        $pvals[] = ['@id'=> $id];
-      }
-    }
-    //echo 'accessRights (rectified) = '; print_r($pvals);
-    return $pvals;
-  }*/
+  function label(): array { // retourne la propriété label comme [PropVal]
+    return $this->props['http://www.w3.org/2000/01/rdf-schema#label'];
+  }
 };

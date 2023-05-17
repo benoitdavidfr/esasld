@@ -1,5 +1,7 @@
 <?php
-/* export.php - script d'export du catalogue Ecosphères - 10/5/2023
+/* export.php - script d'export du catalogue Ecosphères - 17/5/2023
+ 17/5/2023:
+  - réécriture de Statement::rectifStatements()
  16/5/2023:
   - définition de la classe PropVal
   - définition des mathodes cleanYml() et yamlToPropVal()
@@ -23,7 +25,7 @@ use Symfony\Component\Yaml\Exception\ParseException;
 
 ini_set('memory_limit', '1G');
 
-{/* Chaque objet de la classe PropVal correspond à une valeur RDF d'une propriété RDF
+{/* Classe dont chaque objet correspond à une valeur RDF d'une propriété RDF
 ** En JSON-LD une PropVal est structurée sous la forme [{key} => {val}]
 **  - {key} contient une des valeurs
 **    - '@id' indique que {val} correspond à un URI ou un id de blank node
@@ -232,7 +234,7 @@ abstract class RdfClass {
     }
   }
 
-  function __construct(array $resource) {
+  function __construct(array $resource) { // crée un objet à partir de la description JSON-LD 
     $this->id = $resource['@id'];
     unset($resource['@id']);
     $this->types = $resource['@type'];
@@ -390,7 +392,7 @@ abstract class RdfClass {
     throw new Exception("Cas non traité dans yamlToPropVal()");
   }
   
-  // nettoie une valeur codée en Yaml, renvoie un [PropVal] ou []
+  // nettoie une valeur codée en Yaml, renvoie une [PropVal] ou []
   // Certaines chaines sont mal encodées en yaml
   function cleanYaml(string $value): array {
     // certaines propriétés contiennent des chaines encodées en Yaml et sans information
@@ -500,16 +502,15 @@ class Dataset extends RdfClass {
   static function rectifStatements(): void { // rectifie les propriétés accessRights et provenance
     foreach (self::$all as $id => $dataset) {
       foreach ($dataset->props as $pUri => &$pvals) {
-        // Dans la propriété http://purl.org/dc/terms/accessRights, les ressources RightsStatement sont parfois dupliquées
-        // dans une chaine bizarrement formattée ;
-        // Dans d'autre cas il y a juste une chaine et pas de ressource RightsStatement
-        if ($pUri == 'http://purl.org/dc/terms/accessRights') {
-          //try {
-          $pvals = Statement::rectifStatements($pvals, 'RightsStatement');
-            /*} catch (Exception $e) {
-            echo '$dataset = '; var_dump($dataset);
-            throw new Exception("Erreur dans Statement::rectifStatements()");
-          }*/
+        switch ($pUri) {
+          case 'http://purl.org/dc/terms/accessRights': {
+            $pvals = Statement::rectifStatements($pvals, 'RightsStatement');
+            break;
+          }
+          case 'http://purl.org/dc/terms/provenance': {
+            $pvals = Statement::rectifStatements($pvals, 'ProvenanceStatement');
+            break;
+          }
         }
       }
     }
@@ -711,9 +712,9 @@ function import(string $urlPrefix, bool $skip=false, int $lastPage=0, int $first
 }
 
 //$firstPage = 1; $lastPage = 0; // non définie
-//$firstPage = 2; $lastPage = 2; // on se limite à la page 2 qui contient des fiches Géo-IDE
+$firstPage = 2; $lastPage = 2; // on se limite à la page 2 qui contient des fiches Géo-IDE
 //$firstPage = 1; $lastPage = 1; // on se limite à la page 1
-$firstPage = 1002; $lastPage = 1002; // on se limite à la page 1002 de test
+//$firstPage = 1002; $lastPage = 1002; // on se limite à la page 1002 de test
 
 switch ($argv[1]) {
   case 'import': {
