@@ -2,6 +2,7 @@
 /* export.php - script d'export du catalogue Ecosphères - 17/5/2023
  17/5/2023:
   - réécriture de Statement::rectifStatements()
+  - réécriture de Dataset::concat()
  16/5/2023:
   - définition de la classe PropVal
   - définition des mathodes cleanYml() et yamlToPropVal()
@@ -104,6 +105,8 @@ class PropVal {
       }
     }
   }
+  
+  function keys(): array { return $this->keys; }
   
   function asJsonLd(): array { // regénère une structure JSON-LD 
     if ($this->id)
@@ -332,13 +335,14 @@ abstract class RdfClass {
       }
       
       { // certaines propriétés contiennent des chaines encodées en Yaml
-        if ($pUri == 'http://purl.org/dc/terms/accessRightsxx') {
-          echo '$pvals au début = '; print_r($pvals);
-        }
         $rectifiedPvals = []; // [ PropVal ]
         foreach ($pvals as $pval) {
-          if (($pval->keys == ['@value']) && $pval->value
-           && ((substr($pval->value, 0, 1) == '{') || (substr($pval->value, 0, 2) == '[{'))) {
+          if (!is_object($pval)) {
+            echo '$pval = '; print_r($pval);
+            print_r($this);
+            die();
+          }
+          if (($pval->keys == ['@value']) && ((substr($pval->value, 0, 1) == '{') || (substr($pval->value, 0, 2) == '[{'))) {
             if ($yaml = self::cleanYaml($pval->value)) {
               if ($pUri == 'http://purl.org/dc/terms/accessRightsxx') {
                 echo '$yaml = '; print_r($yaml);
@@ -485,16 +489,13 @@ class Dataset extends RdfClass {
   ];
   static array $all=[]; // [{id}=> self] -- dict. des objets de la classe
     
-  function concat(array $elt): void { // concatene 2 valeurs pour un même URI 
+  function concat(array $resource): void { // concatene 2 valeurs pour un même URI 
     foreach (['http://www.w3.org/ns/dcat#catalog',
               'http://www.w3.org/ns/dcat#record',
               'http://www.w3.org/ns/dcat#dataset',
-              'http://www.w3.org/ns/dcat#service'] as $p) {
-      if (isset($this->props[$p]) && isset($elt[$p])) {
-        $this->props[$p] = array_merge($this->props[$p], $elt[$p]);
-      }
-      elseif (!isset($this->props[$p]) && isset($elt[$p])) {
-        $this->props[$p] = $elt[$p];
+              'http://www.w3.org/ns/dcat#service'] as $pUri) {
+      foreach ($resource[$pUri] ?? [] as $pval) {
+        $this->props[$pUri][] = new PropVal($pval);
       }
     }
   }
@@ -711,9 +712,10 @@ function import(string $urlPrefix, bool $skip=false, int $lastPage=0, int $first
   return $errors;
 }
 
-//$firstPage = 1; $lastPage = 0; // non définie
-$firstPage = 2; $lastPage = 2; // on se limite à la page 2 qui contient des fiches Géo-IDE
+$firstPage = 1; $lastPage = 0; // non définie
+//$firstPage = 2; $lastPage = 2; // on se limite à la page 2 qui contient des fiches Géo-IDE
 //$firstPage = 1; $lastPage = 1; // on se limite à la page 1
+//$firstPage = 1; $lastPage = 2; // on se limite aux pages 1 + 2
 //$firstPage = 1002; $lastPage = 1002; // on se limite à la page 1002 de test
 
 switch ($argv[1]) {

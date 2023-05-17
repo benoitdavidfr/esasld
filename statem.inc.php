@@ -98,10 +98,7 @@ class Statement extends RdfClass {
 
   // corrige si nécessaire une liste de valeurs correspondant à une propriété accessRights ou provenance
   static function rectifStatements(array $pvals, string $statementClass): array {
-    //return $pvals;
     $arrayOfMLStrings = []; // [{md5} => ['mlStr'=> MLString, 'bn'=>{bn}]] - liste de chaines correspondant au $pvals
-    
-    echo "$statementClass (input) = "; var_dump($pvals);
     
     foreach ($pvals as $pval) {
       switch ($pval->keys) {
@@ -118,7 +115,6 @@ class Statement extends RdfClass {
         }
         case ['@id'] : {
           $statement = $statementClass::get($pval->id);
-          //echo '$rightsStatement = '; print_r($rightsStatement);
           $mlStr = MLString::fromStatementLabel($statement->label());
           $arrayOfMLStrings[$mlStr->md5()] = ['mlStr'=> $mlStr, 'bn'=>$pval->id];
           break;
@@ -128,8 +124,6 @@ class Statement extends RdfClass {
         }
       }
     }
-    
-    echo '$arrayOfMLStrings = '; print_r($arrayOfMLStrings);
     
     $pvals = [];
     foreach ($arrayOfMLStrings as $md5 => $mlStrAndBn) {
@@ -146,7 +140,6 @@ class Statement extends RdfClass {
         $pvals[] = new PropVal(['@id'=> $id]);
       }
     }
-    echo "$statementClass (rectified) = "; print_r($pvals);
     return $pvals;
   }
   
