@@ -56,15 +56,8 @@ class RightsStatement extends Statement { // Correspond à une ressource RightsS
   const PROP_KEY_URI = [
     'http://www.w3.org/2000/01/rdf-schema#label' => 'label',
   ];
-  // RightsStatement définis par un URI
-  const REGISTRE = [
-    'http://inspire.ec.europa.eu/metadata-codelist/LimitationsOnPublicAccess/noLimitations' => [
-      'en' => "no limitations to public access", // source registre Inspire
-      'fr' => "Pas de restriction d’accès public selon INSPIRE", // chaine souvent utilisée
-    ],
-  ];
 
-  static array $all; // stocke les ressources RightsStatement [{id} => RightsStatement]
+  static array $all=[]; // stocke les ressources RightsStatement [{id} => RightsStatement]
 };
 
 class ProvenanceStatement extends Statement {
@@ -72,7 +65,7 @@ class ProvenanceStatement extends Statement {
     'http://www.w3.org/2000/01/rdf-schema#label' => 'label',
   ];
 
-  static array $all;
+  static array $all=[];
 };
 
 // classe portant la méthode statique rectifStatements()

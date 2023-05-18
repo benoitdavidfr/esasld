@@ -1,15 +1,48 @@
 <?php
-/* export.php - script d'export du catalogue Ecosphères - 17/5/2023
+{/*PhpDoc:
+title: export.php - script de lecture de l'export du catalogue Ecosphères - 18/5/2023
+doc: |
+  L'objectif de ce script est de lire l'export DCAT d'Ecosphères en JSON-LD afin d'y détecter d'éventuelles erreurs.
+  Chaque clase RDF est traduite par une classe Php avec un mapping défini dans RdfClass::CLASS_URI_TO_PHP_NAME
+  Outre la détection et correction d'erreurs, le script affiche différents types d'objets de manière simplifiée
+  et plus lisible pour les néophytes.
+  Cette simplification correspond d'une part à une "compaction JSON-LD" avec un contexte non explicité
+  et d'autre part à un embedding d'un certain nombre de ressources associées, par exemple les publisher d'un Dataset.
+  Ces ressources associées sont définies par les propriétées définies dans PropVal::PROP_RANGE.
+  L'affichage est finalement effectuée en Yaml.
+
+  La classe PropVal facilite l'utilisation en Php de la représentation JSON-LD en définissant
+  une structuration d'une valeur RDF d'une propriété RDF d'une ressource.
+
+  La classe abstraite RdfClass porte une grande partie du code et est la classe mère de toutes les classes Php
+  traduisant les classes RDF. Pour chacune de ces dernières:
+   - la constante de classe PROP_KEY_URI liste les propriétés RDF en définissant leur raccourci,
+     dans l'export DCAT sans y être défini, par exemple dans la classe Standard que l'URI https://tools.ietf.org/html/rfc4287'
+     correspond au format de syndication Atom,
+   - la propriété statique $all contient les objets correspondant aux ressources lues en mémoire à partir du fichier JSON-LD.
+  
+  Le script utilise un registre stocké dans le fichier registre.yaml qui permet d'associer des étiquettes à un certain
+  nombre d'URIs non définis dans l'export.
+  
+  Prolongations éventuelles:
+   - il erait utile de formaliser le contexte associé à la simplification et de s'assurer de son exactitude
+   - l'affichage simplifié pourrait être un export DCAT valide en YAML-LD
+   - il serait utile de réexporter le contenu importé pour bénéficier des corrections, y compris en le paginant
+   - il serait intéressant de définir des shapes SHACL pour valider le graphe DCAT
+
+journal: |
  18/5/2023:
   - ajout classes Standard et LicenseDocument avec leur registre
   - ajout gestion des Location avec URI INSEE
+  - transfert des registres associés aux classes dans le fichier registre.yaml
+  - amélioration du choix de traitement en fonction des arguments du script
  17/5/2023:
   - réécriture de Statement::rectifStatements()
   - réécriture de Dataset::concat()
  16/5/2023:
   - définition de la classe PropVal
   - définition des mathodes cleanYml() et yamlToPropVal()
-  - ajout ed qqs prop. / disparition eds json-ld
+  - ajout de qqs prop. / disparition des json-ld
  15/5/2023:
   - amélioration des rectifications sur les textes encodées en Yaml
  12/5/2023:
@@ -20,9 +53,10 @@
   - améliorations
  8/5/2023:
   - refonte de l'aechitecture
-*/
+*/}
 require_once __DIR__.'/vendor/autoload.php';
 require_once __DIR__.'/statem.inc.php';
+require_once __DIR__.'/registre.inc.php';
 
 use Symfony\Component\Yaml\Yaml;
 use Symfony\Component\Yaml\Exception\ParseException;
@@ -192,6 +226,7 @@ abstract class RdfClass {
     'http://purl.org/dc/terms/RightsStatement' => 'RightsStatement',
     'http://purl.org/dc/terms/ProvenanceStatement' => 'ProvenanceStatement',
     'http://purl.org/dc/terms/MediaTypeOrExtent' => 'MediaTypeOrExtent',
+    'http://purl.org/dc/terms/MediaType' => 'MediaType',
     'http://purl.org/dc/terms/PeriodOfTime' => 'PeriodOfTime',
     'http://purl.org/dc/terms/Frequency' => 'Frequency',
     'http://xmlns.com/foaf/0.1/Organization' => 'Organization',
@@ -199,7 +234,7 @@ abstract class RdfClass {
   ];
   
   protected string $id; // le champ '@id' de la repr. JSON-LD, cad l'URI de la ressource ou l'id blank node
-  protected array $types; // le champ '@type' de la repr. JSON-LD, cad la liste des URI des classes de la ressource
+  protected array $types; // le champ '@type' de la repr. JSON-LD, cad la liste des URI des classes RDF de la ressource
   protected array $props=[]; // dict. des propriétés de la ressource de la forme [{propUri} => [PropVal]]
   
   static function add(array $resource): void { // ajout d'une ressource à la classe
@@ -216,6 +251,7 @@ abstract class RdfClass {
     $class = get_called_class();
     if (isset($class::$all[$id]))
       return $class::$all[$id];
+    /* code utilisé pour lire le contenu des registres associé éventuellement à chaque classe (périmé)
     elseif (defined($class.'::REGISTRE') && ($resource = $class::REGISTRE[$id] ?? null)) {
       $jsonld = [
         '@id'=> $id, 
@@ -229,7 +265,7 @@ abstract class RdfClass {
           $jsonld['http://www.w3.org/2000/01/rdf-schema#label'][] = ['@value'=> $value];
       }
       return new $class($jsonld);
-    }
+    }*/
     else
       throw new Exception("DEREF_ERROR on $id");
   }
@@ -580,39 +616,10 @@ class Location extends RdfClass {
       }
     }
     return parent::simplify();
-    $simple = ['@id'=> $this->id, '@type'=> $this->types];
-    foreach ($this->props as $pUri => $pvals) {
-      foreach ($pvals as $pval)
-        $simple[$pUri][] = $pval->asJsonLd();
-    }
-    return $simple;
   }
 };
 
 class Standard extends RdfClass {
-  const REGISTRE = [
-    'https://tools.ietf.org/html/rfc4287' => [
-      'en' => "The Atom Syndication Format",
-      'fr' => "Le format de syndication Atom",
-    ],
-    'http://www.opengis.net/def/crs/EPSG/0/4326' => [
-      '' => "WGS 84",
-      'en' => "World Geodetic System 1984",
-      'fr' => "Système géodésique mondial 1984",
-    ],
-    'http://www.opengis.net/def/crs/EPSG/0/4171' => [
-      '' => "RGF93 v1",
-      'fr' => "Système géodésique RGF93",
-    ],
-    'http://www.opengis.net/def/crs/EPSG/0/2154' => [
-      '' => "RGF93 v1 / Lambert-93",
-      'fr' => "Projection Lambert 93",
-    ],
-    'http://www.opengis.net/def/crs/EPSG/0/27572' => [
-      '' => "NTF (Paris) / Lambert zone II",
-      'fr' => "Projection Lambert II Étendue",
-    ],
-  ];
   const PROP_KEY_URI = [
     'http://www.w3.org/2000/01/rdf-schema#label' => 'label',
   ];
@@ -621,12 +628,6 @@ class Standard extends RdfClass {
 };
 
 class LicenseDocument extends RdfClass {
-  const REGISTRE = [
-    'https://spdx.org/licenses/etalab-2.0' => [
-      'en' => "Etalab Open License 2.0",
-      'fr' => "Licence ouverte Etalab 2.0",
-    ],
-  ];
   const PROP_KEY_URI = [
     'http://www.w3.org/2000/01/rdf-schema#label' => 'label',
   ];
@@ -662,15 +663,7 @@ class MediaTypeOrExtent extends RdfClass {
 };
 
 class MediaType extends RdfClass {
-  const REGISTRE = [
-    'https://www.iana.org/assignments/media-types/text/html' => [
-      'en' => "HTML text",
-      'fr' => "Texte HTML",
-    ],
-  ];
-
-  const PROP_KEY_URI = [
-  ];
+  const PROP_KEY_URI = [];
 
   static array $all=[];
 };
@@ -685,33 +678,6 @@ class PeriodOfTime extends RdfClass {
 };
 
 class Frequency extends RdfClass {
-  const REGISTRE = [
-    'http://inspire.ec.europa.eu/metadata-codelist/MaintenanceFrequency/continual' => [
-      'en' => "Continual", // source inspire
-      'fr' => "En continu",
-    ],
-    'http://inspire.ec.europa.eu/metadata-codelist/MaintenanceFrequency/asNeeded' => [
-      'en' => "As needed", // source inspire
-      'fr' => "Comme requis",
-    ],
-    'http://inspire.ec.europa.eu/metadata-codelist/MaintenanceFrequency/notPlanned' => [
-      'en' => "Not planned", // source inspire
-      'fr' => "Pas prévu",
-    ],
-    'http://inspire.ec.europa.eu/metadata-codelist/MaintenanceFrequency/irregular' => [
-      'en' => "Irregular", // source inspire
-      'fr' => "Irrégulier",
-    ],
-    
-    'http://inspire.ec.europa.eu/metadata-codelist/MaintenanceFrequency/annually' => [
-      'en' => "Annually", // source inspire
-      'fr' => "Annuel",
-    ],
-    'http://inspire.ec.europa.eu/metadata-codelist/MaintenanceFrequency/quarterly' => [
-      'en' => "Quarterly", // source inspire
-      'fr' => "Trimestriel",
-    ],
-  ];
   const PROP_KEY_URI = [
     'http://www.w3.org/2000/01/rdf-schema#label' => 'label',
   ];
@@ -733,7 +699,7 @@ class Kind extends RdfClass {
 $urlPrefix = 'https://preprod.data.developpement-durable.gouv.fr/dcat/catalog';
 
 if ($argc == 1) {
-  echo "usage: php $argv[0] {action}\n";
+  echo "usage: php $argv[0] {action} [{firstPage} [{lastPage}]]\n";
   echo " où {action} vaut:\n";
   echo "  - import - lecture du catalogue depuis Ecosphères en JSON-LD et copie dans des fichiers locaux\n";
   echo "  - errors - afffichage des erreurs rencontrées lors de la lecture du catalogue\n";
@@ -803,82 +769,53 @@ function import(string $urlPrefix, bool $skip=false, int $lastPage=0, int $first
   return $errors;
 }
 
-$firstPage = 1; $lastPage = 0; // lecture de toutes les pages
-//$firstPage = 2; $lastPage = 2; // on se limite à la page 2 qui contient des fiches Géo-IDE
-//$firstPage = 1; $lastPage = 1; // on se limite à la page 1
-//$firstPage = 1; $lastPage = 2; // on se limite aux pages 1 + 2
-//$firstPage = 1002; $lastPage = 1002; // on se limite à la page 1002 de test
+
+// Par défaut lecture de toutes les pages
+$firstPage = $argv[2] ?? 1; // Par défaut démarrage à la première page
+$lastPage = $argv[3] ?? 0;  // Par défaut fin à la dernière page définie dans l'import
 
 switch ($argv[1]) {
-  case 'import': { // effectue uniquement l'import 
-    import($urlPrefix, true);
+  case 'registre': { // effectue uniquement l'import du registre et affiche ce qui a été importé 
+    Registre::import();
+    foreach (RdfClass::CLASS_URI_TO_PHP_NAME as $classUri => $className)
+      $className::show();
+    break;
+  }
+  case 'import': { // effectue uniquement l'import de l'export
+    import($urlPrefix, true, $lastPage, $firstPage);
     break;
   }
   case 'errors': {
-    $errors = import($urlPrefix, true);
+    $errors = import($urlPrefix, true, $lastPage, $firstPage);
     echo "Pages en erreur:\n";
     foreach ($errors as $page => $error)
       echo "  $page: $error\n";
     break;
   }
   case 'catalogs': {
-    import($urlPrefix, true);
+    Registre::import();
+    import($urlPrefix, true, $lastPage, $firstPage);
     //print_r(RdfClass::$pkeys);
     Catalog::show();
     break;
   }
-  case 'datasets': {
+  case 'datasets': { // import du registre et de l'export puis affichage des datasets
+    Registre::import();
     import($urlPrefix, true, $lastPage, $firstPage);
     Dataset::show();
     break;
   }
-  case 'DataServices': {
-    import($urlPrefix, true, $lastPage, $firstPage);
-    DataService::showIncludingBlankNodes();
-    break;
-  }
-  case 'catalogRecords': {
-    import($urlPrefix, true, $lastPage, $firstPage);
-    catalogRecord::showIncludingBlankNodes();
-    break;
-  }
-  case 'Distributions': {
-    import($urlPrefix, true, $lastPage, $firstPage);
-    Distribution::showIncludingBlankNodes();
-    break;
-  }
-  case 'Kinds': {
-    import($urlPrefix, true, $lastPage, $firstPage);
-    Kind::showIncludingBlankNodes();
-    break;
-  }
-  case 'RightsStatements': {
-    import($urlPrefix, true, $lastPage, $firstPage);
-    RightsStatement::showIncludingBlankNodes();
-    break;
-  }
-  case 'ProvenanceStatements': {
-    import($urlPrefix, true, $lastPage, $firstPage);
-    ProvenanceStatement::showIncludingBlankNodes();
-    break;
-  }
-  case 'PeriodOfTimes': {
-    import($urlPrefix, true, $lastPage, $firstPage);
-    PeriodOfTime::showIncludingBlankNodes();
-    break;
-  }
-  case 'MediaTypeOrExtents': {
-    import($urlPrefix, true, $lastPage, $firstPage);
-    MediaTypeOrExtent::showIncludingBlankNodes();
-    break;
-  }
-  case 'LicenseDocument': {
-    import($urlPrefix, true, $lastPage, $firstPage);
-    LicenseDocument::showIncludingBlankNodes();
-    break;
-  }
   
   default: {
+    foreach (RdfClass::CLASS_URI_TO_PHP_NAME as $classUri => $className) {
+      if ($argv[1] == $className) {
+        Registre::import();
+        import($urlPrefix, true, $lastPage, $firstPage);
+        $className::showIncludingBlankNodes();
+        die();
+      }
+    }
+    
     die("$argv[1] ne correspond à aucune action\n");
   }
 }
