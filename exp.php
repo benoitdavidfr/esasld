@@ -1,5 +1,8 @@
 <?php
 /* export.php - script d'export du catalogue Ecosphères - 17/5/2023
+ 18/5/2023:
+  - ajout classes Standard et LicenseDocument avec leur registre
+  - ajout gestion des Location avec URI INSEE
  17/5/2023:
   - réécriture de Statement::rectifStatements()
   - réécriture de Dataset::concat()
@@ -69,7 +72,9 @@ class PropVal {
     'isPrimaryTopicOf' => 'CatalogRecord',
     'inCatalog' => 'Catalog',
     'contactPoint' => 'Kind',
+    'conformsTo' => 'Standard',
     'accessRights' => 'RightsStatement',
+    'license' => 'LicenseDocument',
     'provenance' => 'ProvenanceStatement',
     'format' => 'MediaTypeOrExtent',
     'mediaType' => 'MediaType',
@@ -182,6 +187,8 @@ abstract class RdfClass {
     'http://www.w3.org/ns/dcat#DataService' => 'DataService',
     'http://www.w3.org/ns/dcat#Distribution' => 'Distribution',
     'http://purl.org/dc/terms/Location' => 'Location',
+    'http://purl.org/dc/terms/Standard' => 'Standard',
+    'http://purl.org/dc/terms/LicenseDocument' => 'LicenseDocument',
     'http://purl.org/dc/terms/RightsStatement' => 'RightsStatement',
     'http://purl.org/dc/terms/ProvenanceStatement' => 'ProvenanceStatement',
     'http://purl.org/dc/terms/MediaTypeOrExtent' => 'MediaTypeOrExtent',
@@ -210,14 +217,18 @@ abstract class RdfClass {
     if (isset($class::$all[$id]))
       return $class::$all[$id];
     elseif (defined($class.'::REGISTRE') && ($resource = $class::REGISTRE[$id] ?? null)) {
-      return new $class([
+      $jsonld = [
         '@id'=> $id, 
         '@type'=> ["http://purl.org/dc/terms/$class"],
-        'http://www.w3.org/2000/01/rdf-schema#label' => [
-          ['@language'=> 'fr', '@value'=> $resource['fr']],
-          ['@language'=> 'en', '@value'=> $resource['en']],
-        ],
-      ]);
+        'http://www.w3.org/2000/01/rdf-schema#label' => [],
+      ];
+      foreach ($resource as $lang => $value) {
+        if ($lang)
+          $jsonld['http://www.w3.org/2000/01/rdf-schema#label'][] = ['@language'=> $lang, '@value'=> $value];
+        else
+          $jsonld['http://www.w3.org/2000/01/rdf-schema#label'][] = ['@value'=> $value];
+      }
+      return new $class($jsonld);
     }
     else
       throw new Exception("DEREF_ERROR on $id");
@@ -505,14 +516,14 @@ class CatalogRecord extends RdfClass {
     'http://www.w3.org/ns/dcat#contactPoint' => 'contactPoint',
     'http://www.w3.org/ns/dcat#inCatalog' => 'inCatalog',
   ];
-  static array $all;
+  static array $all=[];
 };
 
 class DataService extends Dataset {
   const PROP_KEY_URI = [
     'http://purl.org/dc/terms/conformsTo' => 'conformsTo',
   ];
-  static array $all;
+  static array $all=[];
 };
 
 class Organization extends RdfClass {
@@ -522,13 +533,38 @@ class Organization extends RdfClass {
     'http://xmlns.com/foaf/0.1/phone' => 'phone',
     'http://xmlns.com/foaf/0.1/workplaceHomepage' => 'workplaceHomepage',
   ];
-  static array $all;
+  static array $all=[];
   
   function concat(array $elt): void {}
 };
 
 class Location extends RdfClass {
-  static array $all;
+  const TYPES_INSEE = [
+    'region' => "Région",
+    'departement' => "Département",
+    'commune' => "Commune",
+  ];
+  const PROP_KEY_URI = [
+    'http://www.w3.org/2000/01/rdf-schema#label' => 'label',
+  ];
+
+  static array $all=[];
+  
+  static function get(string $id) { // retourne la ressource de la classe get_called_class() ayant cet $id 
+    $class = get_called_class();
+    if (isset($class::$all[$id]))
+      return $class::$all[$id];
+    elseif (preg_match('!^http://id.insee.fr/geo/(region|departement|commune)/(.*)$!', $id, $matches)) {
+      $type_insee = self::TYPES_INSEE[$matches[1]] ?? 'type inconnu';
+      return new $class([
+        '@id'=> $id, 
+        '@type'=> ["http://purl.org/dc/terms/$class"],
+        'http://www.w3.org/2000/01/rdf-schema#label' => [['@language'=> 'fr', '@value'=> "$type_insee $matches[2]"]],
+      ]);
+    }
+    else
+      throw new Exception("DEREF_ERROR on $id");
+  }
   
   function simplify(): string|array {
     if (isset($this->props['http://www.w3.org/ns/locn#geometry'])) {
@@ -543,6 +579,7 @@ class Location extends RdfClass {
           return ['bbox' => $bbox->value];
       }
     }
+    return parent::simplify();
     $simple = ['@id'=> $this->id, '@type'=> $this->types];
     foreach ($this->props as $pUri => $pvals) {
       foreach ($pvals as $pval)
@@ -550,6 +587,51 @@ class Location extends RdfClass {
     }
     return $simple;
   }
+};
+
+class Standard extends RdfClass {
+  const REGISTRE = [
+    'https://tools.ietf.org/html/rfc4287' => [
+      'en' => "The Atom Syndication Format",
+      'fr' => "Le format de syndication Atom",
+    ],
+    'http://www.opengis.net/def/crs/EPSG/0/4326' => [
+      '' => "WGS 84",
+      'en' => "World Geodetic System 1984",
+      'fr' => "Système géodésique mondial 1984",
+    ],
+    'http://www.opengis.net/def/crs/EPSG/0/4171' => [
+      '' => "RGF93 v1",
+      'fr' => "Système géodésique RGF93",
+    ],
+    'http://www.opengis.net/def/crs/EPSG/0/2154' => [
+      '' => "RGF93 v1 / Lambert-93",
+      'fr' => "Projection Lambert 93",
+    ],
+    'http://www.opengis.net/def/crs/EPSG/0/27572' => [
+      '' => "NTF (Paris) / Lambert zone II",
+      'fr' => "Projection Lambert II Étendue",
+    ],
+  ];
+  const PROP_KEY_URI = [
+    'http://www.w3.org/2000/01/rdf-schema#label' => 'label',
+  ];
+
+  static array $all=[];
+};
+
+class LicenseDocument extends RdfClass {
+  const REGISTRE = [
+    'https://spdx.org/licenses/etalab-2.0' => [
+      'en' => "Etalab Open License 2.0",
+      'fr' => "Licence ouverte Etalab 2.0",
+    ],
+  ];
+  const PROP_KEY_URI = [
+    'http://www.w3.org/2000/01/rdf-schema#label' => 'label',
+  ];
+
+  static array $all=[];
 };
 
 class Distribution extends RdfClass {
@@ -568,7 +650,7 @@ class Distribution extends RdfClass {
     'http://www.w3.org/ns/dcat#downloadURL' => 'downloadURL',
   ];
 
-  static array $all;
+  static array $all=[];
 };
 
 class MediaTypeOrExtent extends RdfClass {
@@ -576,7 +658,7 @@ class MediaTypeOrExtent extends RdfClass {
     'http://www.w3.org/2000/01/rdf-schema#label' => 'label',
   ];
 
-  static array $all;
+  static array $all=[];
 };
 
 class MediaType extends RdfClass {
@@ -590,7 +672,7 @@ class MediaType extends RdfClass {
   const PROP_KEY_URI = [
   ];
 
-  static array $all;
+  static array $all=[];
 };
 
 class PeriodOfTime extends RdfClass {
@@ -599,7 +681,7 @@ class PeriodOfTime extends RdfClass {
     'http://www.w3.org/ns/dcat#endDate' => 'endDate',
   ];
 
-  static array $all;
+  static array $all=[];
 };
 
 class Frequency extends RdfClass {
@@ -634,7 +716,7 @@ class Frequency extends RdfClass {
     'http://www.w3.org/2000/01/rdf-schema#label' => 'label',
   ];
 
-  static array $all;
+  static array $all=[];
 };
 
 class Kind extends RdfClass {
@@ -644,7 +726,7 @@ class Kind extends RdfClass {
     'http://www.w3.org/2006/vcard/ns#hasURL' => 'hasURL',
   ];
   
-  static array $all;
+  static array $all=[];
 };
 
 
@@ -697,7 +779,7 @@ function import(string $urlPrefix, bool $skip=false, int $lastPage=0, int $first
     $content = json_decode($content, true, 512, JSON_THROW_ON_ERROR);
     
     //echo "content of page $page = "; print_r($content);
-    fwrite(STDERR, "Info: nbelts de la page $page = ".count($content)."\n");
+    //fwrite(STDERR, "Info: nbelts de la page $page = ".count($content)."\n");
     
     foreach ($content as $no => $resource) {
       $types = implode(', ', $resource['@type']); 
@@ -721,14 +803,14 @@ function import(string $urlPrefix, bool $skip=false, int $lastPage=0, int $first
   return $errors;
 }
 
-$firstPage = 1; $lastPage = 0; // non définie
+$firstPage = 1; $lastPage = 0; // lecture de toutes les pages
 //$firstPage = 2; $lastPage = 2; // on se limite à la page 2 qui contient des fiches Géo-IDE
 //$firstPage = 1; $lastPage = 1; // on se limite à la page 1
 //$firstPage = 1; $lastPage = 2; // on se limite aux pages 1 + 2
 //$firstPage = 1002; $lastPage = 1002; // on se limite à la page 1002 de test
 
 switch ($argv[1]) {
-  case 'import': {
+  case 'import': { // effectue uniquement l'import 
     import($urlPrefix, true);
     break;
   }
@@ -743,12 +825,6 @@ switch ($argv[1]) {
     import($urlPrefix, true);
     //print_r(RdfClass::$pkeys);
     Catalog::show();
-    break;
-  }
-  case 'RightsStatements': {
-    import($urlPrefix, true);
-    print_r(RightsStatement::$all);
-    //Dataset::rectifAccessRights(); // correction des propriétés accessRights qui nécessite que tous les objets soient chargés 
     break;
   }
   case 'datasets': {
@@ -794,6 +870,11 @@ switch ($argv[1]) {
   case 'MediaTypeOrExtents': {
     import($urlPrefix, true, $lastPage, $firstPage);
     MediaTypeOrExtent::showIncludingBlankNodes();
+    break;
+  }
+  case 'LicenseDocument': {
+    import($urlPrefix, true, $lastPage, $firstPage);
+    LicenseDocument::showIncludingBlankNodes();
     break;
   }
   
