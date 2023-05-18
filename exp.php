@@ -25,7 +25,6 @@ doc: |
   'https://tools.ietf.org/html/rfc4287' correspond au format de syndication Atom,
   
   Prolongations éventuelles:
-   - il serait utile d'afficher des stats sur les erreurs détectées et corrigées
    - il erait utile de formaliser le contexte associé à la simplification et de s'assurer de son exactitude
    - l'affichage simplifié pourrait être un export DCAT valide en YAML-LD
    - il serait utile de réexporter le contenu importé pour bénéficier des corrections, y compris en le paginant
@@ -37,6 +36,7 @@ journal: |
   - ajout gestion des Location avec URI INSEE
   - transfert des registres associés aux classes dans le fichier registre.yaml
   - amélioration du choix de traitement en fonction des arguments du script
+  - affichage de stats sur les erreurs détectées et corrigées
  17/5/2023:
   - réécriture de Statement::rectifStatements()
   - réécriture de Dataset::concat()
@@ -236,18 +236,25 @@ abstract class RdfClass {
     'http://www.w3.org/2006/vcard/ns#Kind' => 'Kind',
   ];
   
+  static array $stats = [
+    "nbre de ressources lues"=> 0,
+  ]; // statistiques
+  static array $rectifStats = []; // [{type} => {nbre}] - nbre de rectifications effectuées par type
+  
   protected string $id; // le champ '@id' de la repr. JSON-LD, cad l'URI de la ressource ou l'id blank node
   protected array $types; // le champ '@type' de la repr. JSON-LD, cad la liste des URI des classes RDF de la ressource
   protected array $props=[]; // dict. des propriétés de la ressource de la forme [{propUri} => [PropVal]]
   
   static function add(array $resource): void { // ajout d'une ressource à la classe
-    if (!isset((get_called_class())::$all[$resource['@id']])) {
-      (get_called_class())::$all[$resource['@id']] = new (get_called_class())($resource);
+    $class = get_called_class();
+    if (!isset($class::$all[$resource['@id']])) {
+      $class::$all[$resource['@id']] = new $class($resource);
     }
     else {
-      (get_called_class())::$all[$resource['@id']]->concat($resource);
+      $class::$all[$resource['@id']]->concat($resource);
     }
-    (get_called_class())::$all[$resource['@id']]->rectification();
+    $class::$all[$resource['@id']]->rectification();
+    self::increment('stats', "nbre de ressources pour $class");
   }
 
   static function get(string $id) { // retourne la ressource de la classe get_called_class() ayant cet $id 
@@ -301,6 +308,10 @@ abstract class RdfClass {
     }
   }
   
+  static function increment(string $var, string $label): void { // incrément d'une des sous-variables de la variable $var
+    self::$$var[$label] = 1 + (self::$$var[$label] ?? 0);
+  }
+    
   // corrections d'erreurs ressource par ressource et pas celles qui nécessittent un accès à d'autres ressources
   function rectification(): void {
     foreach ($this->props as $pUri => &$pvals) {
@@ -312,15 +323,18 @@ abstract class RdfClass {
         if ((count($pvals)==2) && ($pvals[0]->keys == ['@id']) && ($pvals[1]->keys == ['@value'])) {
           $pvals = [$pvals[0]]; // si URI et chaine alors je ne conserve que l'URI
           //echo 'language rectifié = '; print_r($pvals);
+          self::increment('rectifStats', "rectification langue");
         }
         elseif ((count($pvals)==2) && ($pvals[0]->keys == ['@value']) && ($pvals[1]->keys == ['@id'])) {
           $pvals = [$pvals[1]]; // si URI et chaine alors je ne conserve que l'URI
           //echo 'language rectifié = '; print_r($pvals);
+          self::increment('rectifStats', "rectification langue");
         }
         elseif ((count($pvals)==1) && ($pvals[0]->keys == ['@value'])) { // si chaine encodée en Yaml avec URI alors URI
           if ($pvals[0]->value == "{'uri': 'http://publications.europa.eu/resource/authority/language/FRA'}") {
             $pvals = [new PropVal(['@id'=> 'http://publications.europa.eu/resource/authority/language/FRA'])];
             //echo 'language rectifié = '; print_r($pvals);
+            self::increment('rectifStats', "rectification langue");
           }
         }
         continue;
@@ -329,17 +343,13 @@ abstract class RdfClass {
       { // les chaines de caractères comme celles du titre sont dupliquées avec un élément avec langue et l'autre sans
         if ((count($pvals)==2) && ($pvals[0]->value == $pvals[1]->value)) {
           if ($pvals[0]->language && !$pvals[1]->language) {
-            //echo "pUri=$pUri\n";
-            //print_r($pvals); print_r($this);
             $pvals = [$pvals[0]];
-            //echo "rectification -> "; print_r($this->props[$pUri]);
+            self::increment('rectifStats', "duplication littéral avec et sans langue");
             continue;
           }
           elseif (!$pvals[0]->language && $pvals[1]->language) {
-            //echo "pUri=$pUri\n";
-            //print_r($pvals);
             $pvals = [$pvals[1]];
-            //echo "rectification -> "; print_r($this->props[$pUri]);
+            self::increment('rectifStats', "duplication littéral avec et sans langue");
             continue;
           }
         }
@@ -353,6 +363,7 @@ abstract class RdfClass {
             //print_r($pvals); print_r($this);
             $pvals = [$pvals[0]];
             //echo "rectification -> "; print_r($this->props[$pUri]);
+            self::increment('rectifStats', "dates dupliquées avec un élément dateTime et l'autre date");
             continue;
           }
           elseif (($pvals[0]->type == 'http://www.w3.org/2001/XMLSchema#dateTime')
@@ -361,6 +372,7 @@ abstract class RdfClass {
             //print_r($pvals);
             $pvals = [$pvals[1]];
             //echo "rectification -> "; print_r($this->props[$pUri]);
+            self::increment('rectifStats', "dates dupliquées avec un élément dateTime et l'autre date");
             continue;
           }
         }
@@ -373,6 +385,7 @@ abstract class RdfClass {
             if ($yaml = self::cleanYaml($pval->value)) {
               $rectifiedPvals = array_merge($rectifiedPvals, $yaml);
             }
+            self::increment('rectifStats', "propriété contenant une chaine encodée en Yaml");
           }
           else {
             $rectifiedPvals[] = $pval;
@@ -759,6 +772,7 @@ function import(string $urlPrefix, bool $skip=false, int $lastPage=0, int $first
     //fwrite(STDERR, "Info: nbelts de la page $page = ".count($content)."\n");
     
     foreach ($content as $no => $resource) {
+      RdfClass::increment('stats', "nbre de ressources lues");
       $types = implode(', ', $resource['@type']); 
       if ($className = (RdfClass::CLASS_URI_TO_PHP_NAME[$types] ?? null)) {
         $className::add($resource);
@@ -786,6 +800,13 @@ $firstPage = $argv[2] ?? 1; // Par défaut démarrage à la première page
 $lastPage = $argv[3] ?? 0;  // Par défaut fin à la dernière page définie dans l'import
 
 switch ($argv[1]) {
+  case 'rectifStats': {
+    Registre::import();
+    import($urlPrefix, true, $lastPage, $firstPage);
+    echo '$stats = '; print_r(RdfClass::$stats);
+    echo '$rectifStats = '; print_r(RdfClass::$rectifStats);
+    break;
+  }
   case 'registre': { // effectue uniquement l'import du registre et affiche ce qui a été importé 
     Registre::import();
     foreach (RdfClass::CLASS_URI_TO_PHP_NAME as $classUri => $className)

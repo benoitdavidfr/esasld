@@ -61,6 +61,7 @@ classes:
   http://purl.org/dc/terms/LinguisticSystem:
     definition: A system of signs, symbols, sounds, gestures, or rules used in communication.
     comment: Written, spoken, sign, and computer languages are linguistic systems.
+    subclassOf: []
     resources:
       - $id: http://publications.europa.eu/resource/authority/language/FRA
         label:

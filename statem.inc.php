@@ -78,6 +78,7 @@ class Statement extends RdfClass {
     foreach ($pvals as $pval) {
       switch ($pval->keys) {
         case ['@language','@value'] : {
+          self::increment('rectifStats', "propriété contenant un Littéral alors qu'elle exige une Resource");
           if ($pval->language == 'fr') {
             $md5 = md5($pval->value);
             if (!isset($arrayOfMLStrings[$md5]))
