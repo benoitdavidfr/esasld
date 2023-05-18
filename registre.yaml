@@ -24,8 +24,16 @@ $schema:
           description: description de la classe et de ses ressources
           type: object
           additionalProperties: false
+          required: [definition, subclassOf]
           properties:
-            definition: { description: 'définition de la classe', type: string }
+            definition: { description: 'définition officielle de la classe', type: string }
+            comment: { description: 'commentaire officiel sur la classe', type: string }
+            subclassOf:
+              description: liste des classes parentes définies par leur URI
+              type: array
+              items:
+                type: string
+                pattern: ^https?://
             resources:
               description: liste des resources de la classe
               type: array
@@ -50,8 +58,38 @@ $schema:
       type: 'null'
     
 classes:
+  http://purl.org/dc/terms/LinguisticSystem:
+    definition: A system of signs, symbols, sounds, gestures, or rules used in communication.
+    comment: Written, spoken, sign, and computer languages are linguistic systems.
+    resources:
+      - $id: http://publications.europa.eu/resource/authority/language/FRA
+        label:
+          fr: Français
+          en: French
+  
+  http://purl.org/dc/terms/RightsStatement:
+    definition: |
+      A statement about the intellectual property rights (IPR) held in or over a resource, a legal document giving official
+      permission to do something with a resource, or a statement about access rights.
+    subclassOf: []
+    resources:
+      - $id: http://inspire.ec.europa.eu/metadata-codelist/LimitationsOnPublicAccess/noLimitations
+        label:
+          fr: Pas de restriction d’accès public selon INSPIRE # libellé souvent utilisé
+          en: no limitations to public access # source registre Inspire
+
+  http://purl.org/dc/terms/LicenseDocument:
+    definition: A legal document giving official permission to do something with a resource.
+    subclassOf: [http://purl.org/dc/terms/RightsStatement]
+    resources:
+      - $id: https://spdx.org/licenses/etalab-2.0
+        label:
+          fr: Licence ouverte Etalab 2.0
+          en: Etalab Open License 2.0
+
   http://purl.org/dc/terms/Standard:
     definition: A reference point against which other things can be evaluated or compared.
+    subclassOf: []
     resources:
       - $id: https://tools.ietf.org/html/rfc4287
         label:
@@ -75,14 +113,9 @@ classes:
           fr: Projection Lambert II Étendue
           '': NTF (Paris) / Lambert zone II
 
-  http://purl.org/dc/terms/LicenseDocument:
-    resources:
-      - $id: https://spdx.org/licenses/etalab-2.0
-        label:
-          fr: Licence ouverte Etalab 2.0
-          en: Etalab Open License 2.0
-
   http://purl.org/dc/terms/MediaType:
+    definition: A file format or physical medium.
+    subclassOf: [http://purl.org/dc/terms/MediaTypeOrExtent]
     resources:
       - $id: https://www.iana.org/assignments/media-types/text/html
         label:
@@ -90,6 +123,8 @@ classes:
           en: HTML text
 
   http://purl.org/dc/terms/Frequency:
+    definition: A rate at which something recurs.
+    subclassOf: []
     resources:
       - $id: http://inspire.ec.europa.eu/metadata-codelist/MaintenanceFrequency/continual
         label:
@@ -115,12 +150,5 @@ classes:
         label:
           fr: Trimestriel
           en: Quarterly
-
-  http://purl.org/dc/terms/RightsStatement:
-    resources:
-      - $id: http://inspire.ec.europa.eu/metadata-codelist/LimitationsOnPublicAccess/noLimitations
-        label:
-          fr: Pas de restriction d’accès public selon INSPIRE # libellé souvent utilisé
-          en: no limitations to public access # source registre Inspire
 
 eof:

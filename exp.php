@@ -113,6 +113,7 @@ class PropVal {
     'provenance' => 'ProvenanceStatement',
     'format' => 'MediaTypeOrExtent',
     'mediaType' => 'MediaType',
+    'language' => 'LinguisticSystem',
     'accrualPeriodicity' => 'Frequency',
     'accessService' => 'DataService',
     'distribution' => 'Distribution',
@@ -230,6 +231,7 @@ abstract class RdfClass {
     'http://purl.org/dc/terms/MediaType' => 'MediaType',
     'http://purl.org/dc/terms/PeriodOfTime' => 'PeriodOfTime',
     'http://purl.org/dc/terms/Frequency' => 'Frequency',
+    'http://purl.org/dc/terms/LinguisticSystem' => 'LinguisticSystem',
     'http://xmlns.com/foaf/0.1/Organization' => 'Organization',
     'http://www.w3.org/2006/vcard/ns#Kind' => 'Kind',
   ];
@@ -679,6 +681,14 @@ class PeriodOfTime extends RdfClass {
 };
 
 class Frequency extends RdfClass {
+  const PROP_KEY_URI = [
+    'http://www.w3.org/2000/01/rdf-schema#label' => 'label',
+  ];
+
+  static array $all=[];
+};
+
+class LinguisticSystem extends RdfClass {
   const PROP_KEY_URI = [
     'http://www.w3.org/2000/01/rdf-schema#label' => 'label',
   ];
