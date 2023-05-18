@@ -715,10 +715,10 @@ function httpResponseCode(array $header) { return substr($header[0], 9, 3); }
 // importe l'export JSON-LD et construit les objets chacun dans leur classe
 // lorque le fichier est absent:
 //   si $skip est faux alors le site est interrogé
-//   sinon ($skip vrai) alors la page est sautée et comptée comme erreur
-// Si $lastPage est indiquée alors la lecture s'arrête à cette page,
-// sinon elle vaut 0 et la dernière page est lue dans une des pages.
-// Si $firstPage est fixée alors la lecture commence à cette page, sinon elle vaut 1.
+//   sinon ($skip vrai) alors la page est sautée et marquée comme erreur
+// Si $lastPage est indiquée et différente de 0 alors la lecture s'arrête à cette page,
+// sinon elle vaut 0 et le numéro de la dernière page est lu dans une des pages.
+// Si $firstPage est indiquée alors la lecture commence à cette page, sinon elle vaut 1.
 function import(string $urlPrefix, bool $skip=false, int $lastPage=0, int $firstPage=1): array {
   $errors = []; // erreur en array [{nopage} => {libellé}]
   for ($page = $firstPage; ($lastPage == 0) || ($page <= $lastPage); $page++) {

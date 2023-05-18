@@ -12,10 +12,10 @@ class Registre {
     } catch (ParseException $exception) {
       throw new Exception('Unable to parse the YAML file: '. $exception->getMessage());
     }
-    foreach ($registre['registre'] as $classUri => $resources) {
+    foreach ($registre['classes'] as $classUri => $classe) {
       if (!($className = RdfClass::CLASS_URI_TO_PHP_NAME[$classUri] ?? null))
         throw new Exception("Erreur, classe $classUri inconnue");
-      foreach ($resources as $resource) {
+      foreach ($classe['resources'] as $resource) {
         $r = [
           '@id'=> $resource['$id'],
           '@type'=> [$classUri],

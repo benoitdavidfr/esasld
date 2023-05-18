@@ -6,7 +6,7 @@ $schema:
   $id: https://georef.eu/exportESph/registre.schema.yaml
   $schema: http://json-schema.org/schema#
   type: object
-  required: [ title, abstract, $schema, registre ]
+  required: [ title, abstract, $schema, classes ]
   properties:
     title: { description: 'titre du document', type: string }
     abstract: { description: 'résumé du document', type: string }
@@ -15,100 +15,112 @@ $schema:
       oneOf:
         - $ref: http://json-schema.org/schema#
         - type: string
-    registre:
-      description: dictionnaire du contenu du registre indexé sur les URI des classes des ressources
+    classes:
+      description: contenu du registre structuré par classe comme dictionnaire indexé sur les URI de ces classes
       type: object
       additionalProperties: false
       patternProperties:
         '^https?://':
-          description: liste des resources de la classe
-          type: array
-          items:
-            description: Description de chaque ressource
-            type: object
-            required: [ $id, label ]
-            additionalProperties: false
-            properties:
-              $id:
-                description: URI de la ressource
-                type: string
-              label:
-                description: étiquettes définies par langue, '' pour langue non définie
+          description: description de la classe et de ses ressources
+          type: object
+          additionalProperties: false
+          properties:
+            definition: { description: 'définition de la classe', type: string }
+            resources:
+              description: liste des resources de la classe
+              type: array
+              items:
+                description: Description de chaque ressource
                 type: object
+                required: [ $id, label ]
                 additionalProperties: false
-                patternProperties:
-                  '^|..$':
+                properties:
+                  $id:
+                    description: URI de la ressource
                     type: string
+                  label:
+                    description: étiquettes définies par langue, '' pour langue non définie
+                    type: object
+                    additionalProperties: false
+                    patternProperties:
+                      '^|..$':
+                        type: string
     eof:
       description: propriété marquant la fin du fichier
       type: 'null'
     
-registre:
+classes:
   http://purl.org/dc/terms/Standard:
-    - $id: https://tools.ietf.org/html/rfc4287
-      label:
-        fr: Le format de syndication Atom
-        en: The Atom Syndication Format
-    - $id: http://www.opengis.net/def/crs/EPSG/0/4326
-      label:
-        fr: Système géodésique mondial 1984
-        en: World Geodetic System 1984
-        '': WGS 84
-    - $id: http://www.opengis.net/def/crs/EPSG/0/4171
-      label:
-        fr: Système géodésique RGF93
-        '': RGF93 v1
-    - $id: http://www.opengis.net/def/crs/EPSG/0/2154
-      label:
-        fr: Projection Lambert 93
-        '': RGF93 v1 / Lambert-93
-    - $id: http://www.opengis.net/def/crs/EPSG/0/27572
-      label:
-        fr: Projection Lambert II Étendue
-        '': NTF (Paris) / Lambert zone II
+    definition: A reference point against which other things can be evaluated or compared.
+    resources:
+      - $id: https://tools.ietf.org/html/rfc4287
+        label:
+          fr: Le format de syndication Atom
+          en: The Atom Syndication Format
+      - $id: http://www.opengis.net/def/crs/EPSG/0/4326
+        label:
+          fr: Système géodésique mondial 1984
+          en: World Geodetic System 1984
+          '': WGS 84
+      - $id: http://www.opengis.net/def/crs/EPSG/0/4171
+        label:
+          fr: Système géodésique RGF93
+          '': RGF93 v1
+      - $id: http://www.opengis.net/def/crs/EPSG/0/2154
+        label:
+          fr: Projection Lambert 93
+          '': RGF93 v1 / Lambert-93
+      - $id: http://www.opengis.net/def/crs/EPSG/0/27572
+        label:
+          fr: Projection Lambert II Étendue
+          '': NTF (Paris) / Lambert zone II
 
   http://purl.org/dc/terms/LicenseDocument:
-    - $id: https://spdx.org/licenses/etalab-2.0
-      label:
-        fr: Licence ouverte Etalab 2.0
-        en: Etalab Open License 2.0
+    resources:
+      - $id: https://spdx.org/licenses/etalab-2.0
+        label:
+          fr: Licence ouverte Etalab 2.0
+          en: Etalab Open License 2.0
 
   http://purl.org/dc/terms/MediaType:
-    - $id: https://www.iana.org/assignments/media-types/text/html
-      label:
-        fr: Texte HTML
-        en: HTML text
+    resources:
+      - $id: https://www.iana.org/assignments/media-types/text/html
+        label:
+          fr: Texte HTML
+          en: HTML text
 
   http://purl.org/dc/terms/Frequency:
-    - $id: http://inspire.ec.europa.eu/metadata-codelist/MaintenanceFrequency/continual
-      label:
-        fr: En continu
-        en: Continual
-    - $id: http://inspire.ec.europa.eu/metadata-codelist/MaintenanceFrequency/asNeeded
-      label:
-        fr: Comme requis
-        en: As needed
-    - $id: http://inspire.ec.europa.eu/metadata-codelist/MaintenanceFrequency/notPlanned
-      label:
-        fr: Pas prévu
-        en: Not planned
-    - $id: http://inspire.ec.europa.eu/metadata-codelist/MaintenanceFrequency/irregular
-      label:
-        fr: Irrégulier
-        en: Irregular
-    - $id: http://inspire.ec.europa.eu/metadata-codelist/MaintenanceFrequency/annually
-      label:
-        fr: Annuel
-        en: Annually
-    - $id: http://inspire.ec.europa.eu/metadata-codelist/MaintenanceFrequency/quarterly
-      label:
-        fr: Trimestriel
-        en: Quarterly
+    resources:
+      - $id: http://inspire.ec.europa.eu/metadata-codelist/MaintenanceFrequency/continual
+        label:
+          fr: En continu
+          en: Continual
+      - $id: http://inspire.ec.europa.eu/metadata-codelist/MaintenanceFrequency/asNeeded
+        label:
+          fr: Comme requis
+          en: As needed
+      - $id: http://inspire.ec.europa.eu/metadata-codelist/MaintenanceFrequency/notPlanned
+        label:
+          fr: Pas prévu
+          en: Not planned
+      - $id: http://inspire.ec.europa.eu/metadata-codelist/MaintenanceFrequency/irregular
+        label:
+          fr: Irrégulier
+          en: Irregular
+      - $id: http://inspire.ec.europa.eu/metadata-codelist/MaintenanceFrequency/annually
+        label:
+          fr: Annuel
+          en: Annually
+      - $id: http://inspire.ec.europa.eu/metadata-codelist/MaintenanceFrequency/quarterly
+        label:
+          fr: Trimestriel
+          en: Quarterly
 
   http://purl.org/dc/terms/RightsStatement:
-    - $id: http://inspire.ec.europa.eu/metadata-codelist/LimitationsOnPublicAccess/noLimitations
-      label:
-        fr: Pas de restriction d’accès public selon INSPIRE # libellé souvent utilisé
-        en: no limitations to public access # source registre Inspire
+    resources:
+      - $id: http://inspire.ec.europa.eu/metadata-codelist/LimitationsOnPublicAccess/noLimitations
+        label:
+          fr: Pas de restriction d’accès public selon INSPIRE # libellé souvent utilisé
+          en: no limitations to public access # source registre Inspire
 
 eof:
