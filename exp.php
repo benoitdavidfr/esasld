@@ -209,33 +209,32 @@ else { // affichage interactif de la version corrigée page par page en Yaml, JS
       <option",($outputFormat=='jsonld') ? " selected='selected'": ''," value='jsonld'>JSON-LD</option>
       <option",($outputFormat=='turtle') ? " selected='selected'": ''," value='turtle'>Turtle</option>
     </select>
-    <input type='submit' value='Submit' /></form></div>
+    <input type='submit' value='Submit' /></form><pre>
   ";
   
   //Registre::import();
   if ($errors = import($urlPrefix, true, $page, $page)) {
-    echo '<pre>errors = '; print_r($errors); echo "</pre>\n";
+    echo 'errors = '; print_r($errors); echo "</pre>\n";
   }
+  echo "---\n";
   switch ($outputFormat) {
     case 'yaml': {
-      echo "<pre>---\n",htmlspecialchars(Dataset::show(false)),'</pre>'; // affichage Yaml
+      echo htmlspecialchars(Dataset::show(false)); // affichage Yaml
       break;
     }
     case 'jsonld': {
-      echo "<pre>---\n",
-        htmlspecialchars(
-          json_encode(
+      echo htmlspecialchars(json_encode(
             RdfClass::exportAsJsonLd(),
             JSON_PRETTY_PRINT|JSON_UNESCAPED_LINE_TERMINATORS|JSON_UNESCAPED_SLASHES
-              |JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR)),
-        "</pre>\n";
+              |JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR));
       break;
     }
     case 'turtle': { // affichage Turtle
       $graph = new \EasyRdf\Graph('https://preprod.data.developpement-durable.gouv.fr/');
       $graph->parse(json_encode(RdfClass::exportAsJsonLd()), 'jsonld', 'https://preprod.data.developpement-durable.gouv.fr/');
-      echo "<pre>---\n",htmlspecialchars($graph->serialise('turtle')),"</pre>\n";
+      echo htmlspecialchars($graph->serialise('turtle'));
       break;
     }
   }
+  echo "</pre>\n";
 }

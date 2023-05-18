@@ -14,6 +14,7 @@ doc: |
 journal: |
  18/5/2023:
   - création par scission de exp.php
+  - rectification des mbox et hasEmail qui doivent être des ressources dont l'URI commence par mailto:
 */}
 use Symfony\Component\Yaml\Yaml;
 use Symfony\Component\Yaml\Exception\ParseException;
@@ -235,7 +236,7 @@ abstract class RdfClass {
       throw new Exception("DEREF_ERROR on $id");
   }
   
-  static function show(bool $echo=true): string { // affiche les ressources de la classe hors blank nodes 
+  static function show(bool $echo=true): string { // affiche en Yaml les ressources de la classe hors blank nodes 
     //echo "Appel de ",get_called_class(),"::show()\n";
     //var_dump((get_called_class())::$all); die();
     $result = '';
@@ -250,7 +251,7 @@ abstract class RdfClass {
     return $result;
   }
   
-  static function showIncludingBlankNodes(): void { // affiche tous les ressources de la classe y compris les blank nodes 
+  static function showIncludingBlankNodes(): void { // affiche en Yaml toutes les ressources de la classe y compris les blank nodes 
     foreach ((get_called_class())::$all as $id => $elt) {
       echo Yaml::dump([$id => $elt->simplify()], 7, 2, Yaml::DUMP_MULTI_LINE_LITERAL_BLOCK);
     }
@@ -268,7 +269,7 @@ abstract class RdfClass {
     }
   }
   
-  static function increment(string $var, string $label): void { // incrément d'une des sous-variables de la variable $var
+  static function increment(string $var, string $label): void { // incrémente une des sous-variables de la variable $var
     self::$$var[$label] = 1 + (self::$$var[$label] ?? 0);
   }
     
@@ -296,6 +297,24 @@ abstract class RdfClass {
             //echo 'language rectifié = '; print_r($pvals);
             self::increment('rectifStats', "rectification langue");
           }
+        }
+        continue;
+      }
+      
+      // rectification des mbox et hasEmail qui doivent être des ressources dont l'URI commence par mailto:
+      if (in_array($pUri, ['http://xmlns.com/foaf/0.1/mbox','http://www.w3.org/2006/vcard/ns#hasEmail'])) {
+        if (count($pvals) <> 1) {
+          var_dump($pvals);
+          throw new Exception("Erreur, 0 ou plusieurs valeurs pour foaf:mbox ou vcard:hasEmail");
+        }
+        //print_r($pvals);
+        if ($pvals[0]->keys == ['@value']) {
+          $pvals = [new PropVal(['@id'=> 'mailto:'.$pvals[0]->value])];
+          self::increment('rectifStats', "rectification mbox");
+        }
+        elseif (($pvals[0]->keys == ['@id']) && (substr($pvals[0]->id, 7, 0)<>'mailto:')) {
+          $pvals = [new PropVal(['@id'=> 'mailto:'.$pvals[0]->id])];
+          self::increment('rectifStats', "rectification mbox");
         }
         continue;
       }
