@@ -1,11 +1,14 @@
 title: registre utilisé par la lecture d'Ecosphères
 abstract: |
-  Ce registre définit des ressources identifiées par des URI présents dans l'export Ecosphères et mais dont la définition
-  est absente de cet export.
+  Ce registre définit:
+    1) les ontologies utilisées
+    2) des ressources identifiées par des URI présents dans l'export Ecosphères et mais dont la définition
+       est absente de cet export.
 $schema:
   $id: https://georef.eu/exportESph/registre.schema.yaml
   $schema: http://json-schema.org/schema#
   type: object
+  additionalProperties: false
   required: [ title, abstract, $schema, classes ]
   properties:
     title: { description: 'titre du document', type: string }
@@ -15,27 +18,51 @@ $schema:
       oneOf:
         - $ref: http://json-schema.org/schema#
         - type: string
-    classes:
-      description: contenu du registre structuré par classe comme dictionnaire indexé sur les URI de ces classes
+    namespaces:
+      description: dictionnaire des espaces de noms indexés sur leur prefixe utilisé dans ce document
       type: object
       additionalProperties: false
       patternProperties:
-        '^https?://':
-          description: description de la classe et de ses ressources
+        '^[a-z]+$':
+          description: URI de l'espace de noms
+          type: string
+          pattern: '^https?://'
+    ontologies:
+      description: dictionnaire des ontologies indexées sur le préfixe de leur espace de noms
+      type: object
+      additionalProperties: false
+      patternProperties:
+        '^[a-z]+$':
+          description: description de l'ontologie
+          type: object
+          properties:
+            title: { description: "titre de l'ontologie", type: string }
+            source:
+              description: liste de références aux documents de référence sur cette ontologie
+              type: array
+              items: {type: string}
+    classes:
+      description: dictionnaire des classes indexées sur leur URI compact
+      type: object
+      additionalProperties: false
+      patternProperties:
+        '^[a-z]+:[A-Za-z]+$':
+          description: description de la classe et de ses ressources bien connues
           type: object
           additionalProperties: false
           required: [definition, subclassOf]
           properties:
+            label: { description: "libellé s'il ne se déduit pas facilement de son URI", type: string}
             definition: { description: 'définition officielle de la classe', type: string }
             comment: { description: 'commentaire officiel sur la classe', type: string }
             subclassOf:
-              description: liste des classes parentes définies par leur URI
+              description: liste des classes parentes définies par leur URI compact
               type: array
               items:
                 type: string
-                pattern: ^https?://
+                pattern: '^[a-z]+:[A-Za-z]+$'
             resources:
-              description: liste des resources de la classe
+              description: liste de ressources bien connues de la classe et utiles
               type: array
               items:
                 description: Description de chaque ressource
@@ -53,12 +80,172 @@ $schema:
                     patternProperties:
                       '^|..$':
                         type: string
+    properties:
+      description: dictionnaire des propriétés indexées sur leur URI compact
+      type: object
+      additionalProperties: false
+      patternProperties:
+        '^[a-z]+:[a-zA-Z]+$':
+          oneOf:
+            - description: description de la propriété
+              type: object
+              additionalProperties: false
+              properties:
+                label: { description: "libellé s'il ne se déduit pas facilement de son URI", type: string}
+                definition: { description: 'définition officielle de la classe', type: string }
+                definition(fr): { description: "une traduction en français de la définition", type: string }
+                comment: { description: 'un commentaire', type: string }
+                subpropertyOf:
+                  description: liste des propriétés parentes
+                  type: array
+                  items:
+                    type: string
+                equivalentProperty:
+                  type: array
+                  items:
+                    type: string
+                range:
+                  description: cible de la propriété comme ensemble de classes définies par leur URI compact
+                  type: array
+                  items: {type: string}
+                domain:
+                  description: domaine de définition de la proprité comme ensemble de classes définies par leur URI compact
+                  type: array
+                  items: {type: string}
+                inverse:
+                  description: définition d'une proprité inverse
+                  type: string
+                  pattern: '^[a-z]+:[a-zA-Z]+$'
+            - description: propriété en cours de définition
+              type: 'null'
     eof:
       description: propriété marquant la fin du fichier
       type: 'null'
     
+namespaces:
+  adms: 'http://www.w3.org/ns/adms#'
+  dc: http://purl.org/dc/elements/1.1/
+  dcat: 'http://www.w3.org/ns/dcat#'
+  dct: http://purl.org/dc/terms/
+  dctype: http://purl.org/dc/dcmitype/
+  foaf: http://xmlns.com/foaf/0.1/
+  locn: http://www.w3.org/ns/locn#
+  odrl: http://www.w3.org/ns/odrl/2/
+  owl: http://www.w3.org/2002/07/owl#
+  prov: http://www.w3.org/ns/prov#
+  rdf: http://www.w3.org/1999/02/22-rdf-syntax-ns#
+  rdfs: http://www.w3.org/2000/01/rdf-schema#
+  skos: http://www.w3.org/2004/02/skos/core#
+  spdx: http://spdx.org/rdf/terms#
+  time: http://www.w3.org/2006/time#
+  vcard: http://www.w3.org/2006/vcard/ns#
+  xsd: http://www.w3.org/2001/XMLSchema#
+  
+ontologies:
+  dcat:
+    title: Data Catalog Vocabulary (DCAT) - Version 3
+    source:
+      - https://www.w3.org/TR/2023/WD-vocab-dcat-3-20230307/
+      - https://www.w3.org/TR/vocab-dcat-3/
+  skos:
+    title: SKOS Simple Knowledge Organization System
+    source:
+      - https://www.w3.org/2004/02/skos/
+  foaf:
+    title: FOAF Vocabulary Specification 
+    source:
+      - http://xmlns.com/foaf/0.1/
+  vcard:
+    title: vCard Ontology - for describing People and Organizations
+    source:
+      - https://www.w3.org/TR/vcard-rdf/
+  prov:
+    title: "PROV-O: The PROV Ontology"
+    source:
+      - https://www.w3.org/TR/prov-o/
+  odrl:
+    title: Open Digital Rights Language (ODRL)
+    source:
+      - https://www.w3.org/TR/odrl-model/
+  adms:
+    title: Asset Description Metadata Schema (ADMS), W3C Working Group Note
+    source:
+      - https://www.w3.org/TR/vocab-adms/
+  dct:
+    title: DCMI Metadata Terms
+    source:
+      - https://www.dublincore.org/specifications/dublin-core/dcmi-terms/
+      - https://www.dublincore.org/resources/userguide/publishing_metadata/
+
 classes:
-  http://purl.org/dc/terms/LinguisticSystem:
+  dcat:Catalog: # DCAT
+    definition: A curated collection of metadata about resources.
+    subclassOf: [dcat:Dataset]
+  dcat:Resource:
+    label: Cataloged Resource
+    definition: Resource published or curated by a single agent.
+    subclassOf: []
+  dcat:CatalogRecord:
+    definition: A record in a catalog, describing the registration of a single dcat:Resource.
+    subclassOf: []
+  dcat:Dataset:
+    definition: |
+      A collection of data, published or curated by a single agent, and available for access or download in one or more
+      representations.
+    subclassOf: [dcat:Resource]
+  dcat:DatasetSeries:
+    definition: A collection of datasets that are published separately, but share some characteristics that group them.
+    subclassOf: [dcat:Dataset]
+  dcat:Distribution:
+    definition: |
+      A specific representation of a dataset. A dataset might be available in multiple serializations that may differ
+      in various ways, including natural language, media-type or format, schematic organization, temporal and spatial
+      resolution, level of detail or profiles (which might specify any or all of the above). 
+    subclassOf: []
+  dcat:DataService:
+    definition: A collection of operations that provides access to one or more datasets or data processing functions.
+    subclassOf: [dcat:Resource, dctype:Service]
+  dcat:Relationship:
+    definition: An association class for attaching additional information to a relationship between DCAT Resources
+    subclassOf: [prov:EntityInfluence]
+    
+  skos:ConceptScheme: # SKOS
+    definition: A knowledge organization system (KOS) used to represent themes/categories of datasets in the catalog.
+    subclassOf: []
+  skos:Concept:
+    definition: A category or a theme used to describe datasets in the catalog.
+    subclassOf: []
+
+  foaf:Agent: # FOAF
+    definition: An agent (eg. person, group, software or physical artifact). 
+    subclassOf: []
+  foaf:Person:
+    definition: |
+      A person.
+      The foaf:Person class represents people. Something is a foaf:Person if it is a person. We don't nitpic about whether
+      they're alive, dead, real, or imaginary. The foaf:Person class is a sub-class of the foaf:Agent class, since all people
+      are considered 'agents' in FOAF. 
+    subclassOf: [foaf:Agent]
+  foaf:Organization:
+    definition: |
+      An organization.
+      The foaf:Organization class represents a kind of foaf:Agent corresponding to social instititutions such as companies,
+      societies etc.  
+    subclassOf: [foaf:Agent]
+
+  vcard:Kind: # VCARD
+    definition: The parent class for all objects
+    subclassOf: []
+  vcard:Email:
+    definition: |
+      To specify the electronic mail address for communication with the object the vCard represents.
+      Use the hasEmail object property.
+    subclassOf: []
+
+  dct:PeriodOfTime: # DCMI
+    definition: An interval of time that is named or defined by its start and end.
+    subclassOf: [dct:LocationPeriodOrJurisdiction]
+  dct:LinguisticSystem:
     definition: A system of signs, symbols, sounds, gestures, or rules used in communication.
     comment: Written, spoken, sign, and computer languages are linguistic systems.
     subclassOf: []
@@ -67,8 +254,7 @@ classes:
         label:
           fr: Français
           en: French
-  
-  http://purl.org/dc/terms/RightsStatement:
+  dct:RightsStatement:
     definition: |
       A statement about the intellectual property rights (IPR) held in or over a resource, a legal document giving official
       permission to do something with a resource, or a statement about access rights.
@@ -78,17 +264,15 @@ classes:
         label:
           fr: Pas de restriction d’accès public selon INSPIRE # libellé souvent utilisé
           en: no limitations to public access # source registre Inspire
-
-  http://purl.org/dc/terms/LicenseDocument:
+  dct:LicenseDocument:
     definition: A legal document giving official permission to do something with a resource.
-    subclassOf: [http://purl.org/dc/terms/RightsStatement]
+    subclassOf: [dct:RightsStatement]
     resources:
       - $id: https://spdx.org/licenses/etalab-2.0
         label:
           fr: Licence ouverte Etalab 2.0
           en: Etalab Open License 2.0
-
-  http://purl.org/dc/terms/Standard:
+  dct:Standard:
     definition: A reference point against which other things can be evaluated or compared.
     subclassOf: []
     resources:
@@ -113,17 +297,15 @@ classes:
         label:
           fr: Projection Lambert II Étendue
           '': NTF (Paris) / Lambert zone II
-
-  http://purl.org/dc/terms/MediaType:
+  dct:MediaType:
     definition: A file format or physical medium.
-    subclassOf: [http://purl.org/dc/terms/MediaTypeOrExtent]
+    subclassOf: [dct:MediaTypeOrExtent]
     resources:
       - $id: https://www.iana.org/assignments/media-types/text/html
         label:
           fr: Texte HTML
           en: HTML text
-
-  http://purl.org/dc/terms/Frequency:
+  dct:Frequency:
     definition: A rate at which something recurs.
     subclassOf: []
     resources:
@@ -151,5 +333,433 @@ classes:
         label:
           fr: Trimestriel
           en: Quarterly
+
+properties:
+  dcat:themeTaxonomy: # DCAT
+    definition: |
+      A knowledge organization system (KOS) used to classify the resources documented in the catalog (e.g., datasets and
+      services).
+    domain: [dcat:Catalog]
+    range: [rdfs:Resource]
+    comment: |
+      It is recommended that the taxonomy is organized in a skos:ConceptScheme, skos:Collection, owl:Ontology or similar,
+      which allows each member to be denoted by an IRI and published as Linked Data. 
+  dcat:theme:
+    definition: A main category of the resource. A resource can have multiple themes.
+    subpropertyOf:	[dcterms:subject]
+    comment: |
+      Usage note:	The set of themes used to categorize the resources are organized in a skos:ConceptScheme, skos:Collection, owl:Ontology or similar, describing all the categories and their relations in the catalog.
+  dcat:resource:
+    definition: A resource that is listed in the catalog.
+    subpropertyOf: [dcterms:hasPart]
+    domain: [dcat:Catalog]
+    range: [dcat:Resource]
+    inverse: dcat:inCatalog
+    comment: |
+      Usage note DCAT:	This is the most general predicate for membership of a catalog. Use of a more specific sub-property is recommended when available.
+  dcat:dataset:
+    definition: A dataset that is listed in the catalog.
+    subpropertyOf: [dcat:resource]
+    domain: [dcat:Catalog]
+    range:	[dcat:Dataset]
+  dcat:service:
+    definition: A service that is listed in the catalog.
+    subpropertyOf: [dcat:resource]
+    domain: [dcat:Catalog]
+    range:	[dcat:DataService]
+  dcat:catalog:
+    definition: A catalog that is listed in the catalog.
+    subpropertyOf: [dcat:resource]
+    domain: [dcat:Catalog]
+    range:	[dcat:Catalog]
+  dcat:record:
+    definition: |
+      A record describing the registration of a single resource (e.g., a dataset, a data service) that is part of the catalog.
+    subpropertyOf: [dcat:resource]
+    domain: [dcat:Catalog]
+    range:	[dcat:CatalogRecord]
+  dcat:contactPoint:
+    definition: Relevant contact information for the cataloged resource. Use of vCard is recommended.
+    range: [vcard:Kind]
+  dcat:qualifiedRelation:
+    definition: Link to a description of a relationship with another resource
+    subpropertyOf: [prov:qualifiedInfluence]
+    domain: [dcat:Resource]
+    range: [dcat:Relationship]
+  dcat:keyword:
+    definition: A keyword or tag describing the resource.
+    range: [rdfs:Literal]
+  dcat:landingPage:
+    definition: |
+      A Web page that can be navigated to in a Web browser to gain access to the catalog, a dataset, its distributions
+      and/or additional information.
+    subpropertyOf: [foaf:page]
+    range: [foaf:Document]
+    comment: |
+      Usage note: If the distribution(s) are accessible only through a landing page (i.e., direct download URLs are not known),
+        then the landing page link SHOULD be duplicated as dcat:accessURL on a distribution.
+  dcat:inSeries:
+    definition: A dataset series of which the dataset is part.
+    range: [dcat:DatasetSeries]
+    subpropertyOf: [dcterms:isPartOf]
+    inverse: dcat:seriesMember
+  dcat:distribution:
+    definition:	An available distribution of the dataset.
+    subpropertyOf: [dct:relation]
+    domain: [dcat:Dataset]
+    range: [dcat:Distribution]
+    inverse: dcat:isDistributionOf
+  dcat:previousVersion:
+    definition: The previous version of a resource in a lineage [PAV].
+    equivalentProperty: [pav:previousVersion]
+    subpropertyOf: [prov:wasRevisionOf]
+    inverse: dcat:nextVersion
+    comment: |
+      This property is meant to be used to specify a version chain, consisting of snapshots of a resource.
+      The notion of version used by this property is limited to versions resulting from revisions occurring to a resource as part of its life-cycle. One of the typical cases here is representing the history of the versions of a dataset that have been released over time.
+  dcat:hasVersion:
+    definition: This resource has a more specific, versioned resource [PAV].
+    equivalentProperty: [pav:hasVersion]
+    subpropertyOf: [dcterms:hasVersion, prov:generalizationOf]
+    comment: |
+      Usage note:
+        This property is intended for relating a non-versioned or abstract resource to several versioned resources, e.g., snapshots [PAV].
+
+        The notion of version used by this property is limited to versions resulting from revisions occurring to a resource as part of its life-cycle. Therefore, its semantics is more specific than its super-property dcterms:hasVersion, which makes use of a broader notion of version, including editions and adaptations.
+  dcat:hasCurrentVersion:
+    definition: This resource has a more specific, versioned resource with equivalent content [PAV].
+    equivalentProperty: [pav:hasCurrentVersion]
+    subpropertyOf: [pav:hasVersion]
+    comment: |
+      Usage note:
+        This property is intended for relating a non-versioned or abstract resource to a single snapshot that can be used as a permalink to indicate the current version of the content [PAV].
+
+        The notion of version used by this property is limited to versions resulting from revisions occurring to a resource as part of its life-cycle.
+  dcat:version:
+    definition: The version indicator (name or identifier) of a resource.
+    equivalentProperty: [pav:version]
+    range: [rdfs:Literal]
+    comment: |
+      Usage note: 	
+        DCAT does not prescribe how a version name / identifier should be specified, and refers for guidance to [DWBP]'s Best Practice 7: Provide a version indicator.
+  dcat:first:
+    definition: The first resource in an ordered collection or series of resources, to which the current resource belongs.
+    subpropertyOf: [xhv:first]
+    comment: |
+      Usage note: 	
+        In DCAT this property is used for resources belonging to a dcat:DatasetSeries.
+  dcat:last:
+    definition: The last resource in an ordered collection or series of resources, to which the current resource belongs.
+    subpropertyOf: [xhv:last]
+    comment: |
+      Usage note: 	
+        In DCAT this property is used for resources belonging to a dcat:DatasetSeries.
+  dcat:prev:
+    definition: The previous resource (before the current one) in an ordered collection or series of resources.
+    subpropertyOf: [xhv:prev]
+    inverse: dcat:next
+    comment: |
+      Usage note: 	
+        In DCAT this property is used for resources belonging to a dcat:DatasetSeries.
+        It is important to note that this property is different from dcat:previousVersion, as it does not denote a previous version of the same resource, but a distinct resource immediately preceding the current one in an ordered collection of resources.
+  
+  foaf:name: # FOAF
+  foaf:mbox:
+    label: personal mailbox
+    definition: |
+      A personal mailbox, ie. an Internet mailbox associated with exactly one owner, the first owner of this mailbox.
+      This is a 'static inverse functional property', in that there is (across time and change) at most one individual
+      that ever has any particular value for foaf:mbox.
+    domain: [foaf:Agent]
+    range: [rdfs:Resource]
+  foaf:phone:
+  foaf:homepage:
+    definition: A homepage of the catalog (a public Web document usually available in HTML).
+    range: [foaf:Document]
+    comment: |
+      note DCAT:
+        foaf:homepage is an inverse functional property (IFP) which means that it MUST be unique and precisely identify
+        the Web-page for the resource. This property indicates the canonical Web-page, which might be helpful in cases
+        where there is more than one Web-page about the resource.
+  foaf:workplaceHomepage:
+  foaf:page:
+  foaf:isPrimaryTopicOf:
+    definition: The dcat:Resource (dataset or service) described in the record. [DCAT]
+    inverse: foaf:isPrimaryTopicOf
+    comment: |
+      [DCAT] Usage note:	foaf:primaryTopic property is functional: each catalog record can have at most one primary topic,
+        i.e., describes one dataset or service.
+  
+  vcard:hasEmail: # VCARD
+    definition: To specify the electronic mail address for communication with the object
+    range: [vcard:Email]
+  vcard:hasURL:
+    definition: To specify a uniform resource locator associated with the object
+  
+  prov:qualifiedAttribution: # PROV
+    definition: Link to an Agent having some form of responsibility for the resource
+    subpropertyOf: [prov:qualifiedInfluence]
+    domain: [prov:Entity]
+    range: [prov:Attribution]
+    comment: |
+      Usage note: Used to link to an Agent where the nature of the relationship is known but does not match one of the standard [DCTERMS] properties (dcterms:creator, dcterms:publisher). Use dcat:hadRole on the prov:Attribution to capture the responsibility of the Agent with respect to the Resource. See 15.1 Relationships between datasets and agents for usage examples.
+  prov:wasGeneratedBy:
+    inverse: prov:generated
+  
+  odrl:hasPolicy: # ODRL
+    definition: An ODRL conformant policy expressing the rights associated with the resource.
+    range: [odrl:Policy]
+    comment: |
+      Usage note: Information about rights expressed as an ODRL policy [ODRL-MODEL] using the ODRL vocabulary [ODRL-VOCAB] MAY be provided for the resource.
+  
+  adms:versionNotes: # ADMS
+    definition: A description of changes between this version and the previous version of the resource [VOCAB-ADMS].
+    range:  [rdfs:Literal]
+    comment: |
+      Usage note: 	
+        In case of backward compatibility issues with the previous version of the resource, a textual description of them SHOULD be specified by using this property.
+  adms:status:
+    definition: The status of the resource in the context of a particular workflow process [VOCAB-ADMS].
+    range: [skos:Concept]
+    comment: |
+      Usage note:
+        DCAT does not prescribe the use of any specific set of life-cycle statuses, but refers to existing standards and community practices fit for the relevant application scenario.
+  
+  dct:title: # MD DCMI de base: titres, id, type, résumé, ...
+    definition: A name given to the resource.
+    range: [rdfs:Literal]
+  dct:alternative:
+    definition: An alternative name for the resource.
+    subpropertyOf: [dct:title]
+  dct:identifier:
+    definition: An unambiguous reference to the resource within a given context.
+    range: [rdfs:Literal]
+  dct:type:
+    definition: The nature or genre of the resource.
+    comment: |
+      Recommended practice is to use a controlled vocabulary such as the DCMI Type Vocabulary [DCMI-TYPE].
+      To describe the file format, physical medium, or dimensions of the resource, use the property Format.
+  dct:description:
+    definition: An account of the resource.
+    definition(fr): Un compte rendu de la ressource. [GoogleTranslate]
+    comment: |
+      Description may include but is not limited to: an abstract, a table of contents, a graphical representation,
+      or a free-text account of the resource.
+  dct:abstract:
+    definition: A summary of the resource.
+    subpropertyOf: [dct:description]
+  dct:tableOfContents:
+    definition: A list of subunits of the resource.
+    subpropertyOf: [dct:description]
+  dct:language:
+    definition: A language of the resource.
+    comment: |
+      Recommended practice is to use either a non-literal value representing a language from a controlled vocabulary such as
+      ISO 639-2 or ISO 639-3, or a literal value consisting of an IETF Best Current Practice 47 [IETF-BCP47] language tag.
+    range: [dct:LinguisticSystem]
+  dct:subject:
+    definition: A topic of the resource.
+    comment: |
+      Recommended practice is to refer to the subject with a URI. If this is not possible or feasible, a literal value
+      that identifies the subject may be provided. Both should preferably refer to a subject in a controlled vocabulary.
+  
+  dct:contributor: # acteurs participants
+    definition: An entity responsible for making contributions to the resource.
+    comment: The guidelines for using names of persons or organizations as creators apply to contributors.
+    range: [dct:Agent]
+  dct:creator:
+    definition: An entity responsible for making the resource.
+    comment: |
+      Recommended practice is to identify the creator with a URI. If this is not possible or feasible, a literal value
+      that identifies the creator may be provided.
+    subpropertyOf: [dct:contributor]
+    range: [dct:Agent]
+  dct:publisher:
+    definition: An entity responsible for making the resource available.
+    range: [dct:Agent]
+  dct:rightsHolder:
+    definition: A person or organization owning or managing rights over the resource.
+    comment: |
+      Recommended practice is to refer to the rights holder with a URI. If this is not possible or feasible, a literal value
+      that identifies the rights holder may be provided.
+    range: [dct:Agent]
+  dct:audience:
+  dct:mediator:
+    definition: An entity that mediates access to the resource.
+    comment: In an educational context, a mediator might be a parent, teacher, teaching assistant, or care-giver.
+    subpropertyOf: [dct:audience]
+    range: [dct:AgentClass]
+
+  dct:rights: # droits associés
+    definition: Information about rights held in and over the resource.
+    comment: |
+      Typically, rights information includes a statement about various property rights associated with the resource,
+      including intellectual property rights. Recommended practice is to refer to a rights statement with a URI.
+      If this is not possible or feasible, a literal value (name, label, or short text) may be provided.
+    range: [dct:RightsStatement]
+  dct:accessRights:
+    definition: Information about who access the resource or an indication of its security status.
+    comment: |
+      Access Rights may include information regarding access or restrictions based on privacy, security, or other policies.
+    subpropertyOf: [dct:rights]
+    range: [dct:RightsStatement]
+  dct:license:
+    definition: A legal document giving official permission to do something with the resource.
+    comment: |
+      Recommended practice is to identify the license document with a URI. If this is not possible or feasible, a literal
+      value that identifies the license may be provided.
+    range: [dct:LicenseDocument]
+    subpropertyOf: [dct:rights]
+
+  dct:date: # dates
+    definition: A point or period of time associated with an event in the lifecycle of the resource.
+    comment: |
+      Date may be used to express temporal information at any level of granularity. Recommended practice is to express the
+      date, date/time, or period of time according to ISO 8601-1 [ISO 8601-1] or a published profile of the ISO standard,
+      such as the W3C Note on Date and Time Formats [W3CDTF] or the Extended Date/Time Format Specification [EDTF].
+      If the full date is unknown, month and year (YYYY-MM) or just year (YYYY) may be used. Date ranges may be specified
+      using ISO 8601 period of time specification in which start and end dates are separated by a '/' (slash) character.
+      Either the start or end date may be missing.
+    range: [rdfs:Literal]
+  dct:issued:
+    definition: Date of formal issuance of the resource.
+    comment: |
+      Recommended practice is to describe the date, date/time, or period of time as recommended for the property Date,
+      of which this is a subproperty.
+    subpropertyOf: [dct:date]
+  dct:created:
+    definition: Date of creation of the resource.
+    comment: |
+      Recommended practice is to describe the date, date/time, or period of time as recommended for the property Date,
+      of which this is a subproperty.
+    subpropertyOf: [dct:date]
+  dct:available:
+    definition: Date that the resource became or will become available.
+    comment: |
+      Recommended practice is to describe the date, date/time, or period of time as recommended for the property Date,
+      of which this is a subproperty.
+    subpropertyOf: [dct:date]
+  dct:valid:
+    definition: Date (often a range) of validity of a resource.
+    comment: |
+      Recommended practice is to describe the date, date/time, or period of time as recommended for the property Date,
+      of which this is a subproperty.
+    subpropertyOf: [dct:date]
+  dct:modified:
+    definition: Date on which the resource was changed.
+    comment: |
+      Recommended practice is to describe the date, date/time, or period of time as recommended for the property Date,
+      of which this is a subproperty.
+    subpropertyOf: [dct:date]
+  dct:dateAccepted:
+    definition: Date of acceptance of the resource.
+    comment: |
+      Recommended practice is to describe the date, date/time, or period of time as recommended for the property Date,
+      of which this is a subproperty. Examples of resources to which a date of acceptance may be relevant are a thesis
+      (accepted by a university department) or an article (accepted by a journal).
+    subpropertyOf: [dct:date]
+  dct:dateCopyrighted:
+    definition: Date of copyright of the resource.
+    comment: |
+      Recommended practice is to describe the date, date/time, or period of time as recommended for the property Date,
+      of which this is a subproperty.
+    subpropertyOf: [dct:date]
+  dct:dateSubmitted:
+    definition: Date on which the resource was changed.
+    comment: |
+      Recommended practice is to describe the date, date/time, or period of time as recommended for the property Date,
+      of which this is a subproperty.
+    subpropertyOf: [dct:date]
+
+  dct:coverage: # couverture
+    definition: |
+      The spatial or temporal topic of the resource, spatial applicability of the resource, or jurisdiction
+      under which the resource is relevant.
+    comment: |
+      Spatial topic and spatial applicability may be a named place or a location specified by its geographic coordinates.
+      Temporal topic may be a named period, date, or date range. A jurisdiction may be a named administrative entity
+      or a geographic place to which the resource applies. Recommended practice is to use a controlled vocabulary
+      such as the Getty Thesaurus of Geographic Names [TGN]. Where appropriate, named places or time periods may be used
+      in preference to numeric identifiers such as sets of coordinates or date ranges. Because coverage is so broadly defined,
+      it is preferable to use the more specific subproperties Temporal Coverage and Spatial Coverage.
+    range: [dct:Location, dct:Period, dct:Jurisdiction]
+  dct:temporal:
+    label: Temporal Coverage
+    definition: Temporal characteristics of the resource.
+    subpropertyOf: [dct:coverage]
+    range: [dct:PeriodOfTime]
+  dct:spatial:
+    label: Spatial Coverage
+    definition: Spatial characteristics of the resource.
+    subpropertyOf: [dct:coverage]
+    range: [dct:Location]
+ 
+  dct:format: # format, conformité
+    definition: The file format, physical medium, or dimensions of the resource.
+    comment: |
+      Recommended practice is to use a controlled vocabulary where available. For example, for file formats one could use
+      the list of Internet Media Types [MIME]. Examples of dimensions include size and duration.
+    range: [dct:MediaType, dct:Extent ]
+  dct:medium:
+    definition: The material or physical carrier of the resource.
+    range: [dct:PhysicalMedium]
+    subpropertyOf: [dct:format]
+  dct:extent:
+    definition: The size or duration of the resource.
+    comment: Recommended practice is to specify the file size in megabytes and duration in ISO 8601 format.
+  dct:conformsTo:
+    definition: An established standard to which the described resource conforms.
+    range: [dct:Standard]
+    subpropertyOf: [dct:relation]
+
+  dct:relation: # relations entre ressources
+    definition: A related resource.
+    comment: |
+      Recommended practice is to identify the related resource by means of a URI.
+      If this is not possible or feasible, a string conforming to a formal identification system may be provided.
+  dct:source:
+  dct:hasPart:
+    definition: A related resource that is included either physically or logically in the described resource.
+    comment: This property is intended to be used with non-literal values. This property is an inverse property of Is Part Of.
+    subpropertyOf: [dct:relation]
+    inverse: dct:isPartOf
+  dct:isReferencedBy:
+    inverse: dct:references
+  dct:isRequiredBy:
+  dct:replaces:
+    inverse: dct:isReplacedBy
+  dct:requires:
+  dct:hasFormat:
+    definition: A related resource that is substantially the same as the pre-existing described resource, but in another format.
+    comment: |
+      This property is intended to be used with non-literal values. This property is an inverse property of Is Format Of.
+    subpropertyOf: [dct:relation]
+  dct:isFormatOf:
+  dct:references:
+  dct:hasVersion:
+    definition: A related resource that is a version, edition, or adaptation of the described resource.
+    inverse: dct:isVersionOf
+    comment: |
+      Changes in version imply substantive changes in content rather than differences in format. This property is intended
+      to be used with non-literal values. This property is an inverse property of Is Version Of.
+
+  dct:provenance: # provenance
+    definition: |
+      A statement of any changes in ownership and custody of the resource since its creation that are significant
+      for its authenticity, integrity, and interpretation.
+    comment: The statement may include a description of any changes successive custodians made to the resource.
+    range: [dct:ProvenanceStatement]
+
+  dct:accrualMethod: # accrual
+  dct:accrualPeriodicity:
+    definition: The frequency at which a dataset is published. [DCAT]
+    range: [dcterms:Frequency]
+    comment: |
+      Usage note: The value of dcterms:accrualPeriodicity gives the rate at which the dataset-as-a-whole is updated. This may be complemented by dcat:temporalResolution to give the time between collected data points in a time series.
+  dct:accrualPolicy:
+
+  dct:educationLevel: # divers
+  dct:bibliographicCitation:
+  dct:instructionalMethod:
 
 eof:

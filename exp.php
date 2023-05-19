@@ -58,6 +58,7 @@ require_once __DIR__.'/registre.inc.php';
 
 use Symfony\Component\Yaml\Yaml;
 use Symfony\Component\Yaml\Exception\ParseException;
+use ML\JsonLD\JsonLD;
 
 ini_set('memory_limit', '1G');
 
@@ -169,6 +170,8 @@ if (php_sapi_name()=='cli') { // traitement CLI en fonction de l'action demandé
     }
     case 'registre': { // effectue uniquement l'import du registre et affiche ce qui a été importé 
       Registre::import();
+      Registre::show();
+      echo "\nRessources prédéfinies:\n";
       foreach (RdfClass::CLASS_URI_TO_PHP_NAME as $classUri => $className)
         $className::show();
       break;
@@ -213,20 +216,24 @@ if (php_sapi_name()=='cli') { // traitement CLI en fonction de l'action demandé
   }
 }
 else { // affichage interactif de la version corrigée page par page en Yaml, JSON-LD ou Turtle
-  echo "<html><head><title>exp</title></head><body>\n";
+  echo "";
   $page = $_GET['page'] ?? 1;
   $outputFormat = $_GET['outputFormat'] ?? 'yaml';
-  echo "<form>
-    <a href='?page=",$page-1,isset($_GET['outputFormat']) ? "&outputFormat=$_GET[outputFormat]" : '',"'>&lt;</a>
-    Page $page
-    <a href='?page=",$page+1,isset($_GET['outputFormat']) ? "&outputFormat=$_GET[outputFormat]" : '',"'>&gt;</a>
-    <input type='hidden' name='page' value='$page' />
-    <select name='outputFormat' id='outputFormat'>
-      <option",($outputFormat=='yaml') ? " selected='selected'": ''," value='yaml'>Yaml</option>
-      <option",($outputFormat=='jsonld') ? " selected='selected'": ''," value='jsonld'>JSON-LD</option>
-      <option",($outputFormat=='turtle') ? " selected='selected'": ''," value='turtle'>Turtle</option>
-    </select>
-    <input type='submit' value='Submit' /></form><pre>\n";
+  { // formulaire 
+    echo "<html><head><title>exp</title></head><body>
+      <form>
+      <a href='?page=",$page-1,isset($_GET['outputFormat']) ? "&outputFormat=$_GET[outputFormat]" : '',"'>&lt;</a>
+      Page $page
+      <a href='?page=",$page+1,isset($_GET['outputFormat']) ? "&outputFormat=$_GET[outputFormat]" : '',"'>&gt;</a>
+      <input type='hidden' name='page' value='$page' />
+      <select name='outputFormat' id='outputFormat'>
+        <option",($outputFormat=='yaml') ? " selected='selected'": ''," value='yaml'>Yaml</option>
+        <option",($outputFormat=='jsonld') ? " selected='selected'": ''," value='jsonld'>JSON-LD</option>
+        <option",($outputFormat=='jsonldc') ? " selected='selected'": ''," value='jsonldc'>JSON-LD compacté</option>
+        <option",($outputFormat=='turtle') ? " selected='selected'": ''," value='turtle'>Turtle</option>
+      </select>
+      <input type='submit' value='Submit' /></form><pre>\n";
+  }
   
   Registre::import();
   if ($errors = import($urlPrefix, true, $page, $page)) {
@@ -236,7 +243,7 @@ else { // affichage interactif de la version corrigée page par page en Yaml, JS
   define('JSON_OPTIONS',
           JSON_PRETTY_PRINT|JSON_UNESCAPED_LINE_TERMINATORS|JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR);
   switch ($outputFormat) {
-    case 'yaml': { // affiche les datasets en Yaml 
+    case 'yaml': { // affichage simplifié des datasets en Yaml 
       $output = Dataset::show(false);
       if (StdErr::$messages) {
         echo 'StdErr::$messages = '; print_r(StdErr::$messages);
@@ -249,11 +256,22 @@ else { // affichage interactif de la version corrigée page par page en Yaml, JS
       echo htmlspecialchars(json_encode(RdfClass::exportAsJsonLd(), JSON_OPTIONS));
       break;
     }
-    case 'turtle': { // affiche le Turtle
+    case 'jsonldc': { // affiche le JSON-LD compacté avec JsonLD
+      if (!is_dir('tmp')) mkdir('tmp');
+      file_put_contents('tmp/document.jsonld', json_encode(RdfClass::exportAsJsonLd(), JSON_OPTIONS));
+      file_put_contents('tmp/context.jsonld', json_encode(RdfClass::jsonLdContext(), JSON_OPTIONS));
+      $compacted = JsonLD::compact('tmp/document.jsonld', 'tmp/context.jsonld');
+      echo htmlspecialchars(json_encode($compacted, JSON_OPTIONS));
+      break;
+    }
+    case 'turtle': { // traduction en Turtle avec EasyRdf
       $graph = new \EasyRdf\Graph('https://preprod.data.developpement-durable.gouv.fr/');
       $graph->parse(json_encode(RdfClass::exportAsJsonLd()), 'jsonld', 'https://preprod.data.developpement-durable.gouv.fr/');
       echo htmlspecialchars($graph->serialise('turtle'));
       break;
+    }
+    default: {
+      throw new Exception("Format $outputFormat inconnu");
     }
   }
   die("</pre>\n");
