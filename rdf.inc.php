@@ -21,10 +21,6 @@ journal: |
 use Symfony\Component\Yaml\Yaml;
 use Symfony\Component\Yaml\Exception\ParseException;
 
-class Ontologies {
-  
-};
-
 {/* Classe dont chaque objet correspond à une valeur RDF d'une propriété RDF
 ** En JSON-LD une PropVal est structurée sous la forme [{key} => {val}]
 **  - {key} contient une des valeurs
@@ -282,6 +278,17 @@ abstract class RdfClass {
     
   // corrections d'erreurs ressource par ressource et pas celles qui nécessittent un accès à d'autres ressources
   function rectification(): void {
+    // remplacer les URI erronés de propriétés
+    foreach ([
+        'http://purl.org/dc/terms/rights_holder' => 'http://purl.org/dc/terms/rightsHolder',
+        'http://www.w3.org/ns/dcat#publisher' => 'http://purl.org/dc/terms/publisher',
+      ] as $bad => $valid) {
+        if (isset($this->props[$bad])) {
+          $this->props[$valid] = $this->props[$bad];
+          unset($this->props[$bad]);
+        }
+    }
+      
     foreach ($this->props as $pUri => &$pvals) {
     
       // Dans la propriété language l'URI est souvent dupliqué avec une chaine encodée en Yaml
@@ -477,7 +484,7 @@ abstract class RdfClass {
   static function exportAsJsonLd(): array { // extraction du contenu en JSON-LD comme array Php
     $jsonld = [];
     foreach (self::CLASS_URI_TO_PHP_NAME as $className) {
-      foreach ($className::$all as $resource)
+      foreach ($className::$all as $id => $resource)
         $jsonld[] = $resource->asJsonLd();
     }
     return $jsonld;
@@ -495,45 +502,6 @@ abstract class RdfClass {
       }
     }
     return $jsonld;
-  }
-  
-  static function jsonLdContext(): array { // contexte JSON-LD de exportAsJsonLd() comme array Php
-    return [
-      'dcat' => 'http://www.w3.org/ns/dcat#',
-      'dct' => 'http://purl.org/dc/terms/',
-      'foaf' => 'http://xmlns.com/foaf/0.1/homepage',
-      'Catalog' => 'dcat:Catalog',
-      'title' => 'dct:title',
-      'homepage' => [
-        '@id' => 'http://xmlns.com/foaf/0.1/homepage',
-        '@type' => '@id',
-      ],
-      'dataset' => 'http://www.w3.org/ns/dcat#dataset',
-      '@language' => 'fr',
-    ];
-    /* Exemple:
-      {
-        "name": "http://schema.org/name",
-        ↑ This means that 'name' is shorthand for 'http://schema.org/name'
-        "image": {
-          "@id": "http://schema.org/image",
-          ↑ This means that 'image' is shorthand for 'http://schema.org/image'
-          "@type": "@id"
-          ↑ This means that a string value associated with 'image'
-            should be interpreted as an identifier that is an IRI
-        },
-      }
-      {
-        "@context": {
-          "name": "http://example.org/name",
-          "occupation": "http://example.org/occupation",
-          ...
-          "@language": "ja"
-        },
-        "name": "花澄",
-        "occupation": "科学者"
-      }
-    */
   }
 };
 

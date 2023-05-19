@@ -108,6 +108,10 @@ $schema:
                   description: cible de la propriété comme ensemble de classes définies par leur URI compact
                   type: array
                   items: {type: string}
+                datatype:
+                  description: liste de types de données attendus
+                  type: array
+                  items: {type: string}
                 domain:
                   description: domaine de définition de la proprité comme ensemble de classes définies par leur URI compact
                   type: array
@@ -142,6 +146,14 @@ namespaces:
   xsd: http://www.w3.org/2001/XMLSchema#
   
 ontologies:
+  rdf:
+    title: RDF Ontology
+    source:
+      - https://www.w3.org/TR/rdf11-concepts/#vocabularies
+  rdfs:
+    title: RDF Schema
+    source:
+      - https://www.w3.org/TR/rdf-schema/
   dcat:
     title: Data Catalog Vocabulary (DCAT) - Version 3
     source:
@@ -178,6 +190,15 @@ ontologies:
       - https://www.dublincore.org/resources/userguide/publishing_metadata/
 
 classes:
+  rdfs:Resource: # RDF/RDFS
+    definition: |
+      All things described by RDF are called resources, and are instances of the class rdfs:Resource.
+      This is the class of everything.
+    subclassOf: []
+  rdfs:Literal:
+    definition: literal values such as strings and integers.
+    subclassOf: []
+    
   dcat:Catalog: # DCAT
     definition: A curated collection of metadata about resources.
     subclassOf: [dcat:Dataset]
@@ -196,15 +217,16 @@ classes:
   dcat:DatasetSeries:
     definition: A collection of datasets that are published separately, but share some characteristics that group them.
     subclassOf: [dcat:Dataset]
+  dcat:DataService:
+    definition: A collection of operations that provides access to one or more datasets or data processing functions.
+    subclassOf: [dcat:Resource, dctype:Service]
   dcat:Distribution:
     definition: |
       A specific representation of a dataset. A dataset might be available in multiple serializations that may differ
       in various ways, including natural language, media-type or format, schematic organization, temporal and spatial
       resolution, level of detail or profiles (which might specify any or all of the above). 
     subclassOf: []
-  dcat:DataService:
-    definition: A collection of operations that provides access to one or more datasets or data processing functions.
-    subclassOf: [dcat:Resource, dctype:Service]
+  
   dcat:Relationship:
     definition: An association class for attaching additional information to a relationship between DCAT Resources
     subclassOf: [prov:EntityInfluence]
@@ -253,7 +275,7 @@ classes:
       - $id: http://publications.europa.eu/resource/authority/language/FRA
         label:
           fr: Français
-          en: French
+          #en: French
   dct:RightsStatement:
     definition: |
       A statement about the intellectual property rights (IPR) held in or over a resource, a legal document giving official
@@ -271,7 +293,7 @@ classes:
       - $id: https://spdx.org/licenses/etalab-2.0
         label:
           fr: Licence ouverte Etalab 2.0
-          en: Etalab Open License 2.0
+          #en: Etalab Open License 2.0
   dct:Standard:
     definition: A reference point against which other things can be evaluated or compared.
     subclassOf: []
@@ -279,24 +301,27 @@ classes:
       - $id: https://tools.ietf.org/html/rfc4287
         label:
           fr: Le format de syndication Atom
-          en: The Atom Syndication Format
+          #en: The Atom Syndication Format
       - $id: http://www.opengis.net/def/crs/EPSG/0/4326
         label:
           fr: Système géodésique mondial 1984
-          en: World Geodetic System 1984
-          '': WGS 84
+          #en: World Geodetic System 1984
+          #'': WGS 84
       - $id: http://www.opengis.net/def/crs/EPSG/0/4171
         label:
           fr: Système géodésique RGF93
-          '': RGF93 v1
+          #'': RGF93 v1
       - $id: http://www.opengis.net/def/crs/EPSG/0/2154
         label:
           fr: Projection Lambert 93
-          '': RGF93 v1 / Lambert-93
+          #'': RGF93 v1 / Lambert-93
       - $id: http://www.opengis.net/def/crs/EPSG/0/27572
         label:
           fr: Projection Lambert II Étendue
-          '': NTF (Paris) / Lambert zone II
+          #'': NTF (Paris) / Lambert zone II
+  dct:MediaTypeOrExtent:
+    definition: A media type or extent.
+    subclassOf: []
   dct:MediaType:
     definition: A file format or physical medium.
     subclassOf: [dct:MediaTypeOrExtent]
@@ -305,6 +330,9 @@ classes:
         label:
           fr: Texte HTML
           en: HTML text
+  dct:SizeOrDuration:
+    definition: A dimension or extent, or a time taken to play or execute.
+    subclassOf: [dct:MediaTypeOrExtent]
   dct:Frequency:
     definition: A rate at which something recurs.
     subclassOf: []
@@ -335,6 +363,17 @@ classes:
           en: Quarterly
 
 properties:
+  rdfs:label: # RDF/RDFS
+    definition: provides a human-readable version of a resource's name.
+    subpropertyOf: []
+    range: [rdfs:Literal]
+    domain: [rdfs:label]
+  rdfs:comment:
+    definition: provides a human-readable description of a resource.
+    subpropertyOf: []
+    range: [rdfs:Literal]
+    domain: [rdfs:label]
+
   dcat:themeTaxonomy: # DCAT
     definition: |
       A knowledge organization system (KOS) used to classify the resources documented in the catalog (e.g., datasets and
@@ -346,9 +385,10 @@ properties:
       which allows each member to be denoted by an IRI and published as Linked Data. 
   dcat:theme:
     definition: A main category of the resource. A resource can have multiple themes.
-    subpropertyOf:	[dcterms:subject]
+    subpropertyOf: [dcterms:subject]
+    range: [rdfs:Resource]
     comment: |
-      Usage note:	The set of themes used to categorize the resources are organized in a skos:ConceptScheme, skos:Collection, owl:Ontology or similar, describing all the categories and their relations in the catalog.
+      Usage note: The set of themes used to categorize the resources are organized in a skos:ConceptScheme, skos:Collection, owl:Ontology or similar, describing all the categories and their relations in the catalog.
   dcat:resource:
     definition: A resource that is listed in the catalog.
     subpropertyOf: [dcterms:hasPart]
@@ -356,7 +396,7 @@ properties:
     range: [dcat:Resource]
     inverse: dcat:inCatalog
     comment: |
-      Usage note DCAT:	This is the most general predicate for membership of a catalog. Use of a more specific sub-property is recommended when available.
+      Usage note DCAT: This is the most general predicate for membership of a catalog. Use of a more specific sub-property is recommended when available.
   dcat:dataset:
     definition: A dataset that is listed in the catalog.
     subpropertyOf: [dcat:resource]
@@ -400,6 +440,7 @@ properties:
         then the landing page link SHOULD be duplicated as dcat:accessURL on a distribution.
   dcat:inSeries:
     definition: A dataset series of which the dataset is part.
+    domain: [dcat:Dataset]
     range: [dcat:DatasetSeries]
     subpropertyOf: [dcterms:isPartOf]
     inverse: dcat:seriesMember
@@ -409,6 +450,32 @@ properties:
     domain: [dcat:Dataset]
     range: [dcat:Distribution]
     inverse: dcat:isDistributionOf
+  dcat:accessURL:
+    definition: |
+      A URL of the resource that gives access to a distribution of the dataset. E.g., landing page, feed, SPARQL endpoint.
+    domain: [dcat:Distribution]
+    range: [rdfs:Resource]
+    comment: |
+      Usage note:	
+
+      dcat:accessURL SHOULD be used for the URL of a service or location that can provide access to this distribution, typically through a Web form, query or API call.
+
+      dcat:downloadURL is preferred for direct links to downloadable resources.
+
+      If the distribution(s) are accessible only through a landing page (i.e., direct download URLs are not known), then the landing page URL associated with the dcat:Dataset SHOULD be duplicated as access URL on a distribution (see 5.7 Dataset available only behind some Web page).
+  dcat:accessService:
+    definition: A data service that gives access to the distribution of the dataset
+    range: [dcat:DataService]
+    comment: |
+      Usage note:	dcat:accessService SHOULD be used to link to a description of a dcat:DataService that can provide access to this distribution.
+  dcat:downloadURL:
+    definition: |
+      The URL of the downloadable file in a given format. E.g., CSV file or RDF file. The format is indicated by the
+      distribution's dcterms:format and/or dcat:mediaType
+    domain: [dcat:Distribution]
+    range: [rdfs:Resource]
+    comment: |
+      Usage note: dcat:downloadURL SHOULD be used for the URL at which this distribution is available directly, typically through a HTTP Get request.
   dcat:previousVersion:
     definition: The previous version of a resource in a lineage [PAV].
     equivalentProperty: [pav:previousVersion]
@@ -483,18 +550,26 @@ properties:
         where there is more than one Web-page about the resource.
   foaf:workplaceHomepage:
   foaf:page:
-  foaf:isPrimaryTopicOf:
+  foaf:primaryTopic:
     definition: The dcat:Resource (dataset or service) described in the record. [DCAT]
+    range: [dcat:Resource]
+    domain: [dcat:CatalogRecord]
     inverse: foaf:isPrimaryTopicOf
     comment: |
       [DCAT] Usage note:	foaf:primaryTopic property is functional: each catalog record can have at most one primary topic,
         i.e., describes one dataset or service.
+      Les propriétés range et domain correspondent à l'utilisation effectuée dans DCAT et pas au cas général.
   
-  vcard:hasEmail: # VCARD
+  vcard:fn: # VCARD
+    definition: The full name of the object (as a single string). This is the only mandatory property.
+    range: [rdfs:Literal]
+    datatype: [xsd:string]
+  vcard:hasEmail:
     definition: To specify the electronic mail address for communication with the object
     range: [vcard:Email]
   vcard:hasURL:
     definition: To specify a uniform resource locator associated with the object
+    range: [rdfs:Resource]
   
   prov:qualifiedAttribution: # PROV
     definition: Link to an Agent having some form of responsibility for the resource
@@ -725,17 +800,16 @@ properties:
     inverse: dct:isPartOf
   dct:isReferencedBy:
     inverse: dct:references
+  dct:requires:
   dct:isRequiredBy:
   dct:replaces:
     inverse: dct:isReplacedBy
-  dct:requires:
   dct:hasFormat:
     definition: A related resource that is substantially the same as the pre-existing described resource, but in another format.
     comment: |
       This property is intended to be used with non-literal values. This property is an inverse property of Is Format Of.
     subpropertyOf: [dct:relation]
   dct:isFormatOf:
-  dct:references:
   dct:hasVersion:
     definition: A related resource that is a version, edition, or adaptation of the described resource.
     inverse: dct:isVersionOf

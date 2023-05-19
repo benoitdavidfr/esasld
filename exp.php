@@ -26,6 +26,7 @@ doc: |
 journal: |
  19/5/2023:
   - gestion des ressources PagedCollection comme les autres ressources Rdf permettant de les visualiser
+  - extension du registre avec la déf. des ontologies
  18/5/2023:
   - ajout classes Standard et LicenseDocument avec leur registre
   - ajout gestion des Location avec URI INSEE
@@ -220,7 +221,7 @@ else { // affichage interactif de la version corrigée page par page en Yaml, JS
   $page = $_GET['page'] ?? 1;
   $outputFormat = $_GET['outputFormat'] ?? 'yaml';
   { // formulaire 
-    echo "<html><head><title>exp</title></head><body>
+    echo "<html><head><title>exp $outputFormat</title></head><body>
       <form>
       <a href='?page=",$page-1,isset($_GET['outputFormat']) ? "&outputFormat=$_GET[outputFormat]" : '',"'>&lt;</a>
       Page $page
@@ -229,7 +230,9 @@ else { // affichage interactif de la version corrigée page par page en Yaml, JS
       <select name='outputFormat' id='outputFormat'>
         <option",($outputFormat=='yaml') ? " selected='selected'": ''," value='yaml'>Yaml</option>
         <option",($outputFormat=='jsonld') ? " selected='selected'": ''," value='jsonld'>JSON-LD</option>
+        <option",($outputFormat=='jsonLdContext') ? " selected='selected'": ''," value='jsonLdContext'>JSON-LD contexte</option>
         <option",($outputFormat=='jsonldc') ? " selected='selected'": ''," value='jsonldc'>JSON-LD compacté</option>
+        <option",($outputFormat=='jsonldf') ? " selected='selected'": ''," value='jsonldf'>JSON-LD imbriqué</option>
         <option",($outputFormat=='turtle') ? " selected='selected'": ''," value='turtle'>Turtle</option>
       </select>
       <input type='submit' value='Submit' /></form><pre>\n";
@@ -256,12 +259,24 @@ else { // affichage interactif de la version corrigée page par page en Yaml, JS
       echo htmlspecialchars(json_encode(RdfClass::exportAsJsonLd(), JSON_OPTIONS));
       break;
     }
+    case 'jsonLdContext': {
+      echo htmlspecialchars(json_encode(Registre::jsonLdContext(), JSON_OPTIONS));
+      break;
+    }
     case 'jsonldc': { // affiche le JSON-LD compacté avec JsonLD
       if (!is_dir('tmp')) mkdir('tmp');
       file_put_contents('tmp/document.jsonld', json_encode(RdfClass::exportAsJsonLd(), JSON_OPTIONS));
-      file_put_contents('tmp/context.jsonld', json_encode(RdfClass::jsonLdContext(), JSON_OPTIONS));
+      file_put_contents('tmp/context.jsonld', json_encode(Registre::jsonLdContext(), JSON_OPTIONS));
       $compacted = JsonLD::compact('tmp/document.jsonld', 'tmp/context.jsonld');
       echo htmlspecialchars(json_encode($compacted, JSON_OPTIONS));
+      break;
+    }
+    case 'jsonldf': { // affiche le JSON-LD structuré (framed) avec JsonLD
+      if (!is_dir('tmp')) mkdir('tmp');
+      file_put_contents('tmp/document.jsonld', json_encode(RdfClass::exportAsJsonLd(), JSON_OPTIONS));
+      file_put_contents('tmp/frame.jsonld', json_encode(Registre::jsonLdFrame(), JSON_OPTIONS));
+      $framed = JsonLD::frame('tmp/document.jsonld', 'tmp/frame.jsonld');
+      echo htmlspecialchars(json_encode($framed, JSON_OPTIONS));
       break;
     }
     case 'turtle': { // traduction en Turtle avec EasyRdf

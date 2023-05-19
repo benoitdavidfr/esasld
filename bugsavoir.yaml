@@ -1,0 +1,41 @@
+title: bugs à voir
+bugs:
+  - label: utilisation de dcat:Service dans Distribution alors que ce n'est pas approprié
+    example:
+      {
+          "@id": "_:b632",
+          "@type": "Distribution",
+          "format": {
+              "@id": "_:b1412",
+              "@type": "MediaTypeOrExtent",
+              "label": {
+                  "@type": "rdf:langString",
+                  "@value": "ESRI Shapefile (SHP)"
+              }
+          },
+          "license": {
+              "@id": "https://spdx.org/licenses/etalab-2.0",
+              "@type": "LicenseDocument",
+              "label": "Licence ouverte Etalab 2.0"
+          },
+          "title": "Téléchargement simple (Atom) du jeu et des documents associés via intranet",
+          "accessService": {
+              "@id": "_:b1217",
+              "@type": "DataService",
+              "conformsTo": {
+                  "@id": "https://tools.ietf.org/html/rfc4287",
+                  "@type": "Standard",
+                  "label": "Le format de syndication Atom"
+              }
+          },
+          "accessURL": "https://atom.geo-ide.e2.rie.gouv.fr/atomArchive/GetResource?id=71f3c4b5-92c7-4e09-809c-d7cf5175631e&dataType=dataset",
+          "downloadURL": "https://atom.geo-ide.e2.rie.gouv.fr/atomArchive/GetResource?id=71f3c4b5-92c7-4e09-809c-d7cf5175631e&dataType=dataset"
+      }
+  - label: champ spatial vide ?
+    example: "spatial": [],
+  - label: foaf:name non défini
+    example:
+      "http://xmlns.com/foaf/0.1/name": [{"@value": "DDT 37"}]
+
+  
+eof:
