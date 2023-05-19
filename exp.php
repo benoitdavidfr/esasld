@@ -27,6 +27,7 @@ journal: |
  19/5/2023:
   - gestion des ressources PagedCollection comme les autres ressources Rdf permettant de les visualiser
   - extension du registre avec la déf. des ontologies
+  - mise en oeuvre d'un contexte JSON-LD et d'un frame, à débugger et améliorer
  18/5/2023:
   - ajout classes Standard et LicenseDocument avec leur registre
   - ajout gestion des Location avec URI INSEE
