@@ -188,6 +188,10 @@ ontologies:
     source:
       - https://www.dublincore.org/specifications/dublin-core/dcmi-terms/
       - https://www.dublincore.org/resources/userguide/publishing_metadata/
+  locn:
+    title: Location Core Vocabulary
+    source:
+      - http://www.w3.org/ns/locn 
 
 classes:
   rdfs:Resource: # RDF/RDFS
@@ -333,6 +337,18 @@ classes:
   dct:SizeOrDuration:
     definition: A dimension or extent, or a time taken to play or execute.
     subclassOf: [dct:MediaTypeOrExtent]
+  dct:LocationPeriodOrJurisdiction:
+    label: Location, Period, or Jurisdiction
+    definition: A location, period of time, or jurisdiction.
+    subclassOf: []
+  dct:Location:
+    definition: A spatial region or named place.
+    subclassOf: [dct:LocationPeriodOrJurisdiction]
+    comment: |
+      Usage note DCAT:
+      For an extensive geometry (i.e., a set of coordinates denoting the vertices of the relevant geographic area), the property locn:geometry [LOCN] SHOULD be used.
+      For a geographic bounding box delimiting a spatial area the property dcat:bbox SHOULD be used.
+      For the geographic center of a spatial area, or another characteristic point, the property dcat:centroid SHOULD be used.
   dct:Frequency:
     definition: A rate at which something recurs.
     subclassOf: []
@@ -429,6 +445,16 @@ properties:
   dcat:keyword:
     definition: A keyword or tag describing the resource.
     range: [rdfs:Literal]
+  dcat:bbox:
+    definition: The geographic bounding box of a spatial thing [SDW-BP].
+    range: [rdfs:Literal]
+    comment: |
+      Usage note:	The range of this property (rdfs:Literal) is intentionally generic, with the purpose of allowing different geometry literal encodings. E.g., the geometry could be encoded as a WKT literal (geosparql:wktLiteral [GeoSPARQL]).
+  dcat:centroid:
+    definition: The geographic center (centroid) of a spatial thing [SDW-BP].
+    range: [rdfs:Literal]
+    comment: |
+      Usage note: The range of this property (rdfs:Literal) is intentionally generic, with the purpose of allowing different geometry literal encodings. E.g., the geometry could be encoded as a WKT literal (geosparql:wktLiteral [GeoSPARQL]).
   dcat:landingPage:
     definition: |
       A Web page that can be navigated to in a Web browser to gain access to the catalog, a dataset, its distributions
@@ -529,6 +555,8 @@ properties:
       Usage note: 	
         In DCAT this property is used for resources belonging to a dcat:DatasetSeries.
         It is important to note that this property is different from dcat:previousVersion, as it does not denote a previous version of the same resource, but a distinct resource immediately preceding the current one in an ordered collection of resources.
+  
+  locn:geometry: # LOCN
   
   foaf:name: # FOAF
   foaf:mbox:

@@ -31,11 +31,7 @@ bugs:
           "accessURL": "https://atom.geo-ide.e2.rie.gouv.fr/atomArchive/GetResource?id=71f3c4b5-92c7-4e09-809c-d7cf5175631e&dataType=dataset",
           "downloadURL": "https://atom.geo-ide.e2.rie.gouv.fr/atomArchive/GetResource?id=71f3c4b5-92c7-4e09-809c-d7cf5175631e&dataType=dataset"
       }
-  - label: champ spatial vide ?
-    example: "spatial": [],
-  - label: foaf:name non défini
-    example:
-      "http://xmlns.com/foaf/0.1/name": [{"@value": "DDT 37"}]
+      
 
   
 eof:
