@@ -10,7 +10,9 @@ doc: |
    - la constante de classe PROP_KEY_URI liste les propriétés RDF en définissant leur raccourci,
    - la propriété statique $all contient les objets correspondant aux ressources lues à partir du registre et des fichiers
      JSON-LD.
-
+  
+  A voir:
+    - 
 journal: |
  18/5/2023:
   - création par scission de exp.php
@@ -124,8 +126,7 @@ class PropVal {
           try {
             $simple = $class::get($id)->simplify();
           } catch (Exception $e) {
-            if (defined('STDERR'))
-              fwrite(STDERR, "Alerte, ressource $id non trouvée dans $class\n");
+            StdErr::write("Alerte, ressource $id non trouvée dans $class");
             return "<$id>";
           }
           return array_merge(['@id'=> $id], $simple);
@@ -190,6 +191,7 @@ abstract class RdfClass {
     'http://purl.org/dc/terms/LinguisticSystem' => 'LinguisticSystem',
     'http://xmlns.com/foaf/0.1/Organization' => 'Organization',
     'http://www.w3.org/2006/vcard/ns#Kind' => 'Kind',
+    'http://www.w3.org/ns/hydra/core#PagedCollection' => 'PagedCollection',
   ];
   
   static array $stats = [
@@ -201,7 +203,7 @@ abstract class RdfClass {
   protected array $types; // le champ '@type' de la repr. JSON-LD, cad la liste des URI des classes RDF de la ressource
   protected array $props=[]; // dict. des propriétés de la ressource de la forme [{propUri} => [PropVal]]
   
-  static function add(array $resource): void { // ajout d'une ressource à la classe
+  static function add(array $resource): self { // ajout d'une ressource à la classe
     $class = get_called_class();
     if (!isset($class::$all[$resource['@id']])) {
       $class::$all[$resource['@id']] = new $class($resource);
@@ -211,6 +213,7 @@ abstract class RdfClass {
     }
     $class::$all[$resource['@id']]->rectification();
     self::increment('stats', "nbre de ressources pour $class");
+    return $class::$all[$resource['@id']];
   }
 
   static function get(string $id) { // retourne la ressource de la classe get_called_class() ayant cet $id 
@@ -432,8 +435,7 @@ abstract class RdfClass {
         $yaml = Yaml::parse($value2);
         //echo "value=$value\n";
       } catch (ParseException $e) {
-        if (defined('STDERR'))
-          fwrite(STDERR, "Erreur2 de Yaml::parse() dans RdfClass::rectification() sur $value\n");
+        StdErr::write("Erreur2 de Yaml::parse() dans RdfClass::rectification() sur $value\n");
         return [new PropVal(['@value'=> "Erreur de yaml::parse() sur $value"])];
       }
     }
@@ -454,8 +456,7 @@ abstract class RdfClass {
   function simplify(): string|array {
     $simple = [];
     $jsonld = $this->props;
-    $propConstUri = (get_called_class())::PROP_KEY_URI;
-    foreach ($propConstUri as $uri => $key) {
+    foreach ((get_called_class())::PROP_KEY_URI as $uri => $key) {
       if (isset($this->props[$uri])) {
         $simple[$key] = PropVal::simplifPvals($this->props[$uri], $key);
         unset($jsonld[$uri]);
@@ -718,6 +719,26 @@ class Kind extends RdfClass {
     'http://www.w3.org/2006/vcard/ns#hasEmail' => 'hasEmail',
     'http://www.w3.org/2006/vcard/ns#hasURL' => 'hasURL',
   ];
+  
+  static array $all=[];
+};
+
+class PagedCollection extends RdfClass {
+  const PROP_KEY_URI = [
+    'http://www.w3.org/ns/hydra/core#firstPage' => 'firstPage',
+    'http://www.w3.org/ns/hydra/core#lastPage' => 'lastPage',
+    'http://www.w3.org/ns/hydra/core#nextPage' => 'nextPage',
+    'http://www.w3.org/ns/hydra/core#previousPage' => 'previousPage',
+    'http://www.w3.org/ns/hydra/core#itemsPerPage' => 'itemsPerPage',
+    'http://www.w3.org/ns/hydra/core#totalItems' => 'totalItems',
+  ];
+
+  function lastPage(): int {
+    $lastPage = $this->props['http://www.w3.org/ns/hydra/core#lastPage'][0]->value;
+    if (!preg_match('!\?page=(\d+)$!', $lastPage, $m))
+      throw new Exception("erreur de preg_match sur $lastPage");
+    return $m[1];
+  }
   
   static array $all=[];
 };

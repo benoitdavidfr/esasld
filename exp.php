@@ -16,12 +16,16 @@ doc: |
   'https://tools.ietf.org/html/rfc4287' correspond au format de syndication Atom,
   
   Prolongations éventuelles:
+   - tester JsonLD pour compacter une page avec le contexte utilisé pour la simplification
+     afin d'afficher la page en JSON-LD compactée et/ou en YAML-LD.
    - formaliser le contexte associé à la simplification et vérifier son exactitude
    - générer un affichage simplifié qui soit un export DCAT valide en YAML-LD
    - réexporter le contenu importé pour bénéficier des corrections, y compris en le paginant
    - définir des shapes SHACL pour valider le graphe DCAT en s'inspirant de ceux de DCTA-AP
 
 journal: |
+ 19/5/2023:
+  - gestion des ressources PagedCollection comme les autres ressources Rdf permettant de les visualiser
  18/5/2023:
   - ajout classes Standard et LicenseDocument avec leur registre
   - ajout gestion des Location avec URI INSEE
@@ -58,16 +62,34 @@ use Symfony\Component\Yaml\Exception\ParseException;
 ini_set('memory_limit', '1G');
 
 
+class StdErr { // afffichage de messages d'info, d'alerte ou d'erreur non fatale 
+  static array $messages=[]; // [{message} => {nbre}]
+  
+  static function write(string $message): void {
+    if (!defined('STDERR')) { // en non CLI les messages sont justes stockés sans répétition en gardant le nombre d'itération
+      self::$messages[$message] = (self::$messages[$message] ?? 0) + 1;
+    }
+    elseif (!isset(self::$messages[$message])) { // en CLI si le message est nouveau 
+      fwrite(STDERR, "$message\n"); // alors affichage sur STDERR
+      self::$messages[$message] = 1; // et stockage du message
+    }
+    else { // en CLI si le message est déjà apparu
+      self::$messages[$message]++; // alors le nbre d'itérations est incrémenté
+    }
+  }
+};
+
 // extrait le code HTTP de retour de l'en-tête HTTP
 function httpResponseCode(array $header) { return substr($header[0], 9, 3); }
 
-// importe l'export JSON-LD et construit les objets chacun dans leur classe
-// lorque le fichier est absent:
-//   si $skip est faux alors le site est interrogé
-//   sinon ($skip vrai) alors la page est sautée et marquée comme erreur
-// Si $lastPage est indiquée et différente de 0 alors la lecture s'arrête à cette page,
-// sinon elle vaut 0 et le numéro de la dernière page est lu dans une des pages.
-// Si $firstPage est indiquée alors la lecture commence à cette page, sinon elle vaut 1.
+{/* importe l'export JSON-LD et construit les objets chacun dans leur classe
+  lorque le fichier est absent:
+    si $skip est faux alors le site est interrogé
+    sinon ($skip vrai) alors la page est sautée et marquée comme erreur
+  Si $lastPage est indiquée et différente de 0 alors la lecture s'arrête à cette page,
+  sinon elle vaut 0 et le numéro de la dernière page est lu dans une des pages.
+  Si $firstPage est indiquée alors la lecture commence à cette page, sinon elle vaut 1.
+*/}
 function import(string $urlPrefix, bool $skip=false, int $lastPage=0, int $firstPage=1): array {
   $errors = []; // erreur en array [{nopage} => {libellé}]
   for ($page = $firstPage; ($lastPage == 0) || ($page <= $lastPage); $page++) {
@@ -95,22 +117,16 @@ function import(string $urlPrefix, bool $skip=false, int $lastPage=0, int $first
     $content = json_decode($content, true, 512, JSON_THROW_ON_ERROR);
     
     //echo "content of page $page = "; print_r($content);
-    //fwrite(STDERR, "Info: nbelts de la page $page = ".count($content)."\n");
+    //StdErr::write("Info: nbelts de la page $page = ".count($content)."\n");
     
     foreach ($content as $no => $resource) {
       RdfClass::increment('stats', "nbre de ressources lues");
       $types = implode(', ', $resource['@type']); 
       if ($className = (RdfClass::CLASS_URI_TO_PHP_NAME[$types] ?? null)) {
-        $className::add($resource);
-      }
-      elseif ($types == 'http://www.w3.org/ns/hydra/core#PagedCollection') {
-        if ($lastPage == 0) {
-          $lastPage = $resource['http://www.w3.org/ns/hydra/core#lastPage'][0]['@value'];
-          if (!preg_match('!\?page=(\d+)$!', $lastPage, $m))
-            throw new Exception("erreur de preg_match sur $lastPage");
-          $lastPage = $m[1];
-          if (defined('STDERR'))
-            fwrite(STDERR, "Info: lastPage=$lastPage\n");
+        $resource = $className::add($resource);
+        if (($className == 'PagedCollection') && ($lastPage == 0)) {
+          $lastPage = $resource->lastPage();
+          StdErr::write("Info: lastPage=$lastPage\n");
         }
       }
       else
@@ -201,40 +217,44 @@ else { // affichage interactif de la version corrigée page par page en Yaml, JS
   $page = $_GET['page'] ?? 1;
   $outputFormat = $_GET['outputFormat'] ?? 'yaml';
   echo "<form>
-    Page $page, <a href='?page=",$page+1,
-      isset($_GET['outputFormat']) ? "&outputFormat=$_GET[outputFormat]" : '',"'>Page suivante</a>
+    <a href='?page=",$page-1,isset($_GET['outputFormat']) ? "&outputFormat=$_GET[outputFormat]" : '',"'>&lt;</a>
+    Page $page
+    <a href='?page=",$page+1,isset($_GET['outputFormat']) ? "&outputFormat=$_GET[outputFormat]" : '',"'>&gt;</a>
     <input type='hidden' name='page' value='$page' />
     <select name='outputFormat' id='outputFormat'>
       <option",($outputFormat=='yaml') ? " selected='selected'": ''," value='yaml'>Yaml</option>
       <option",($outputFormat=='jsonld') ? " selected='selected'": ''," value='jsonld'>JSON-LD</option>
       <option",($outputFormat=='turtle') ? " selected='selected'": ''," value='turtle'>Turtle</option>
     </select>
-    <input type='submit' value='Submit' /></form><pre>
-  ";
+    <input type='submit' value='Submit' /></form><pre>\n";
   
-  //Registre::import();
+  Registre::import();
   if ($errors = import($urlPrefix, true, $page, $page)) {
-    echo 'errors = '; print_r($errors); echo "</pre>\n";
+    echo 'errors = '; print_r($errors);
   }
   echo "---\n";
+  define('JSON_OPTIONS',
+          JSON_PRETTY_PRINT|JSON_UNESCAPED_LINE_TERMINATORS|JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR);
   switch ($outputFormat) {
-    case 'yaml': {
-      echo htmlspecialchars(Dataset::show(false)); // affichage Yaml
+    case 'yaml': { // affiche les datasets en Yaml 
+      $output = Dataset::show(false);
+      if (StdErr::$messages) {
+        echo 'StdErr::$messages = '; print_r(StdErr::$messages);
+        echo "---\n";
+      }
+      echo htmlspecialchars($output); // affichage Yaml
       break;
     }
-    case 'jsonld': {
-      echo htmlspecialchars(json_encode(
-            RdfClass::exportAsJsonLd(),
-            JSON_PRETTY_PRINT|JSON_UNESCAPED_LINE_TERMINATORS|JSON_UNESCAPED_SLASHES
-              |JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR));
+    case 'jsonld': { // affiche le JSON-LD généré par RdfClass 
+      echo htmlspecialchars(json_encode(RdfClass::exportAsJsonLd(), JSON_OPTIONS));
       break;
     }
-    case 'turtle': { // affichage Turtle
+    case 'turtle': { // affiche le Turtle
       $graph = new \EasyRdf\Graph('https://preprod.data.developpement-durable.gouv.fr/');
       $graph->parse(json_encode(RdfClass::exportAsJsonLd()), 'jsonld', 'https://preprod.data.developpement-durable.gouv.fr/');
       echo htmlspecialchars($graph->serialise('turtle'));
       break;
     }
   }
-  echo "</pre>\n";
+  die("</pre>\n");
 }
