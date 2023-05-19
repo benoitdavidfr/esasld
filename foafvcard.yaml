@@ -1,0 +1,26 @@
+title: FOAF & vCard
+source:
+  - http://xmlns.com/foaf/0.1/
+prefix:
+  foaf: http://xmlns.com/foaf/0.1/
+classes:
+  foaf:Agent:
+  foaf:Organization:
+  vcard:Kind:
+properties:
+  foaf:mbox:
+    label: personal mailbox
+    definition: |
+      A personal mailbox, ie. an Internet mailbox associated with exactly one owner, the first owner of this mailbox.
+      This is a 'static inverse functional property', in that there is (across time and change) at most one individual
+      that ever has any particular value for foaf:mbox.
+    Domain: foaf:Agent
+    Range: http://www.w3.org/2000/01/rdf-schema#Resource
+  foaf:name:
+  foaf:phone:
+  foaf:workplaceHomepage:
+  foaf:page:
+  foaf:isPrimaryTopicOf:
+  vcard:hasEmail:
+  vcard:hasURL:
+eof:
