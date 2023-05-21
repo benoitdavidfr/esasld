@@ -1,139 +1,163 @@
 title: Conception
-idéesDObjectifs:
-  - jouer avec l'export Ecosphères pour estimer son utilisabilité et sa qualité
-  - en construire une représentation plus facile à consulter
-  - définir cette représentation au moyen d'un contexte JSON-LD
+point@20/5:
+  - JsonLD::compact() n'est pas suffisant
+  - JsonLD::frame() ne fonctionne pas bien, à éviter
+    - il plante sur plusieurs pages
+    - je ne comprend pas comment définir le paramétrage répondant à mes besoins
+  - idée:
+    - faire en Php une sortie compactée et structurée
+    - simplifier et homogénéiser certains éléments
+      - par exemple transformer toutes les dateTime en date
+    - lui associer un contexte
+    - vérifier le contexte en applatissant (flatten) et décompactant (expand) la sortie avec JsonLD
+  - voabulaire, j'appelle:
+    - rectifier (rectify) = la correction d'erreurs qui devraient être corrigées à la source
+    - améliorer (improve) = modifier pour faciliter la lecture et la compréhension
+      - sans modifier fondamentalement le contenu
+        - par exemple transformer toutes les dateTime en date
+      - mais en apportant des modifications qui ont du sens comme
+        - supprimer les téléchargements Géo-IDE dispos uniquement en intranet
+        - supprimer le discours Géo-IDE sur Atom qui ne sert à rien
+  - ca veut dire
+    - programmer le process d'amélioration
+    - effectuer la compaction (champs simples) et la structuration (embedding de ressources)
+    - tout en conservant la structure JSON-LD
+    - pour effectuer la sortie JSON-LD avec le contexte
+démarrage(8/5):
+    idéesDObjectifs:
+    - jouer avec l'export Ecosphères pour estimer son utilisabilité et sa qualité
+    - en construire une représentation plus facile à consulter
+    - définir cette représentation au moyen d'un contexte JSON-LD
 
-provenance:
+  provenance:
   
-  dcterms:accessRights:
-    Definition: Information about who can access the resource or an indication of its security status.
-    Range: dcterms:RightsStatement
+    dcterms:accessRights:
+      Definition: Information about who can access the resource or an indication of its security status.
+      Range: dcterms:RightsStatement
     
-  dcterms:RightsStatement:
+    dcterms:RightsStatement:
     
-    
-    ex:myDatabase dcterms:title "Data from my last evaluation" ;
-                  dcterms:accessRights [ rdfs:label "My colleagues only" ] .
+      ex:myDatabase dcterms:title "Data from my last evaluation" ;
+                    dcterms:accessRights [ rdfs:label "My colleagues only" ] .
     
 
-questions:
-  - pour accessRights et provenance, est-ce que j'accepte de mettre un literal à la place d'un statement
-    ou est-ce que je force les littéraux en statement ?
-    - la spec DCAT semble imposer des Statements et tous les ex présentent des Statements
-    - la spec DCMI est claire sur le fait d'imposer des Statements
-    - choix: accessRights et provenance sont hétérogènes, je transforme tout en statements
-  - pour les ressources de second niveau (embedding)
-    - si blank node alors intégration au père comme en Turtle
-    - possibilité d'intégrer des ressources avec id propre en utilisant '@id'
-      - attention aux cycles, y en a t'il ?
-      - exemple intégration des Organization dans un Dataset
-      - faut-il le faire systématiquement ou uniquement pour certaines propriétés ?
+  questions:
+    - pour accessRights et provenance, est-ce que j'accepte de mettre un literal à la place d'un statement
+      ou est-ce que je force les littéraux en statement ?
+      - la spec DCAT semble imposer des Statements et tous les ex présentent des Statements
+      - la spec DCMI est claire sur le fait d'imposer des Statements
+      - choix: accessRights et provenance sont hétérogènes, je transforme tout en statements
+    - pour les ressources de second niveau (embedding)
+      - si blank node alors intégration au père comme en Turtle
+      - possibilité d'intégrer des ressources avec id propre en utilisant '@id'
+        - attention aux cycles, y en a t'il ?
+        - exemple intégration des Organization dans un Dataset
+        - faut-il le faire systématiquement ou uniquement pour certaines propriétés ?
     
-bugs:
-  distribution:
-    '@id': 'https://preprod.data.developpement-durable.gouv.fr/dataset/606123c6-d537-485d-ba99-182b0b54d971/resource/cd15f448-f833-4479-aed5-39d329d3778e'
-    title: '{''fr'': ''Accès au lien ATOM de téléchargement'', ''en'': ''''}'
-    license: '[{''label'': {''fr'': '''', ''en'': ''''}, ''type'': [], ''uri'': ''https://spdx.org/licenses/etalab-2.0''}]'
-    issued: '2023-04-26T03:36:52.196836'
-    modified: '2023-04-26T03:36:52.188384'
-    downloadURL: '<https://catalogue.datara.gouv.fr/rss/atomfeed/atomdataset/68f05974-ca80-4d21-9ef6-9c85a60276d0>'
+  bugs:
+    distribution:
+      '@id': 'https://preprod.data.developpement-durable.gouv.fr/dataset/606123c6-d537-485d-ba99-182b0b54d971/resource/cd15f448-f833-4479-aed5-39d329d3778e'
+      title: '{''fr'': ''Accès au lien ATOM de téléchargement'', ''en'': ''''}'
+      license: '[{''label'': {''fr'': '''', ''en'': ''''}, ''type'': [], ''uri'': ''https://spdx.org/licenses/etalab-2.0''}]'
+      issued: '2023-04-26T03:36:52.196836'
+      modified: '2023-04-26T03:36:52.188384'
+      downloadURL: '<https://catalogue.datara.gouv.fr/rss/atomfeed/atomdataset/68f05974-ca80-4d21-9ef6-9c85a60276d0>'
     
-  provenance: '{''fr'': [''Gestion et entretien du réseau routier''], ''en'': []}'
+    provenance: '{''fr'': [''Gestion et entretien du réseau routier''], ''en'': []}'
   
-  spatial:
-    - '<http://id.insee.fr/geo/commune/45270>'
-    - '<http://id.insee.fr/geo/commune/45039>'
-    -
-      geometry: 'POLYGON ((3.1285 48.3449, 3.1285 47.4832, 1.5141 47.4832, 1.5141 48.3449, 3.1285 48.3449))'
-    - '<http://id.insee.fr/geo/commune/45122>'
-    - '<http://id.insee.fr/geo/commune/45244>'
-    - '<http://id.insee.fr/geo/departement/45>'
-    - '<http://id.insee.fr/geo/commune/45184>'
-    - '<http://id.insee.fr/geo/commune/45315>'
-    -
-      '@id': '_:N96b53139513a468a8958138b6ec486fa'
-      '@type':
-        - 'http://purl.org/dc/terms/Location'
-      'http://www.w3.org/2004/02/skos/core#prefLabel':
-        -
-          '@language': fr
-          '@value': '45267'
-    - '<http://id.insee.fr/geo/commune/45051>'
-    - '<http://id.insee.fr/geo/commune/45042>'
-    -
-      bbox: 'POLYGON((3.12849689 48.34494400,3.12849689 47.48318481,1.51405132 47.48318481,1.51405132 48.34494400,3.12849689 48.34494400))'
-    - '<http://id.insee.fr/geo/commune/45297>'
-    - '<http://id.insee.fr/geo/commune/45268>'
+    spatial:
+      - '<http://id.insee.fr/geo/commune/45270>'
+      - '<http://id.insee.fr/geo/commune/45039>'
+      -
+        geometry: 'POLYGON ((3.1285 48.3449, 3.1285 47.4832, 1.5141 47.4832, 1.5141 48.3449, 3.1285 48.3449))'
+      - '<http://id.insee.fr/geo/commune/45122>'
+      - '<http://id.insee.fr/geo/commune/45244>'
+      - '<http://id.insee.fr/geo/departement/45>'
+      - '<http://id.insee.fr/geo/commune/45184>'
+      - '<http://id.insee.fr/geo/commune/45315>'
+      -
+        '@id': '_:N96b53139513a468a8958138b6ec486fa'
+        '@type':
+          - 'http://purl.org/dc/terms/Location'
+        'http://www.w3.org/2004/02/skos/core#prefLabel':
+          -
+            '@language': fr
+            '@value': '45267'
+      - '<http://id.insee.fr/geo/commune/45051>'
+      - '<http://id.insee.fr/geo/commune/45042>'
+      -
+        bbox: 'POLYGON((3.12849689 48.34494400,3.12849689 47.48318481,1.51405132 47.48318481,1.51405132 48.34494400,3.12849689 48.34494400))'
+      - '<http://id.insee.fr/geo/commune/45297>'
+      - '<http://id.insee.fr/geo/commune/45268>'
   
-bugsCorrigésDansExp.php:
-  https://preprod.data.developpement-durable.gouv.fr/dataset/606123c6-d537-485d-ba99-182b0b54d971:
-    license: '[{''label'': {''fr'': '''', ''en'': ''''}, ''type'': [], ''uri'': ''https://spdx.org/licenses/etalab-2.0''}]'
+  bugsCorrigésDansExp.php:
+    https://preprod.data.developpement-durable.gouv.fr/dataset/606123c6-d537-485d-ba99-182b0b54d971:
+      license: '[{''label'': {''fr'': '''', ''en'': ''''}, ''type'': [], ''uri'': ''https://spdx.org/licenses/etalab-2.0''}]'
   
-  - la valeur prise par la propriété language est parfois mal structurée
-    ex:
-      <https://preprod.data.developpement-durable.gouv.fr> a dcat:Catalog ;
+    - la valeur prise par la propriété language est parfois mal structurée
+      ex:
+        <https://preprod.data.developpement-durable.gouv.fr> a dcat:Catalog ;
+            dct:issued "2022-10-01T00:00:00"^^xsd:dateTime ;
+            dct:language <fr>,
+                "fr" ;
+            dct:modified "2023-04-26T04:03:05.142364"^^xsd:dateTime ;
+            dct:title "Ecosphères" ;
+      
+        <https://preprod.data.developpement-durable.gouv.fr/dataset/0865d885-15f6-4c68-a8c9-9d5d1ad0e644>
+            a dcat:Dataset ;
+            dct:identifier <http://www.mongeosource.fr/geosource/a250762a-1770-422d-b919-2b142d10e212> ;
+            dct:issued "2016-01-29T00:00:00"^^xsd:dateTime ;
+            dct:language "{'uri': 'http://publications.europa.eu/resource/authority/language/FRA'}" ;
+            dct:modified "2018-06-28T00:00:00"^^xsd:dateTime ;
+      
+    - la propriété issued semble contenir parfois la date de publication dans Ecosphères qui n'a pas d'intérêt
+      ex:
+        <https://preprod.data.developpement-durable.gouv.fr/dataset/1e2c6c65-b5d7-4fcd-89d6-364ff460c620>
+          a dcat:Dataset ;
+          dct:title "Forets de conifères en Pays de la Loire - CLC - 2006" ;
+          dct:identifier <https://catalogue.sigloire.fr/geonetwork/srv/ad615e57-49eb-498e-b0c6-d66192689080> ;
+          dct:issued "2023-04-26T03:38:06.044301"^^xsd:dateTime ;
+          dct:modified "2014-07-03T00:00:00"^^xsd:dateTime .
+    
+    - les propriétés http://purl.org/dc/terms/provenance et http://www.w3.org/ns/adms#versionNotes
+      sont souvent présentes avec une valeur vide
+      ex:
+        <https://preprod.data.developpement-durable.gouv.fr/dataset/0865d885-15f6-4c68-a8c9-9d5d1ad0e644>
+          a dcat:Dataset ;
+          dct:title "Traits de côte naturels anciens" ;
+          dct:identifier <http://www.mongeosource.fr/geosource/a250762a-1770-422d-b919-2b142d10e212> ;
+          dct:provenance "{'fr': [], 'en': []}" ;
+          adms:versionNotes "{'fr': '', 'en': ''}" .
+      
+    - le prédicat http://www.w3.org/ns/dcat#publisher est utilisé sans être défini
+      ex:
+        <https://preprod.data.developpement-durable.gouv.fr>
+          a dcat:Catalog ;
           dct:issued "2022-10-01T00:00:00"^^xsd:dateTime ;
           dct:language <fr>,
               "fr" ;
           dct:modified "2023-04-26T04:03:05.142364"^^xsd:dateTime ;
           dct:title "Ecosphères" ;
-      
-      <https://preprod.data.developpement-durable.gouv.fr/dataset/0865d885-15f6-4c68-a8c9-9d5d1ad0e644>
+          dcat:publisher [ a foaf:Organization ;
+                  foaf:mbox "changeme@example.com" ;
+                  foaf:name "MTE" ;
+                  foaf:phone "0123456789" ;
+                  foaf:workplaceHomepage "changeme.gouv.fr" ] ;
+          foaf:homepage <https://preprod.data.developpement-durable.gouv.fr/#> .
+    - le prédicat http://purl.org/dc/terms/rights_holder est utilisé sans être défini
+      ex:
+         <http://catalogue.geo-ide.developpement-durable.gouv.fr/catalogue/srv/fre/catalog.search#/metadata/fr-120066022-jdd-04a0c8b6-49f5-4ab1-b909-eefc2e100b3b>
           a dcat:Dataset ;
-          dct:identifier <http://www.mongeosource.fr/geosource/a250762a-1770-422d-b919-2b142d10e212> ;
-          dct:issued "2016-01-29T00:00:00"^^xsd:dateTime ;
-          dct:language "{'uri': 'http://publications.europa.eu/resource/authority/language/FRA'}" ;
-          dct:modified "2018-06-28T00:00:00"^^xsd:dateTime ;
-      
-  - la propriété issued semble contenir parfois la date de publication dans Ecosphères qui n'a pas d'intérêt
-    ex:
-      <https://preprod.data.developpement-durable.gouv.fr/dataset/1e2c6c65-b5d7-4fcd-89d6-364ff460c620>
-        a dcat:Dataset ;
-        dct:title "Forets de conifères en Pays de la Loire - CLC - 2006" ;
-        dct:identifier <https://catalogue.sigloire.fr/geonetwork/srv/ad615e57-49eb-498e-b0c6-d66192689080> ;
-        dct:issued "2023-04-26T03:38:06.044301"^^xsd:dateTime ;
-        dct:modified "2014-07-03T00:00:00"^^xsd:dateTime .
-    
-  - les propriétés http://purl.org/dc/terms/provenance et http://www.w3.org/ns/adms#versionNotes
-    sont souvent présentes avec une valeur vide
-    ex:
-      <https://preprod.data.developpement-durable.gouv.fr/dataset/0865d885-15f6-4c68-a8c9-9d5d1ad0e644>
-        a dcat:Dataset ;
-        dct:title "Traits de côte naturels anciens" ;
-        dct:identifier <http://www.mongeosource.fr/geosource/a250762a-1770-422d-b919-2b142d10e212> ;
-        dct:provenance "{'fr': [], 'en': []}" ;
-        adms:versionNotes "{'fr': '', 'en': ''}" .
-      
-  - le prédicat http://www.w3.org/ns/dcat#publisher est utilisé sans être défini
-    ex:
-      <https://preprod.data.developpement-durable.gouv.fr>
-        a dcat:Catalog ;
-        dct:issued "2022-10-01T00:00:00"^^xsd:dateTime ;
-        dct:language <fr>,
-            "fr" ;
-        dct:modified "2023-04-26T04:03:05.142364"^^xsd:dateTime ;
-        dct:title "Ecosphères" ;
-        dcat:publisher [ a foaf:Organization ;
-                foaf:mbox "changeme@example.com" ;
-                foaf:name "MTE" ;
-                foaf:phone "0123456789" ;
-                foaf:workplaceHomepage "changeme.gouv.fr" ] ;
-        foaf:homepage <https://preprod.data.developpement-durable.gouv.fr/#> .
-  - le prédicat http://purl.org/dc/terms/rights_holder est utilisé sans être défini
-    ex:
-       <http://catalogue.geo-ide.developpement-durable.gouv.fr/catalogue/srv/fre/catalog.search#/metadata/fr-120066022-jdd-04a0c8b6-49f5-4ab1-b909-eefc2e100b3b>
-        a dcat:Dataset ;
-        dct:identifier "6350a7df-7e57-4ba1-b9a3-e55e11ae80ba" ;
-        dct:rights_holder
-            [ a foaf:Organization ;
-                foaf:mbox <bruit-ppbe-2018@loiret.gouv.fr> ;
-                foaf:name "DDT45 - Bruit PPBE"@fr ],
-            [ a foaf:Organization ;
-                foaf:mbox <ddt-pcpt-suadt@loiret.gouv.fr> ;
-                foaf:name "DDT 45 (Direction Départementale des Territoires du Loiret)"@fr ;
-                foaf:workplaceHomepage <http://www.loiret.gouv.fr/> ] ;
-        dct:title "Table décrivant les Zones de dépassement des valeurs limites de Bruit de nuit sur les voies communales d'Orléans-Métropole dans le Loiret (C_LN)",
-            "Table décrivant les Zones de dépassement des valeurs limites de Bruit de nuit sur les voies communales d'Orléans-Métropole dans le Loiret (C_LN)"@fr ;
-        foaf:page <http://catalogue.geo-ide.developpement-durable.gouv.fr/catalogue/srv/fre/catalog.search#/metadata/fr-120066022-ca-jdd-04a0c8b6-49f5-4ab1-b909-eefc2e100b3b> .
+          dct:identifier "6350a7df-7e57-4ba1-b9a3-e55e11ae80ba" ;
+          dct:rights_holder
+              [ a foaf:Organization ;
+                  foaf:mbox <bruit-ppbe-2018@loiret.gouv.fr> ;
+                  foaf:name "DDT45 - Bruit PPBE"@fr ],
+              [ a foaf:Organization ;
+                  foaf:mbox <ddt-pcpt-suadt@loiret.gouv.fr> ;
+                  foaf:name "DDT 45 (Direction Départementale des Territoires du Loiret)"@fr ;
+                  foaf:workplaceHomepage <http://www.loiret.gouv.fr/> ] ;
+          dct:title "Table décrivant les Zones de dépassement des valeurs limites de Bruit de nuit sur les voies communales d'Orléans-Métropole dans le Loiret (C_LN)",
+              "Table décrivant les Zones de dépassement des valeurs limites de Bruit de nuit sur les voies communales d'Orléans-Métropole dans le Loiret (C_LN)"@fr ;
+          foaf:page <http://catalogue.geo-ide.developpement-durable.gouv.fr/catalogue/srv/fre/catalog.search#/metadata/fr-120066022-ca-jdd-04a0c8b6-49f5-4ab1-b909-eefc2e100b3b> .
     

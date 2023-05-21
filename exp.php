@@ -16,14 +16,13 @@ doc: |
   'https://tools.ietf.org/html/rfc4287' correspond au format de syndication Atom,
   
   Prolongations éventuelles:
-   - tester JsonLD pour compacter une page avec le contexte utilisé pour la simplification
-     afin d'afficher la page en JSON-LD compactée et/ou en YAML-LD.
-   - formaliser le contexte associé à la simplification et vérifier son exactitude
    - générer un affichage simplifié qui soit un export DCAT valide en YAML-LD
    - réexporter le contenu importé pour bénéficier des corrections, y compris en le paginant
    - définir des shapes SHACL pour valider le graphe DCAT en s'inspirant de ceux de DCTA-AP
 
 journal: |
+ 21/5/2023:
+  - regroupement dans la classe GenClass de classes simples n'ayant aucun traitement spécifique
  19/5/2023:
   - gestion des ressources PagedCollection comme les autres ressources Rdf permettant de les visualiser
   - extension du registre avec la déf. des ontologies
@@ -62,7 +61,7 @@ use Symfony\Component\Yaml\Yaml;
 use Symfony\Component\Yaml\Exception\ParseException;
 use ML\JsonLD\JsonLD;
 
-ini_set('memory_limit', '1G');
+ini_set('memory_limit', '2G');
 
 
 class StdErr { // afffichage de messages d'info, d'alerte ou d'erreur non fatale 
@@ -218,7 +217,7 @@ if (php_sapi_name()=='cli') { // traitement CLI en fonction de l'action demandé
   }
 }
 else { // affichage interactif de la version corrigée page par page en Yaml, JSON-LD ou Turtle
-  echo "";
+  set_time_limit(60);
   $page = $_GET['page'] ?? 1;
   $outputFormat = $_GET['outputFormat'] ?? 'yaml';
   { // formulaire 

@@ -60,20 +60,20 @@ class PropVal {
     'creator' => 'Organization',
     'rightsHolder' => 'Organization',
     'spatial' => 'Location',
-    'temporal' => 'PeriodOfTime',
+    'temporal' => 'GenClass',
     'isPrimaryTopicOf' => 'CatalogRecord',
     'inCatalog' => 'Catalog',
-    'contactPoint' => 'Kind',
-    'conformsTo' => 'Standard',
+    'contactPoint' => 'GenClass',
+    'conformsTo' => 'GenClass', // Standard
     'accessRights' => 'RightsStatement',
-    'license' => 'LicenseDocument',
+    'license' => 'GenClass',
     'provenance' => 'ProvenanceStatement',
-    'format' => 'MediaTypeOrExtent',
+    'format' => 'GenClass',
     'mediaType' => 'MediaType',
-    'language' => 'LinguisticSystem',
-    'accrualPeriodicity' => 'Frequency',
+    'language' => 'GenClass',
+    'accrualPeriodicity' => 'GenClass',
     'accessService' => 'DataService',
-    'distribution' => 'Distribution',
+    'distribution' => 'GenClass',
   ];
 
   public readonly array $keys; // liste des clés de la représentation JSON-LD définissant le type de PropVal
@@ -178,19 +178,19 @@ abstract class RdfClass {
     'http://www.w3.org/ns/dcat#Dataset, http://www.w3.org/ns/dcat#DatasetSeries' => 'Dataset',
     'http://www.w3.org/ns/dcat#DatasetSeries, http://www.w3.org/ns/dcat#Dataset' => 'Dataset',
     'http://www.w3.org/ns/dcat#DataService' => 'DataService',
-    'http://www.w3.org/ns/dcat#Distribution' => 'Distribution',
+    'http://www.w3.org/ns/dcat#Distribution' => 'GenClass',
     'http://purl.org/dc/terms/Location' => 'Location',
-    'http://purl.org/dc/terms/Standard' => 'Standard',
-    'http://purl.org/dc/terms/LicenseDocument' => 'LicenseDocument',
+    'http://purl.org/dc/terms/Standard' => 'GenClass',
+    'http://purl.org/dc/terms/LicenseDocument' => 'GenClass',
     'http://purl.org/dc/terms/RightsStatement' => 'RightsStatement',
     'http://purl.org/dc/terms/ProvenanceStatement' => 'ProvenanceStatement',
-    'http://purl.org/dc/terms/MediaTypeOrExtent' => 'MediaTypeOrExtent',
-    'http://purl.org/dc/terms/MediaType' => 'MediaType',
-    'http://purl.org/dc/terms/PeriodOfTime' => 'PeriodOfTime',
-    'http://purl.org/dc/terms/Frequency' => 'Frequency',
-    'http://purl.org/dc/terms/LinguisticSystem' => 'LinguisticSystem',
+    'http://purl.org/dc/terms/MediaTypeOrExtent' => 'GenClass',
+    'http://purl.org/dc/terms/MediaType' => 'GenClass',
+    'http://purl.org/dc/terms/PeriodOfTime' => 'GenClass',
+    'http://purl.org/dc/terms/Frequency' => 'GenClass',
+    'http://purl.org/dc/terms/LinguisticSystem' => 'GenClass',
     'http://xmlns.com/foaf/0.1/Organization' => 'Organization',
-    'http://www.w3.org/2006/vcard/ns#Kind' => 'Kind',
+    'http://www.w3.org/2006/vcard/ns#Kind' => 'GenClass',
     'http://www.w3.org/ns/hydra/core#PagedCollection' => 'PagedCollection',
   ];
   
@@ -260,6 +260,8 @@ abstract class RdfClass {
     }
   }
 
+  function prop_key_uri(): array { return (get_called_class())::PROP_KEY_URI; }
+  
   function __construct(array $resource) { // crée un objet à partir de la description JSON-LD 
     $this->id = $resource['@id'];
     unset($resource['@id']);
@@ -467,7 +469,7 @@ abstract class RdfClass {
   function simplify(): string|array {
     $simple = [];
     $jsonld = $this->props;
-    foreach ((get_called_class())::PROP_KEY_URI as $uri => $key) {
+    foreach ($this->prop_key_uri() as $uri => $key) {
       if (isset($this->props[$uri])) {
         $simple[$key] = PropVal::simplifPvals($this->props[$uri], $key);
         unset($jsonld[$uri]);
@@ -575,6 +577,13 @@ class Catalog extends Dataset {
   static array $all=[]; // [{id}=> self] -- dict. de tous les objets de la classe
 };
 
+class DataService extends Dataset {
+  const PROP_KEY_URI = [
+    'http://purl.org/dc/terms/conformsTo' => 'conformsTo',
+  ];
+  static array $all=[];
+};
+
 class CatalogRecord extends RdfClass {
   const PROP_KEY_URI = [
     'http://purl.org/dc/terms/identifier' => 'identifier',
@@ -582,13 +591,6 @@ class CatalogRecord extends RdfClass {
     'http://purl.org/dc/terms/modified' => 'modified',
     'http://www.w3.org/ns/dcat#contactPoint' => 'contactPoint',
     'http://www.w3.org/ns/dcat#inCatalog' => 'inCatalog',
-  ];
-  static array $all=[];
-};
-
-class DataService extends Dataset {
-  const PROP_KEY_URI = [
-    'http://purl.org/dc/terms/conformsTo' => 'conformsTo',
   ];
   static array $all=[];
 };
@@ -601,8 +603,6 @@ class Organization extends RdfClass {
     'http://xmlns.com/foaf/0.1/workplaceHomepage' => 'workplaceHomepage',
   ];
   static array $all=[];
-  
-  function concat(array $elt): void {}
 };
 
 class Location extends RdfClass {
@@ -650,88 +650,62 @@ class Location extends RdfClass {
   }
 };
 
-class Standard extends RdfClass {
-  const PROP_KEY_URI = [
-    'http://www.w3.org/2000/01/rdf-schema#label' => 'label',
+// Classe générique regroupant plusieurs classes n'ayant pas de traitement spécifique 
+class GenClass extends RdfClass {
+  const PROP_KEY_URI_PER_CLASS = [
+    'http://purl.org/dc/terms/Standard' => [
+      'http://www.w3.org/2000/01/rdf-schema#label' => 'label',
+    ],
+    'http://purl.org/dc/terms/LicenseDocument' => [
+      'http://www.w3.org/2000/01/rdf-schema#label' => 'label',
+    ],
+    'http://purl.org/dc/terms/MediaTypeOrExtent' => [
+      'http://www.w3.org/2000/01/rdf-schema#label' => 'label',
+    ],
+    'http://purl.org/dc/terms/MediaType' => [
+      'http://www.w3.org/2000/01/rdf-schema#label' => 'label',
+    ],
+    'http://purl.org/dc/terms/Frequency' => [
+      'http://www.w3.org/2000/01/rdf-schema#label' => 'label',
+    ],
+    'http://purl.org/dc/terms/LinguisticSystem' => [
+      'http://www.w3.org/2000/01/rdf-schema#label' => 'label',
+    ],
+    'http://purl.org/dc/terms/PeriodOfTime' => [
+      'http://www.w3.org/ns/dcat#startDate' => 'startDate',
+      'http://www.w3.org/ns/dcat#endDate' => 'endDate',
+    ],
+    'http://www.w3.org/2006/vcard/ns#Kind' => [
+      'http://www.w3.org/2006/vcard/ns#fn' => 'fn',
+      'http://www.w3.org/2006/vcard/ns#hasEmail' => 'hasEmail',
+      'http://www.w3.org/2006/vcard/ns#hasURL' => 'hasURL',
+    ],
+    'http://www.w3.org/ns/dcat#Distribution' => [
+      'http://purl.org/dc/terms/title' => 'title',
+      'http://purl.org/dc/terms/description' => 'description',
+      'http://purl.org/dc/terms/format' => 'format',
+      'http://www.w3.org/ns/dcat#mediaType' => 'mediaType',
+      'http://purl.org/dc/terms/rights' => 'rights',
+      'http://purl.org/dc/terms/license' => 'license',
+      'http://purl.org/dc/terms/issued' => 'issued',
+      'http://purl.org/dc/terms/created' => 'created',
+      'http://purl.org/dc/terms/modified' => 'modified',
+      'http://www.w3.org/ns/dcat#accessService' => 'accessService',
+      'http://www.w3.org/ns/dcat#accessURL' => 'accessURL',
+      'http://www.w3.org/ns/dcat#downloadURL' => 'downloadURL',
+    ],
   ];
-
-  static array $all=[];
-};
-
-class LicenseDocument extends RdfClass {
-  const PROP_KEY_URI = [
-    'http://www.w3.org/2000/01/rdf-schema#label' => 'label',
-  ];
-
-  static array $all=[];
-};
-
-class Distribution extends RdfClass {
-  const PROP_KEY_URI = [
-    'http://purl.org/dc/terms/title' => 'title',
-    'http://purl.org/dc/terms/description' => 'description',
-    'http://purl.org/dc/terms/format' => 'format',
-    'http://www.w3.org/ns/dcat#mediaType' => 'mediaType',
-    'http://purl.org/dc/terms/rights' => 'rights',
-    'http://purl.org/dc/terms/license' => 'license',
-    'http://purl.org/dc/terms/issued' => 'issued',
-    'http://purl.org/dc/terms/created' => 'created',
-    'http://purl.org/dc/terms/modified' => 'modified',
-    'http://www.w3.org/ns/dcat#accessService' => 'accessService',
-    'http://www.w3.org/ns/dcat#accessURL' => 'accessURL',
-    'http://www.w3.org/ns/dcat#downloadURL' => 'downloadURL',
-  ];
-
-  static array $all=[];
-};
-
-class MediaTypeOrExtent extends RdfClass {
-  const PROP_KEY_URI = [
-    'http://www.w3.org/2000/01/rdf-schema#label' => 'label',
-  ];
-
-  static array $all=[];
-};
-
-class MediaType extends RdfClass {
-  const PROP_KEY_URI = [
-    'http://www.w3.org/2000/01/rdf-schema#label' => 'label',
-  ];
-
-  static array $all=[];
-};
-
-class PeriodOfTime extends RdfClass {
-  const PROP_KEY_URI = [
-    'http://www.w3.org/ns/dcat#startDate' => 'startDate',
-    'http://www.w3.org/ns/dcat#endDate' => 'endDate',
-  ];
-
-  static array $all=[];
-};
-
-class Frequency extends RdfClass {
-  const PROP_KEY_URI = [
-    'http://www.w3.org/2000/01/rdf-schema#label' => 'label',
-  ];
-
-  static array $all=[];
-};
-
-class LinguisticSystem extends RdfClass {
-  const PROP_KEY_URI = [
-    'http://www.w3.org/2000/01/rdf-schema#label' => 'label',
-  ];
-
-  static array $all=[];
-};
-
-class Kind extends RdfClass {
-  const PROP_KEY_URI = [
-    'http://www.w3.org/2006/vcard/ns#fn' => 'fn',
-    'http://www.w3.org/2006/vcard/ns#hasEmail' => 'hasEmail',
-    'http://www.w3.org/2006/vcard/ns#hasURL' => 'hasURL',
-  ];
+  // retourne le dictionnaire ROP_KEY_URI pour l'objet
+  function prop_key_uri(): array {
+    $type = $this->types[0];
+    if ($prop_key_uri = self::PROP_KEY_URI_PER_CLASS[$type] ?? null) {
+      return $prop_key_uri;
+    }
+    else {
+      print_r($this);
+      throw new Exception("Erreur, PROP_KEY_URI non défini pour le type $type et l'objet ci-dessus");
+    }
+  }
   
   static array $all=[];
 };
