@@ -140,6 +140,8 @@ function import(string $urlPrefix, bool $skip=false, int $lastPage=0, int $first
 }
 
 
+define('JSON_OPTIONS',
+        JSON_PRETTY_PRINT|JSON_UNESCAPED_LINE_TERMINATORS|JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR);
 $urlPrefix = 'https://preprod.data.developpement-durable.gouv.fr/dcat/catalog';
 
 if (php_sapi_name()=='cli') { // traitement CLI en fonction de l'action demandée 
@@ -203,7 +205,15 @@ if (php_sapi_name()=='cli') { // traitement CLI en fonction de l'action demandé
       Dataset::show();
       break;
     }
-  
+    
+    case 'frameDatasets': {
+      Registre::import();
+      import($urlPrefix, true, $lastPage, $firstPage);
+      Dataset::frameAll(['http://purl.org/dc/terms/publisher']);
+      echo json_encode(Dataset::exportClassAsJsonLd(), JSON_OPTIONS);
+      break;
+    }
+    
     default: {
       foreach (RdfClass::CLASS_URI_TO_PHP_NAME as $classUri => $className) {
         if ($argv[1] == $className) {
@@ -245,8 +255,6 @@ else { // affichage interactif de la version corrigée page par page en Yaml, JS
     echo 'errors = '; print_r($errors);
   }
   echo "---\n";
-  define('JSON_OPTIONS',
-          JSON_PRETTY_PRINT|JSON_UNESCAPED_LINE_TERMINATORS|JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR);
   switch ($outputFormat) {
     case 'yaml': { // affichage simplifié des datasets en Yaml 
       $output = Dataset::show(false);
@@ -258,7 +266,7 @@ else { // affichage interactif de la version corrigée page par page en Yaml, JS
       break;
     }
     case 'jsonld': { // affiche le JSON-LD généré par RdfClass 
-      echo htmlspecialchars(json_encode(RdfClass::exportAsJsonLd(), JSON_OPTIONS));
+      echo htmlspecialchars(json_encode(RdfClass::exportAllAsJsonLd(), JSON_OPTIONS));
       break;
     }
     case 'jsonLdContext': {
@@ -267,7 +275,7 @@ else { // affichage interactif de la version corrigée page par page en Yaml, JS
     }
     case 'jsonldc': { // affiche le JSON-LD compacté avec JsonLD
       if (!is_dir('tmp')) mkdir('tmp');
-      file_put_contents('tmp/document.jsonld', json_encode(RdfClass::exportAsJsonLd(), JSON_OPTIONS));
+      file_put_contents('tmp/document.jsonld', json_encode(RdfClass::exportAllAsJsonLd(), JSON_OPTIONS));
       file_put_contents('tmp/context.jsonld', json_encode(Registre::jsonLdContext(), JSON_OPTIONS));
       $compacted = JsonLD::compact('tmp/document.jsonld', 'tmp/context.jsonld');
       echo htmlspecialchars(json_encode($compacted, JSON_OPTIONS));
@@ -275,7 +283,7 @@ else { // affichage interactif de la version corrigée page par page en Yaml, JS
     }
     case 'jsonldf': { // affiche le JSON-LD structuré (framed) avec JsonLD
       if (!is_dir('tmp')) mkdir('tmp');
-      file_put_contents('tmp/document.jsonld', json_encode(RdfClass::exportAsJsonLd(), JSON_OPTIONS));
+      file_put_contents('tmp/document.jsonld', json_encode(RdfClass::exportAllAsJsonLd(), JSON_OPTIONS));
       file_put_contents('tmp/frame.jsonld', json_encode(Registre::jsonLdFrame(), JSON_OPTIONS));
       $framed = JsonLD::frame('tmp/document.jsonld', 'tmp/frame.jsonld');
       echo htmlspecialchars(json_encode($framed, JSON_OPTIONS));
@@ -283,7 +291,7 @@ else { // affichage interactif de la version corrigée page par page en Yaml, JS
     }
     case 'turtle': { // traduction en Turtle avec EasyRdf
       $graph = new \EasyRdf\Graph('https://preprod.data.developpement-durable.gouv.fr/');
-      $graph->parse(json_encode(RdfClass::exportAsJsonLd()), 'jsonld', 'https://preprod.data.developpement-durable.gouv.fr/');
+      $graph->parse(json_encode(RdfClass::exportAllAsJsonLd()), 'jsonld', 'https://preprod.data.developpement-durable.gouv.fr/');
       echo htmlspecialchars($graph->serialise('turtle'));
       break;
     }

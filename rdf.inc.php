@@ -21,6 +21,7 @@ doc: |
 journal: |
  21/5/2023:
   - regroupement dans la classe GenClass de classes simples n'ayant aucun traitement spécifique
+  - première version de l'opération frame sur les objets d'une classe
  18/5/2023:
   - création par scission de exp.php
   - rectification des mbox et hasEmail qui doivent être des ressources dont l'URI commence par mailto:
@@ -61,7 +62,7 @@ use Symfony\Component\Yaml\Exception\ParseException;
 ** PROP_RANGE indique le range de certaines propriétés afin de permettre le déréférencement
 */}
 class PropVal {
-  // indique par propriété sa classe d'arrivée (range), nécessaire pour le déréférencement
+  // indique par propriété sa classe d'arrivée (range), nécessaire pour le déréférencement pour la simplification
   const PROP_RANGE = [
     'publisher' => 'GenClass',
     'creator' => 'GenClass',
@@ -140,7 +141,7 @@ class PropVal {
         }
         // si le pointeur pointe sur un blank node alors déréférencement du pointeur
         if (!($class = (self::PROP_RANGE[$pKey] ?? null)))
-          throw new Exception("Erreur $pKey absent de RdfClass::PROP_RANGE");
+          throw new Exception("Erreur $pKey absent de PropVal::PROP_RANGE");
         return $class::get($id)->simplify();
       }
       case ['@value'] : { // SI $pval ne contient qu'un champ '@value' alors simplif par cette valeur
@@ -256,6 +257,7 @@ abstract class RdfClass {
     }
   }
 
+  // retourne PROP_KEY_URI, redéfini sur GenClass pour retourner le PROP_KEY_URI en fonction du type de l'objet
   function prop_key_uri(): array { return (get_called_class())::PROP_KEY_URI; }
   
   function __construct(array $resource) { // crée un objet à partir de la description JSON-LD 
@@ -270,7 +272,7 @@ abstract class RdfClass {
     }
   }
   
-  function __toString(): string {
+  function __toString(): string { // génère une chaine pour afficher l'objet 
     return Yaml::dump([$this->asJsonLd()]);
   }
   
@@ -464,7 +466,38 @@ abstract class RdfClass {
       return [self::yamlToPropVal($yaml)];
     }
   }
+
+  static function exportAllAsJsonLd(): array { // extraction du contenu en JSON-LD comme array Php
+    $jsonld = [];
+    foreach (self::CLASS_URI_TO_PHP_NAME as $className) {
+      foreach ($className::$all as $id => $resource)
+        $jsonld[] = $resource->asJsonLd();
+    }
+    return $jsonld;
+  }
   
+  static function exportClassAsJsonLd(): array { // extraction du contenu de la classe en JSON-LD comme array Php
+    //echo 'exportClassAsJsonLd()='; print_r((get_called_class())::$all);
+    $jsonld = [];
+    foreach ((get_called_class())::$all as $id => $resource)
+      $jsonld[] = $resource->asJsonLd();
+    return $jsonld;
+  }
+  
+  function asJsonLd(): array { // retourne la ressource comme JSON-LD 
+    $jsonld = [
+      '@id' => $this->id,
+      '@type'=> $this->types,
+    ];
+    foreach ($this->props as $propUri => $objects) {
+      $jsonld[$propUri] = [];
+      foreach ($objects as $object) {
+        $jsonld[$propUri][] = $object->asJsonLd();
+      }
+    }
+    return $jsonld;
+  }
+    
   // simplification des valeurs des propriétés 
   function simplify(): string|array {
     $simple = [];
@@ -483,27 +516,26 @@ abstract class RdfClass {
     return $simple;
   }
 
-  static function exportAsJsonLd(): array { // extraction du contenu en JSON-LD comme array Php
-    $jsonld = [];
-    foreach (self::CLASS_URI_TO_PHP_NAME as $className) {
-      foreach ($className::$all as $id => $resource)
-        $jsonld[] = $resource->asJsonLd();
+  // applique frame sur les objets de la classe
+  static function frameAll(array $propUris): void {
+    foreach ((get_called_class())::$all as $id => &$resource) {
+      $resource->frame($propUris);
     }
-    return $jsonld;
   }
   
-  function asJsonLd(): array {
-    $jsonld = [
-      '@id' => $this->id,
-      '@type'=> $this->types,
-    ];
-    foreach ($this->props as $propUri => $objects) {
-      $jsonld[$propUri] = [];
-      foreach ($objects as $object) {
-        $jsonld[$propUri][] = $object->asJsonLd();
+  // modifie l'objet en intégrant pour les propriétés définies (par la liste [{propUri}]),
+  // les ressources référencées par la ressource
+  function frame(array $propUris): void {
+    foreach ($this->props as $pUri => &$pvals) {
+      if (!in_array($pUri, $propUris)) continue;
+      $propShortName = $this->prop_key_uri()[$pUri];
+      $rangeClass = PropVal::PROP_RANGE[$propShortName];
+      foreach ($pvals as $i => $pval) {
+        if ($pval->keys == ['@id']) {
+          $pvals[$i] = $rangeClass::get($pval->id);
+        }
       }
     }
-    return $jsonld;
   }
 };
 

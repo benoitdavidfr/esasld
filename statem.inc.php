@@ -1,5 +1,5 @@
 <?php
-/* statem.inc.php - déf. des classes RightsStatement et MLString - 17/5/2023
+/* statem.inc.php - déf. de la classes MLString - 21/5/2023
 */
 use Symfony\Component\Yaml\Yaml;
 use Symfony\Component\Yaml\Exception\ParseException;
@@ -39,7 +39,7 @@ class MLString { // chaine de caractères multilingue
   
   function md5(): string { return md5($this->langstr['fr']); } // calcule le MD5 sur la chaine française
   
-  function toStatementLabel(): array {
+  function toStatementLabel(): array { // génère la liste de valeurs JSON-LD correspondant au MLString
     $label = [];
     foreach ($this->langstr as $lang => $str) {
       $label[] = [

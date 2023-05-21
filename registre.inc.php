@@ -99,7 +99,7 @@ class Registre { // stockage du registre
     ], 5);
   }
   
-  static function jsonLdContext(): array { // contexte JSON-LD de exportAsJsonLd() comme array Php
+  static function jsonLdContext(): array { // contexte JSON-LD de exportAllAsJsonLd() comme array Php
     $context = [
       '@language'=> 'fr',
       '@base'=> 'http://base/',
