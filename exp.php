@@ -135,7 +135,7 @@ function import(string $urlPrefix, bool $skip=false, int $lastPage=0, int $first
         throw new Exception("Types $types non traité");
     }
   }
-  Dataset::rectifStatements(); // correction des propriétés accessRights qui nécessite que tous les objets soient chargés 
+  Dataset::rectifAllStatements(); // rectification des propriétés accessRights et provenance qui nécessitent que tous les objets soient chargés avant la rectification
   return $errors;
 }
 

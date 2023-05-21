@@ -72,9 +72,9 @@ class PropVal {
     'inCatalog' => 'Catalog',
     'contactPoint' => 'GenClass',
     'conformsTo' => 'GenClass',
-    'accessRights' => 'RightsStatement',
+    'accessRights' => 'GenClass',
     'license' => 'GenClass',
-    'provenance' => 'ProvenanceStatement',
+    'provenance' => 'GenClass',
     'format' => 'GenClass',
     'mediaType' => 'GenClass',
     'language' => 'GenClass',
@@ -191,8 +191,8 @@ abstract class RdfClass {
     'http://purl.org/dc/terms/Location' => 'Location',
     'http://purl.org/dc/terms/Standard' => 'GenClass',
     'http://purl.org/dc/terms/LicenseDocument' => 'GenClass',
-    'http://purl.org/dc/terms/RightsStatement' => 'RightsStatement',
-    'http://purl.org/dc/terms/ProvenanceStatement' => 'ProvenanceStatement',
+    'http://purl.org/dc/terms/RightsStatement' => 'GenClass',
+    'http://purl.org/dc/terms/ProvenanceStatement' => 'GenClass',
     'http://purl.org/dc/terms/MediaTypeOrExtent' => 'GenClass',
     'http://purl.org/dc/terms/MediaType' => 'GenClass',
     'http://purl.org/dc/terms/PeriodOfTime' => 'GenClass',
@@ -281,6 +281,10 @@ abstract class RdfClass {
         $this->props[$pUri][] = new PropVal($pval);
       }
     }
+  }
+  
+  function __toString(): string {
+    return Yaml::dump([$this->asJsonLd()]);
   }
   
   static function increment(string $var, string $label): void { // incrémente une des sous-variables de la variable $var
@@ -564,21 +568,69 @@ class Dataset extends RdfClass {
     }
   }
 
-  static function rectifStatements(): void { // rectifie les propriétés accessRights et provenance
+  static function rectifAllStatements(): void { // rectifie les propriétés accessRights et provenance
     foreach (self::$all as $id => $dataset) {
       foreach ($dataset->props as $pUri => &$pvals) {
         switch ($pUri) {
           case 'http://purl.org/dc/terms/accessRights': {
-            $pvals = Statement::rectifStatements($pvals, 'RightsStatement');
+            $pvals = self::rectifOneStatement($pvals, 'RightsStatement');
             break;
           }
           case 'http://purl.org/dc/terms/provenance': {
-            $pvals = Statement::rectifStatements($pvals, 'ProvenanceStatement');
+            $pvals = self::rectifOneStatement($pvals, 'ProvenanceStatement');
             break;
           }
         }
       }
     }
+  }
+  
+  // corrige si nécessaire une liste de valeurs correspondant à une propriété accessRights ou provenance
+  static function rectifOneStatement(array $pvals, string $statementClass): array {
+    $arrayOfMLStrings = []; // [{md5} => ['mlStr'=> MLString, 'bn'=>{bn}]] - liste de chaines correspondant au $pvals
+    
+    foreach ($pvals as $pval) {
+      switch ($pval->keys) {
+        case ['@language','@value'] : {
+          self::increment('rectifStats', "propriété contenant un Littéral alors qu'elle exige une Resource");
+          if ($pval->language == 'fr') {
+            $md5 = md5($pval->value);
+            if (!isset($arrayOfMLStrings[$md5]))
+              $arrayOfMLStrings[$md5] = ['mlStr'=> new MLString(['fr'=> $pval->value])];
+          }
+          else {
+            throw new Exception("Langue ".$pval->language." non traitée");
+          }
+          break;
+        }
+        case ['@id'] : {
+          $statement = GenClass::get($pval->id);
+          $mlStr = MLString::fromStatementLabel($statement->label);
+          $arrayOfMLStrings[$mlStr->md5()] = ['mlStr'=> $mlStr, 'bn'=>$pval->id];
+          break;
+        }
+        default: {
+          throw new Exception("Keys ".implode(',', $pval->keys)." non traité");
+        }
+      }
+    }
+    
+    $pvals = [];
+    foreach ($arrayOfMLStrings as $md5 => $mlStrAndBn) {
+      if (isset($mlStrAndBn['bn']))
+        $pvals[] = new PropVal(['@id'=> $mlStrAndBn['bn']]);
+      else {
+        $id = '_:md5-'.$md5; // définition d'un id de BN à partir du MD5
+        $resource = [
+          '@id'=> $id,
+          '@type'=> ["http://purl.org/dc/terms/$statementClass"],
+          'http://www.w3.org/2000/01/rdf-schema#label'=> $mlStrAndBn['mlStr']->toStatementLabel(),
+        ];
+        GenClass::$all[$id] = new GenClass($resource);
+        $pvals[] = new PropVal(['@id'=> $id]);
+      }
+    }
+    return $pvals;
   }
 };
 
@@ -660,6 +712,12 @@ class GenClass extends RdfClass {
     'http://purl.org/dc/terms/LicenseDocument' => [
       'http://www.w3.org/2000/01/rdf-schema#label' => 'label',
     ],
+    'http://purl.org/dc/terms/RightsStatement' => [
+      'http://www.w3.org/2000/01/rdf-schema#label' => 'label',
+    ],
+    'http://purl.org/dc/terms/ProvenanceStatement' => [
+      'http://www.w3.org/2000/01/rdf-schema#label' => 'label',
+    ],
     'http://purl.org/dc/terms/MediaTypeOrExtent' => [
       'http://www.w3.org/2000/01/rdf-schema#label' => 'label',
     ],
@@ -695,8 +753,9 @@ class GenClass extends RdfClass {
       'http://www.w3.org/ns/dcat#accessURL' => 'accessURL',
       'http://www.w3.org/ns/dcat#downloadURL' => 'downloadURL',
     ],
-  ];
-  // retourne le dictionnaire ROP_KEY_URI pour l'objet
+  ]; // dict. [{typeUri}=> [{propUri} => {$propName}]]
+  
+  // retourne le dictionnaire PROP_KEY_URI pour l'objet
   function prop_key_uri(): array {
     $type = $this->types[0];
     if ($prop_key_uri = self::PROP_KEY_URI_PER_CLASS[$type] ?? null) {
@@ -706,6 +765,25 @@ class GenClass extends RdfClass {
       print_r($this);
       throw new Exception("Erreur, PROP_KEY_URI non défini pour le type $type et l'objet ci-dessus");
     }
+  }
+  
+  // retourne la liste [PropVal] correspondant pour l'objet à une propriété définie par son nom court
+  function __get(string $name): ?array {
+    //echo "__get($name) sur "; print($this);
+    $uri = null;
+    foreach ($this->prop_key_uri() as $pUri => $pName) {
+      if ($pName == $name) {
+        $uri = $pUri;
+        break;
+      }
+    }
+    if (!$uri) {
+      echo "__get($name) retourne null\n";
+      throw new Exception("$name non défini dans GenClass::__get()");
+      return null;
+    }
+    //echo "uri=$uri\n";
+    return $this->props[$uri] ?? [];
   }
   
   static array $all=[];
