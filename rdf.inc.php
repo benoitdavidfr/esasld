@@ -64,7 +64,7 @@ class PropVal {
     'isPrimaryTopicOf' => 'CatalogRecord',
     'inCatalog' => 'Catalog',
     'contactPoint' => 'GenClass',
-    'conformsTo' => 'GenClass', // Standard
+    'conformsTo' => 'GenClass',
     'accessRights' => 'RightsStatement',
     'license' => 'GenClass',
     'provenance' => 'ProvenanceStatement',
