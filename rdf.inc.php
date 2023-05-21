@@ -14,7 +14,7 @@ doc: |
   à partir du registre et des fichiers JSON-LD.
   Les classes non fusionnées définissent la constante de classe PROP_KEY_URI qui liste les propriétés RDF en définissant
   leur raccourci,
-  La classe GenClass définit la méthode prop_key_uri() qui retourne la même liste en fonction de l'objet.
+  La classe GenClass définit la méthode prop_key_uri() qui retourne la même liste en fonction du type de l'objet.
   
   A voir:
     - 
@@ -58,17 +58,17 @@ use Symfony\Component\Yaml\Exception\ParseException;
     "http://purl.org/dc/terms/modified": [
       { "@type": "http://www.w3.org/2001/XMLSchema#dateTime", "@value": "2022-09-21T13:31:46.000249" }
     ],
-** et PROP_RANGE indiquant le range de certaines propriétés afin de permettre le déréférencement
+** PROP_RANGE indique le range de certaines propriétés afin de permettre le déréférencement
 */}
 class PropVal {
   // indique par propriété sa classe d'arrivée (range), nécessaire pour le déréférencement
   const PROP_RANGE = [
-    'publisher' => 'Organization',
-    'creator' => 'Organization',
-    'rightsHolder' => 'Organization',
+    'publisher' => 'GenClass',
+    'creator' => 'GenClass',
+    'rightsHolder' => 'GenClass',
     'spatial' => 'Location',
     'temporal' => 'GenClass',
-    'isPrimaryTopicOf' => 'CatalogRecord',
+    'isPrimaryTopicOf' => 'GenClass',
     'inCatalog' => 'Catalog',
     'contactPoint' => 'GenClass',
     'conformsTo' => 'GenClass',
@@ -76,7 +76,7 @@ class PropVal {
     'license' => 'GenClass',
     'provenance' => 'ProvenanceStatement',
     'format' => 'GenClass',
-    'mediaType' => 'MediaType',
+    'mediaType' => 'GenClass',
     'language' => 'GenClass',
     'accrualPeriodicity' => 'GenClass',
     'accessService' => 'DataService',
@@ -174,18 +174,20 @@ class PropVal {
 };
 
 {/* Classe abstraite portant les méthodes communes à toutes les classes RDF
-** ainsi que les constantes CLASS_URI_TO_PHP_NAME définissant le mapping URI -> nom Php
+** ainsi que la constantes CLASS_URI_TO_PHP_NAME définissant le mapping URI du type ou liste des URI -> nom de la classe Php
+** La propriété $props est le dict. des propriétés de la ressource de la forme [{propUri} => [PropVal|RdfClass]]
+** Lorsque la représentation est applatie (flatten) la forme est [{propUri} => [PropVal]]
 */}
 abstract class RdfClass {
   // Dict. [{URI de classe RDF ou liste d'URI} => {Nom de classe Php}]
   const CLASS_URI_TO_PHP_NAME = [
     'http://www.w3.org/ns/dcat#Catalog' => 'Catalog',
-    'http://www.w3.org/ns/dcat#CatalogRecord' => 'CatalogRecord',
     'http://www.w3.org/ns/dcat#Dataset' => 'Dataset',
     'http://www.w3.org/ns/dcat#Dataset, http://www.w3.org/ns/dcat#DatasetSeries' => 'Dataset',
     'http://www.w3.org/ns/dcat#DatasetSeries, http://www.w3.org/ns/dcat#Dataset' => 'Dataset',
     'http://www.w3.org/ns/dcat#DataService' => 'DataService',
     'http://www.w3.org/ns/dcat#Distribution' => 'GenClass',
+    'http://www.w3.org/ns/dcat#CatalogRecord' => 'GenClass',
     'http://purl.org/dc/terms/Location' => 'Location',
     'http://purl.org/dc/terms/Standard' => 'GenClass',
     'http://purl.org/dc/terms/LicenseDocument' => 'GenClass',
@@ -196,7 +198,7 @@ abstract class RdfClass {
     'http://purl.org/dc/terms/PeriodOfTime' => 'GenClass',
     'http://purl.org/dc/terms/Frequency' => 'GenClass',
     'http://purl.org/dc/terms/LinguisticSystem' => 'GenClass',
-    'http://xmlns.com/foaf/0.1/Organization' => 'Organization',
+    'http://xmlns.com/foaf/0.1/Organization' => 'GenClass',
     'http://www.w3.org/2006/vcard/ns#Kind' => 'GenClass',
     'http://www.w3.org/ns/hydra/core#PagedCollection' => 'PagedCollection',
   ];
@@ -208,7 +210,7 @@ abstract class RdfClass {
   
   protected string $id; // le champ '@id' de la repr. JSON-LD, cad l'URI de la ressource ou l'id blank node
   protected array $types; // le champ '@type' de la repr. JSON-LD, cad la liste des URI des classes RDF de la ressource
-  protected array $props=[]; // dict. des propriétés de la ressource de la forme [{propUri} => [PropVal]]
+  protected array $props=[]; // dict. des propriétés de la ressource de la forme [{propUri} => [PropVal|RdfClass]]
   
   static function add(array $resource): self { // ajout d'une ressource à la classe
     $class = get_called_class();
@@ -591,27 +593,6 @@ class DataService extends Dataset {
   static array $all=[];
 };
 
-class CatalogRecord extends RdfClass {
-  const PROP_KEY_URI = [
-    'http://purl.org/dc/terms/identifier' => 'identifier',
-    'http://purl.org/dc/terms/language' => 'language',
-    'http://purl.org/dc/terms/modified' => 'modified',
-    'http://www.w3.org/ns/dcat#contactPoint' => 'contactPoint',
-    'http://www.w3.org/ns/dcat#inCatalog' => 'inCatalog',
-  ];
-  static array $all=[];
-};
-
-class Organization extends RdfClass {
-  const PROP_KEY_URI = [
-    'http://xmlns.com/foaf/0.1/name' => 'name',
-    'http://xmlns.com/foaf/0.1/mbox' => 'mbox',
-    'http://xmlns.com/foaf/0.1/phone' => 'phone',
-    'http://xmlns.com/foaf/0.1/workplaceHomepage' => 'workplaceHomepage',
-  ];
-  static array $all=[];
-};
-
 class Location extends RdfClass {
   const TYPES_INSEE = [
     'region' => "Région",
@@ -660,6 +641,19 @@ class Location extends RdfClass {
 // Classe générique regroupant plusieurs classes n'ayant pas de traitement spécifique 
 class GenClass extends RdfClass {
   const PROP_KEY_URI_PER_CLASS = [
+    'http://www.w3.org/ns/dcat#CatalogRecord' => [
+      'http://purl.org/dc/terms/identifier' => 'identifier',
+      'http://purl.org/dc/terms/language' => 'language',
+      'http://purl.org/dc/terms/modified' => 'modified',
+      'http://www.w3.org/ns/dcat#contactPoint' => 'contactPoint',
+      'http://www.w3.org/ns/dcat#inCatalog' => 'inCatalog',
+    ],
+    'http://xmlns.com/foaf/0.1/Organization' => [
+      'http://xmlns.com/foaf/0.1/name' => 'name',
+      'http://xmlns.com/foaf/0.1/mbox' => 'mbox',
+      'http://xmlns.com/foaf/0.1/phone' => 'phone',
+      'http://xmlns.com/foaf/0.1/workplaceHomepage' => 'workplaceHomepage',
+    ],
     'http://purl.org/dc/terms/Standard' => [
       'http://www.w3.org/2000/01/rdf-schema#label' => 'label',
     ],
