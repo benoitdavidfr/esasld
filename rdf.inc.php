@@ -6,14 +6,21 @@ doc: |
   une structuration d'une valeur RDF d'une propriété RDF d'une ressource.
 
   La classe abstraite RdfClass porte une grande partie du code et est la classe mère de toutes les classes Php
-  traduisant les classes RDF. Pour chacune de ces dernières:
-   - la constante de classe PROP_KEY_URI liste les propriétés RDF en définissant leur raccourci,
-   - la propriété statique $all contient les objets correspondant aux ressources lues à partir du registre et des fichiers
-     JSON-LD.
+  traduisant les classes RDF.
+  
+  Chaque classe RDF est soit traduite en une classe Php, soit, si elle ne porte pas de traitement spécifique,
+  fusionnée dans la classe GenClass.
+  Chacune de ces classes Php définit la propriété statique $all contient les objets correspondant aux ressources lues
+  à partir du registre et des fichiers JSON-LD.
+  Les classes non fusionnées définissent la constante de classe PROP_KEY_URI qui liste les propriétés RDF en définissant
+  leur raccourci,
+  La classe GenClass définit la méthode prop_key_uri() qui retourne la même liste en fonction de l'objet.
   
   A voir:
     - 
 journal: |
+ 21/5/2023:
+  - regroupement dans la classe GenClass de classes simples n'ayant aucun traitement spécifique
  18/5/2023:
   - création par scission de exp.php
   - rectification des mbox et hasEmail qui doivent être des ressources dont l'URI commence par mailto:
