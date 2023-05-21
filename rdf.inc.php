@@ -229,23 +229,10 @@ abstract class RdfClass {
     $class = get_called_class();
     if (isset($class::$all[$id]))
       return $class::$all[$id];
-    /* code utilisé pour lire le contenu des registres associé éventuellement à chaque classe (périmé)
-    elseif (defined($class.'::REGISTRE') && ($resource = $class::REGISTRE[$id] ?? null)) {
-      $jsonld = [
-        '@id'=> $id, 
-        '@type'=> ["http://purl.org/dc/terms/$class"],
-        'http://www.w3.org/2000/01/rdf-schema#label' => [],
-      ];
-      foreach ($resource as $lang => $value) {
-        if ($lang)
-          $jsonld['http://www.w3.org/2000/01/rdf-schema#label'][] = ['@language'=> $lang, '@value'=> $value];
-        else
-          $jsonld['http://www.w3.org/2000/01/rdf-schema#label'][] = ['@value'=> $value];
-      }
-      return new $class($jsonld);
-    }*/
-    else
+    else {
+      echo "RdfClass::get($id) sur la classe $class\n";
       throw new Exception("DEREF_ERROR on $id");
+    }
   }
   
   static function show(bool $echo=true): string { // affiche en Yaml les ressources de la classe hors blank nodes 
@@ -520,6 +507,108 @@ abstract class RdfClass {
   }
 };
 
+// Classe générique regroupant plusieurs classes n'ayant pas de traitement spécifique 
+class GenClass extends RdfClass {
+  const PROP_KEY_URI_PER_CLASS = [
+    'http://www.w3.org/ns/dcat#CatalogRecord' => [
+      'http://purl.org/dc/terms/identifier' => 'identifier',
+      'http://purl.org/dc/terms/language' => 'language',
+      'http://purl.org/dc/terms/modified' => 'modified',
+      'http://www.w3.org/ns/dcat#contactPoint' => 'contactPoint',
+      'http://www.w3.org/ns/dcat#inCatalog' => 'inCatalog',
+    ],
+    'http://xmlns.com/foaf/0.1/Organization' => [
+      'http://xmlns.com/foaf/0.1/name' => 'name',
+      'http://xmlns.com/foaf/0.1/mbox' => 'mbox',
+      'http://xmlns.com/foaf/0.1/phone' => 'phone',
+      'http://xmlns.com/foaf/0.1/workplaceHomepage' => 'workplaceHomepage',
+    ],
+    'http://purl.org/dc/terms/Standard' => [
+      'http://www.w3.org/2000/01/rdf-schema#label' => 'label',
+    ],
+    'http://purl.org/dc/terms/LicenseDocument' => [
+      'http://www.w3.org/2000/01/rdf-schema#label' => 'label',
+    ],
+    'http://purl.org/dc/terms/RightsStatement' => [
+      'http://www.w3.org/2000/01/rdf-schema#label' => 'label',
+    ],
+    'http://purl.org/dc/terms/ProvenanceStatement' => [
+      'http://www.w3.org/2000/01/rdf-schema#label' => 'label',
+    ],
+    'http://purl.org/dc/terms/MediaTypeOrExtent' => [
+      'http://www.w3.org/2000/01/rdf-schema#label' => 'label',
+    ],
+    'http://purl.org/dc/terms/MediaType' => [
+      'http://www.w3.org/2000/01/rdf-schema#label' => 'label',
+    ],
+    'http://purl.org/dc/terms/Frequency' => [
+      'http://www.w3.org/2000/01/rdf-schema#label' => 'label',
+    ],
+    'http://purl.org/dc/terms/LinguisticSystem' => [
+      'http://www.w3.org/2000/01/rdf-schema#label' => 'label',
+    ],
+    'http://purl.org/dc/terms/PeriodOfTime' => [
+      'http://www.w3.org/ns/dcat#startDate' => 'startDate',
+      'http://www.w3.org/ns/dcat#endDate' => 'endDate',
+    ],
+    'http://www.w3.org/2006/vcard/ns#Kind' => [
+      'http://www.w3.org/2006/vcard/ns#fn' => 'fn',
+      'http://www.w3.org/2006/vcard/ns#hasEmail' => 'hasEmail',
+      'http://www.w3.org/2006/vcard/ns#hasURL' => 'hasURL',
+    ],
+    'http://www.w3.org/ns/dcat#Distribution' => [
+      'http://purl.org/dc/terms/title' => 'title',
+      'http://purl.org/dc/terms/description' => 'description',
+      'http://purl.org/dc/terms/format' => 'format',
+      'http://www.w3.org/ns/dcat#mediaType' => 'mediaType',
+      'http://purl.org/dc/terms/rights' => 'rights',
+      'http://purl.org/dc/terms/license' => 'license',
+      'http://purl.org/dc/terms/issued' => 'issued',
+      'http://purl.org/dc/terms/created' => 'created',
+      'http://purl.org/dc/terms/modified' => 'modified',
+      'http://www.w3.org/ns/dcat#accessService' => 'accessService',
+      'http://www.w3.org/ns/dcat#accessURL' => 'accessURL',
+      'http://www.w3.org/ns/dcat#downloadURL' => 'downloadURL',
+    ],
+  ]; // dict. [{typeUri}=> [{propUri} => {$propName}]]
+  
+  // retourne le dictionnaire PROP_KEY_URI pour l'objet
+  function prop_key_uri(): array {
+    $type = $this->types[0];
+    if ($prop_key_uri = self::PROP_KEY_URI_PER_CLASS[$type] ?? null) {
+      return $prop_key_uri;
+    }
+    else {
+      print_r($this);
+      throw new Exception("Erreur, PROP_KEY_URI non défini pour le type $type et l'objet ci-dessus");
+    }
+  }
+  
+  // retourne la liste [PropVal] correspondant pour l'objet à la propriété définie par son nom court
+  function __get(string $name): ?array {
+    //echo "__get($name) sur "; print($this);
+    $uri = null;
+    foreach ($this->prop_key_uri() as $pUri => $pName) {
+      if ($pName == $name) {
+        $uri = $pUri;
+        break;
+      }
+    }
+    if (!$uri) {
+      echo "__get($name) retourne null\n";
+      throw new Exception("$name non défini dans GenClass::__get()");
+      //return null;
+    }
+    //echo "uri=$uri\n";
+    return $this->props[$uri] ?? [];
+  }
+  
+  // je fais l'hypothèse que les objets autres que Catalog quand ils sont définis plusieurs fois ont des defs identiques
+  function concat(array $resource): void {}
+  
+  static array $all=[];
+};
+
 class Dataset extends RdfClass {
   const PROP_KEY_URI = [
     'http://purl.org/dc/terms/title' => 'title',
@@ -688,105 +777,6 @@ class Location extends RdfClass {
     }
     return parent::simplify();
   }
-};
-
-// Classe générique regroupant plusieurs classes n'ayant pas de traitement spécifique 
-class GenClass extends RdfClass {
-  const PROP_KEY_URI_PER_CLASS = [
-    'http://www.w3.org/ns/dcat#CatalogRecord' => [
-      'http://purl.org/dc/terms/identifier' => 'identifier',
-      'http://purl.org/dc/terms/language' => 'language',
-      'http://purl.org/dc/terms/modified' => 'modified',
-      'http://www.w3.org/ns/dcat#contactPoint' => 'contactPoint',
-      'http://www.w3.org/ns/dcat#inCatalog' => 'inCatalog',
-    ],
-    'http://xmlns.com/foaf/0.1/Organization' => [
-      'http://xmlns.com/foaf/0.1/name' => 'name',
-      'http://xmlns.com/foaf/0.1/mbox' => 'mbox',
-      'http://xmlns.com/foaf/0.1/phone' => 'phone',
-      'http://xmlns.com/foaf/0.1/workplaceHomepage' => 'workplaceHomepage',
-    ],
-    'http://purl.org/dc/terms/Standard' => [
-      'http://www.w3.org/2000/01/rdf-schema#label' => 'label',
-    ],
-    'http://purl.org/dc/terms/LicenseDocument' => [
-      'http://www.w3.org/2000/01/rdf-schema#label' => 'label',
-    ],
-    'http://purl.org/dc/terms/RightsStatement' => [
-      'http://www.w3.org/2000/01/rdf-schema#label' => 'label',
-    ],
-    'http://purl.org/dc/terms/ProvenanceStatement' => [
-      'http://www.w3.org/2000/01/rdf-schema#label' => 'label',
-    ],
-    'http://purl.org/dc/terms/MediaTypeOrExtent' => [
-      'http://www.w3.org/2000/01/rdf-schema#label' => 'label',
-    ],
-    'http://purl.org/dc/terms/MediaType' => [
-      'http://www.w3.org/2000/01/rdf-schema#label' => 'label',
-    ],
-    'http://purl.org/dc/terms/Frequency' => [
-      'http://www.w3.org/2000/01/rdf-schema#label' => 'label',
-    ],
-    'http://purl.org/dc/terms/LinguisticSystem' => [
-      'http://www.w3.org/2000/01/rdf-schema#label' => 'label',
-    ],
-    'http://purl.org/dc/terms/PeriodOfTime' => [
-      'http://www.w3.org/ns/dcat#startDate' => 'startDate',
-      'http://www.w3.org/ns/dcat#endDate' => 'endDate',
-    ],
-    'http://www.w3.org/2006/vcard/ns#Kind' => [
-      'http://www.w3.org/2006/vcard/ns#fn' => 'fn',
-      'http://www.w3.org/2006/vcard/ns#hasEmail' => 'hasEmail',
-      'http://www.w3.org/2006/vcard/ns#hasURL' => 'hasURL',
-    ],
-    'http://www.w3.org/ns/dcat#Distribution' => [
-      'http://purl.org/dc/terms/title' => 'title',
-      'http://purl.org/dc/terms/description' => 'description',
-      'http://purl.org/dc/terms/format' => 'format',
-      'http://www.w3.org/ns/dcat#mediaType' => 'mediaType',
-      'http://purl.org/dc/terms/rights' => 'rights',
-      'http://purl.org/dc/terms/license' => 'license',
-      'http://purl.org/dc/terms/issued' => 'issued',
-      'http://purl.org/dc/terms/created' => 'created',
-      'http://purl.org/dc/terms/modified' => 'modified',
-      'http://www.w3.org/ns/dcat#accessService' => 'accessService',
-      'http://www.w3.org/ns/dcat#accessURL' => 'accessURL',
-      'http://www.w3.org/ns/dcat#downloadURL' => 'downloadURL',
-    ],
-  ]; // dict. [{typeUri}=> [{propUri} => {$propName}]]
-  
-  // retourne le dictionnaire PROP_KEY_URI pour l'objet
-  function prop_key_uri(): array {
-    $type = $this->types[0];
-    if ($prop_key_uri = self::PROP_KEY_URI_PER_CLASS[$type] ?? null) {
-      return $prop_key_uri;
-    }
-    else {
-      print_r($this);
-      throw new Exception("Erreur, PROP_KEY_URI non défini pour le type $type et l'objet ci-dessus");
-    }
-  }
-  
-  // retourne la liste [PropVal] correspondant pour l'objet à une propriété définie par son nom court
-  function __get(string $name): ?array {
-    //echo "__get($name) sur "; print($this);
-    $uri = null;
-    foreach ($this->prop_key_uri() as $pUri => $pName) {
-      if ($pName == $name) {
-        $uri = $pUri;
-        break;
-      }
-    }
-    if (!$uri) {
-      echo "__get($name) retourne null\n";
-      throw new Exception("$name non défini dans GenClass::__get()");
-      return null;
-    }
-    //echo "uri=$uri\n";
-    return $this->props[$uri] ?? [];
-  }
-  
-  static array $all=[];
 };
 
 class PagedCollection extends RdfClass {

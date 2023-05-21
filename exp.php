@@ -152,7 +152,7 @@ if (php_sapi_name()=='cli') { // traitement CLI en fonction de l'action demandé
     echo "  - errors - afffichage des erreurs rencontrées lors de la lecture du catalogue\n";
     echo "  - catalogs - lecture du catalogue puis affichage des catalogues\n";
     echo "  - datasets - lecture du catalogue puis affichage des jeux de données\n";
-    foreach (RdfClass::CLASS_URI_TO_PHP_NAME as $classUri => $className)
+    foreach (array_unique(array_values(RdfClass::CLASS_URI_TO_PHP_NAME)) as $classUri => $className)
       echo "  - $className - affiche les objets de la classe $className y compris les blank nodes\n";
     die();
   }
@@ -178,10 +178,12 @@ if (php_sapi_name()=='cli') { // traitement CLI en fonction de l'action demandé
       break;
     }
     case 'import': { // effectue uniquement l'import de l'export
+      Registre::import();
       import($urlPrefix, true, $lastPage, $firstPage);
       break;
     }
     case 'errors': {
+      Registre::import();
       $errors = import($urlPrefix, true, $lastPage, $firstPage);
       echo "Pages en erreur:\n";
       foreach ($errors as $page => $error)
