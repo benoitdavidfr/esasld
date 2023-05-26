@@ -1,0 +1,38 @@
+'@language': fr
+dcat: http://www.w3.org/ns/dcat#
+dct: http://purl.org/dc/terms/
+foaf: http://xmlns.com/foaf/0.1/
+vcard: http://www.w3.org/2006/vcard/ns#
+rdfs: http://www.w3.org/2000/01/rdf-schema#
+xsd: http://www.w3.org/2001/XMLSchema#
+# DCAT
+Dataset: dcat:Dataset
+Catalog: dcat:Catalog
+CatalogRecord: dcat:CatalogRecord
+inCatalog: dcat:inCatalog
+keyword: dcat:keyword
+landingPage: {'@id': dcat:landingPage, '@type': '@id'}
+distribution: {'@id': dcat:distribution, '@type': '@id'}
+contactPoint: {'@id': dcat:contactPoint, '@type': '@id'}
+downloadURL: {'@id': dcat:downloadURL, '@type': '@id'}
+# DCT
+RightsStatement: dct:RightsStatement
+title: dct:title
+description: dct:description
+issued: {'@id': dct:issued, '@type': xsd:date} # PB peut-ête dateTime
+publisher: dct:publisher
+language: {'@id': dct:language, '@type': dct:LinguisticSystem}  # NE FONCTIONNE PAS
+identifier: {'@id': dct:identifier, '@language': null}
+accessRights: dct:accessRights
+# FOAF
+Organization: foaf:Organization
+name: foaf:name
+isPrimaryTopicOf: foaf:isPrimaryTopicOf
+homepage: {'@id': foaf:homepage, '@type': '@id'}
+page: {'@id': foaf:page, '@type': '@id'}
+# VCARD
+Kind: vcard:Kind
+hasEmail: {'@id': vcard:hasEmail, '@type': '@id'}
+hasURL: {'@id': vcard:hasURL, '@type': '@id'}
+# RDFS
+label: rdfs:label

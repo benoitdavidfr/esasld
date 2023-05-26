@@ -17,9 +17,18 @@ doc: |
   
   Prolongations éventuelles:
    - générer un affichage simplifié qui soit un export DCAT valide en YAML-LD
+     - l'enjeeu est
+       - d'une part de définir le contexte adhoc qui formalise la structure de données d'export
+       - d'autre part d'effectuer le framing adhoc
+      - on pourrait avoir les exports suivants
+        - les catalogues moissonnés sans les JD
+        - les JdD d'un catalogue particulier
+        - les organizations
+        - les JdD d'une organization donnée dans les différents catalogues
    - réexporter le contenu importé pour bénéficier des corrections, y compris en le paginant
    - définir des shapes SHACL pour valider le graphe DCAT en s'inspirant de ceux de DCTA-AP
 
+  21/5 17h30 Les dernières modifs ne machent pas
 journal: |
  21/5/2023:
   - regroupement dans la classe GenClass de classes simples n'ayant aucun traitement spécifique

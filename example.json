@@ -1,0 +1,297 @@
+{
+  "@id": "http://catalogue.geo-ide.developpement-durable.gouv.fr/fr-120066022-jdd-acddda4a-918b-4063-9920-b8e505dd4447",
+  "@type": [
+    "http://www.w3.org/ns/dcat#Dataset"
+  ],
+  "http://purl.org/dc/terms/title": [
+    {
+      "@language": "fr",
+      "@value": "Données carroyées à 200 mètres dans le Loiret"
+    }
+  ],
+  "http://purl.org/dc/terms/description": [
+    {
+      "@language": "fr",
+      "@value": "Les données carroyées (carreaux de 200 mètres) sont issues de la source Revenus Fiscaux Localisés 2010. Elles sont utiles pour disposer d’information à des niveaux infra-communaux selon des découpages propres aux différents utilisateurs."
+    }
+  ],
+  "http://purl.org/dc/terms/issued": [
+    {
+      "@type": "http://www.w3.org/2001/XMLSchema#date",
+      "@value": "2015-12-11"
+    }
+  ],
+  "http://purl.org/dc/terms/publisher": [
+    {
+      "@id": "https://preprod.data.developpement-durable.gouv.fr/organization/f1dfae20-8872-4fc6-a242-26dd529bd159",
+      "@type": [
+        "http://xmlns.com/foaf/0.1/Organization"
+      ],
+      "http://xmlns.com/foaf/0.1/name": [
+        {
+          "@language": "fr",
+          "@value": "DDT 45"
+        }
+      ]
+    }
+  ],
+  "http://purl.org/dc/terms/language": [
+    {
+      "@id": "http://publications.europa.eu/resource/authority/language/FRA",
+      "@type": ["http://purl.org/dc/terms/LinguisticSystem"],
+      "http://www.w3.org/2000/01/rdf-schema#label": [
+        {"@language": "fr", "@value": "Français"}
+      ]
+    }
+  ],
+  "http://purl.org/dc/terms/identifier": [
+    {
+      "@value": "46011ed1-bc65-4c83-a51a-c3fc78ba6ba9"
+    }
+  ],
+  "http://www.w3.org/ns/dcat#keyword": [
+    {
+      "@language": "fr",
+      "@value": "ménages"
+    },
+    {
+      "@language": "fr",
+      "@value": "données ouvertes"
+    },
+    {
+      "@language": "fr",
+      "@value": "Donnée générique/Démographie"
+    },
+    {
+      "@language": "fr",
+      "@value": "population"
+    }
+  ],
+  "http://www.w3.org/ns/dcat#landingPage": [
+    {
+      "@id": "http://catalogue.geo-ide.developpement-durable.gouv.fr/catalogue/srv/fre/catalog.search#/metadata/fr-120066022-jdd-acddda4a-918b-4063-9920-b8e505dd4447"
+    }
+  ],
+  "http://xmlns.com/foaf/0.1/isPrimaryTopicOf": [
+    {
+      "@type": [
+        "http://www.w3.org/ns/dcat#CatalogRecord"
+      ],
+      "http://purl.org/dc/terms/identifier": [
+        {
+          "@value": "fr-120066022-jdd-acddda4a-918b-4063-9920-b8e505dd4447"
+        }
+      ],
+      "http://purl.org/dc/terms/language": [
+        {
+          "@id": "http://publications.europa.eu/resource/authority/language/FRA",
+          "@type": ["http://purl.org/dc/terms/LinguisticSystem"],
+          "http://www.w3.org/2000/01/rdf-schema#label": [
+            {"@language": "fr", "@value": "Français"}
+          ]
+        }
+      ],
+      "http://purl.org/dc/terms/modified": [
+        {
+          "@type": "http://www.w3.org/2001/XMLSchema#dateTime",
+          "@value": "2022-09-21T09:56:38.000437"
+        }
+      ],
+      "http://www.w3.org/ns/dcat#contactPoint": [
+        {
+          "@type": [
+            "http://www.w3.org/2006/vcard/ns#Kind"
+          ],
+          "http://www.w3.org/2006/vcard/ns#hasEmail": [
+            {
+              "@id": "mailto:ddt-pcpt-suadt@loiret.gouv.fr"
+            }
+          ],
+          "http://www.w3.org/2006/vcard/ns#hasURL": [
+            {
+              "@id": "http://www.loiret.gouv.fr/"
+            }
+          ]
+        },
+        {
+          "@type": [
+            "http://www.w3.org/2006/vcard/ns#Kind"
+          ],
+          "http://www.w3.org/2006/vcard/ns#hasEmail": [
+            {
+              "@id": "mailto:pcpt.suadt.ddt-45@equipement-agriculture.gouv.fr"
+            }
+          ]
+        },
+        {
+          "@type": [
+            "http://www.w3.org/2006/vcard/ns#Kind"
+          ],
+          "http://www.w3.org/2006/vcard/ns#hasEmail": [
+            {
+              "@id": "mailto:pcpt.suadt.ddt-45@equipement-agriculture.gouv.fr"
+            }
+          ]
+        }
+      ],
+      "http://www.w3.org/ns/dcat#inCatalog": [
+        {
+          "@type": [
+            "http://www.w3.org/ns/dcat#Catalog"
+          ],
+          "http://purl.org/dc/terms/title": [
+            {
+              "@language": "fr",
+              "@value": "GéoIDE Catalogue"
+            }
+          ],
+          "http://xmlns.com/foaf/0.1/homepage": [
+            {
+              "@id": "http://catalogue.geo-ide.developpement-durable.gouv.fr"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "http://xmlns.com/foaf/0.1/page": [
+    {
+      "@id": "http://catalogue.geo-ide.developpement-durable.gouv.fr/catalogue/srv/fre/catalog.search#/metadata/fr-120066022-ca-jdd-acddda4a-918b-4063-9920-b8e505dd4447"
+    }
+  ],
+  "http://purl.org/dc/terms/accessRights": [
+    {
+      "@type": [
+        "http://purl.org/dc/terms/RightsStatement"
+      ],
+      "http://www.w3.org/2000/01/rdf-schema#label": [
+        {
+          "@language": "fr",
+          "@value": "Pas de restriction d'accès public selon INSPIRE"
+        }
+      ]
+    },
+    {
+      "@type": [
+        "http://purl.org/dc/terms/RightsStatement"
+      ],
+      "http://www.w3.org/2000/01/rdf-schema#label": [
+        {
+          "@language": "fr",
+          "@value": "Aucun des articles de la loi ne peut être invoqué pour justifier d'une restriction d'accès public."
+        }
+      ]
+    }
+  ],
+  "http://purl.org/dc/terms/spatial": [
+    {
+      "@type": [
+        "http://purl.org/dc/terms/Location"
+      ],
+      "http://www.w3.org/ns/dcat#bbox": [
+        {
+          "@type": "http://www.opengis.net/ont/geosparql#wktLiteral",
+          "@value": "POLYGON((3.12849689 48.34494400,3.12849689 47.48318481,1.51405132 47.48318481,1.51405132 48.34494400,3.12849689 48.34494400))"
+        }
+      ]
+    },
+    {
+      "@type": [
+        "http://purl.org/dc/terms/Location"
+      ],
+      "http://www.w3.org/ns/locn#geometry": [
+        {
+          "@type": "http://www.opengis.net/ont/geosparql#wktLiteral",
+          "@value": "POLYGON ((3.1285 48.3449, 3.1285 47.4832, 1.5141 47.4832, 1.5141 48.3449, 3.1285 48.3449))"
+        },
+        {
+          "@type": "https://www.iana.org/assignments/media-types/application/vnd.geo+json",
+          "@value": "{\"type\": \"Polygon\", \"coordinates\": [[[3.12849689, 48.344944], [3.12849689, 47.48318481], [1.51405132, 47.48318481], [1.51405132, 48.344944], [3.12849689, 48.344944]]]}"
+        }
+      ]
+    }
+  ],
+  "http://www.w3.org/ns/dcat#distribution": [
+    {
+      "@id": "https://preprod.data.developpement-durable.gouv.fr/dataset/46011ed1-bc65-4c83-a51a-c3fc78ba6ba9/resource/6fe1ebef-72ad-4e96-8009-40d65d81b493",
+      "@type": [
+        "http://www.w3.org/ns/dcat#Distribution"
+      ],
+      "http://purl.org/dc/terms/issued": [
+        {
+          "@type": "http://www.w3.org/2001/XMLSchema#dateTime",
+          "@value": "2023-04-26T01:58:49.151622"
+        }
+      ],
+      "http://purl.org/dc/terms/license": [
+        {
+          "@id": "https://spdx.org/licenses/etalab-2.0",
+          "@type": ["http://purl.org/dc/terms/LicenseDocument"],
+          "http://www.w3.org/2000/01/rdf-schema#label": [
+            {
+              "@language": "fr",
+              "@value": "Licence ouverte Etalab 2.0"
+            }
+          ]
+        }
+      ],
+      "http://purl.org/dc/terms/modified": [
+        {
+          "@type": "http://www.w3.org/2001/XMLSchema#dateTime",
+          "@value": "2023-04-26T01:58:49.141347"
+        }
+      ],
+      "http://purl.org/dc/terms/title": [
+        {
+          "@language": "fr",
+          "@value": "Téléchargement simple (Atom) du jeu et des documents associés via internet"
+        }
+      ],
+      "http://www.w3.org/ns/dcat#downloadURL": [
+        {
+          "@id": "https://atom.geo-ide.developpement-durable.gouv.fr/atomArchive/GetResource?id=44ed5fac-4276-4615-92cd-1bb05cd6ede0&dataType=dataset"
+        }
+      ]
+    },
+    {
+      "@id": "https://preprod.data.developpement-durable.gouv.fr/dataset/46011ed1-bc65-4c83-a51a-c3fc78ba6ba9/resource/11bd34a0-e73f-49bc-ad59-b1ec2a0c6548",
+      "@type": [
+        "http://www.w3.org/ns/dcat#Distribution"
+      ],
+      "http://purl.org/dc/terms/issued": [
+        {
+          "@type": "http://www.w3.org/2001/XMLSchema#dateTime",
+          "@value": "2023-04-26T01:58:49.151630"
+        }
+      ],
+      "http://purl.org/dc/terms/license": [
+        {
+          "@id": "https://spdx.org/licenses/etalab-2.0",
+          "@type": ["http://purl.org/dc/terms/LicenseDocument"],
+          "http://www.w3.org/2000/01/rdf-schema#label": [
+            {
+              "@language": "fr",
+              "@value": "Licence ouverte Etalab 2.0"
+            }
+          ]
+        }
+      ],
+      "http://purl.org/dc/terms/modified": [
+        {
+          "@type": "http://www.w3.org/2001/XMLSchema#dateTime",
+          "@value": "2023-04-26T01:58:49.141862"
+        }
+      ],
+      "http://purl.org/dc/terms/title": [
+        {
+          "@value": "Téléchargement simple (Atom) du jeu et des documents associés via intranet"
+        }
+      ],
+      "http://www.w3.org/ns/dcat#downloadURL": [
+        {
+          "@id": "https://atom.geo-ide.e2.rie.gouv.fr/atomArchive/GetResource?id=44ed5fac-4276-4615-92cd-1bb05cd6ede0&dataType=dataset"
+        }
+      ]
+    }
+  ]
+}

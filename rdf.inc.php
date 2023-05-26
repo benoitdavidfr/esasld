@@ -260,7 +260,8 @@ abstract class RdfClass {
   // retourne PROP_KEY_URI, redéfini sur GenClass pour retourner le PROP_KEY_URI en fonction du type de l'objet
   function prop_key_uri(): array { return (get_called_class())::PROP_KEY_URI; }
   
-  function __construct(array $resource) { // crée un objet à partir de la description JSON-LD 
+  // crée un objet à partir de la description JSON-LD, réordonne les propriétés selon l'ordre de PROP_KEY_URI
+  function __construct(array $resource) {
     $this->id = $resource['@id'];
     unset($resource['@id']);
     $this->types = $resource['@type'];
@@ -659,6 +660,7 @@ class Dataset extends RdfClass {
     'http://purl.org/dc/terms/spatial' => 'spatial',
     'http://purl.org/dc/terms/temporal' => 'temporal',
     'http://purl.org/dc/terms/accessRights' => 'accessRights',
+    'http://purl.org/dc/terms/rightsHolder' => 'rightsHolder',
     'http://purl.org/dc/terms/rights_holder' => 'rightsHolder', // ERREUR
     'http://xmlns.com/foaf/0.1/homepage' => 'homepage',
     'http://www.w3.org/ns/dcat#landingPage' => 'landingPage',
@@ -674,7 +676,6 @@ class Dataset extends RdfClass {
     'http://www.w3.org/ns/dcat#inSeries' => 'inSeries',
     'http://www.w3.org/ns/dcat#seriesMember' => 'seriesMember',
     'http://www.w3.org/ns/dcat#distribution' => 'distribution',
-    
   ];
   static array $all=[]; // [{id}=> self] -- dict. des objets de la classe
     

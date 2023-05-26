@@ -1,15 +1,25 @@
 title: Conception
+point@25/5:
+  - mise en oeuvre compexp.php pour concevoir le contexte
+  - JsonLD n'est pas compatible JSON-LD 1.1
+  - example.json simule une sortie d'un JdD
+  - context.json contient le contexte
+  - à voir
+    - possibilité de supprimer la classe des ressources ? ne semble pas possible
+    - simplification de spatial
+    - pb de l'ordre des propriétés non conservée par compact -> ordre à définir au moment de l'affichage
+  
 point@20/5:
   - JsonLD::compact() n'est pas suffisant
   - JsonLD::frame() ne fonctionne pas bien, à éviter
     - il plante sur plusieurs pages
     - je ne comprend pas comment définir le paramétrage répondant à mes besoins
   - idée:
-    - faire en Php une sortie compactée et structurée
+    - faire en Php une sortie non compactée et structurée
     - simplifier et homogénéiser certains éléments
       - par exemple transformer toutes les dateTime en date
     - lui associer un contexte
-    - vérifier le contexte en applatissant (flatten) et décompactant (expand) la sortie avec JsonLD
+    - vérifier le contexte en compactant (compact) et décompactant (expand) la sortie avec JsonLD
   - voabulaire, j'appelle:
     - rectifier (rectify) = la correction d'erreurs qui devraient être corrigées à la source
     - améliorer (improve) = modifier pour faciliter la lecture et la compréhension
