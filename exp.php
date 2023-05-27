@@ -3,7 +3,7 @@
 title: export.php - script de lecture de l'export du catalogue Ecosphères - 18/5/2023
 doc: |
   L'objectif de ce script est de lire l'export DCAT d'Ecosphères en JSON-LD afin d'y détecter d'éventuelles erreurs.
-  Chaque clase RDF est traduite par une classe Php avec un mapping trivial défini dans RdfClass::CLASS_URI_TO_PHP_NAME
+  Chaque clase RDF est traduite par une classe Php avec un mapping trivial défini dans RdfResource::CLASS_URI_TO_PHP_NAME
   Outre la détection et correction d'erreurs, le script affiche différents types d'objets de manière simplifiée
   et plus lisible pour les néophytes.
   Cette simplification correspond, d'une part, à une "compaction JSON-LD" avec un contexte non explicité
@@ -131,9 +131,9 @@ function import(string $urlPrefix, bool $skip=false, int $lastPage=0, int $first
     //StdErr::write("Info: nbelts de la page $page = ".count($content)."\n");
     
     foreach ($content as $no => $resource) {
-      RdfClass::increment('stats', "nbre de ressources lues");
+      RdfResource::increment('stats', "nbre de ressources lues");
       $types = implode(', ', $resource['@type']); 
-      if ($className = (RdfClass::CLASS_URI_TO_PHP_NAME[$types] ?? null)) {
+      if ($className = (RdfResource::CLASS_URI_TO_PHP_NAME[$types] ?? null)) {
         $resource = $className::add($resource);
         if (($className == 'PagedCollection') && ($lastPage == 0)) {
           $lastPage = $resource->lastPage();
@@ -163,7 +163,7 @@ if (php_sapi_name()=='cli') { // traitement CLI en fonction de l'action demandé
     echo "  - errors - afffichage des erreurs rencontrées lors de la lecture du catalogue\n";
     echo "  - catalogs - lecture du catalogue puis affichage des catalogues\n";
     echo "  - datasets - lecture du catalogue puis affichage des jeux de données\n";
-    foreach (array_unique(array_values(RdfClass::CLASS_URI_TO_PHP_NAME)) as $classUri => $className)
+    foreach (array_unique(array_values(RdfResource::CLASS_URI_TO_PHP_NAME)) as $classUri => $className)
       echo "  - $className - affiche les objets de la classe $className y compris les blank nodes\n";
     die();
   }
@@ -176,15 +176,15 @@ if (php_sapi_name()=='cli') { // traitement CLI en fonction de l'action demandé
     case 'rectifStats': {
       Registre::import();
       import($urlPrefix, true, $lastPage, $firstPage);
-      echo '$stats = '; print_r(RdfClass::$stats);
-      echo '$rectifStats = '; print_r(RdfClass::$rectifStats);
+      echo '$stats = '; print_r(RdfResource::$stats);
+      echo '$rectifStats = '; print_r(RdfResource::$rectifStats);
       break;
     }
     case 'registre': { // effectue uniquement l'import du registre et affiche ce qui a été importé 
       Registre::import();
       Registre::show();
       echo "\nRessources prédéfinies:\n";
-      foreach (RdfClass::CLASS_URI_TO_PHP_NAME as $classUri => $className)
+      foreach (RdfResource::CLASS_URI_TO_PHP_NAME as $classUri => $className)
         $className::show();
       break;
     }
@@ -204,7 +204,7 @@ if (php_sapi_name()=='cli') { // traitement CLI en fonction de l'action demandé
     case 'catalogs': {
       Registre::import();
       import($urlPrefix, true, $lastPage, $firstPage);
-      //print_r(RdfClass::$pkeys);
+      //print_r(RdfResource::$pkeys);
       Catalog::show();
       break;
     }
@@ -224,7 +224,7 @@ if (php_sapi_name()=='cli') { // traitement CLI en fonction de l'action demandé
     }
     
     default: {
-      foreach (RdfClass::CLASS_URI_TO_PHP_NAME as $classUri => $className) {
+      foreach (RdfResource::CLASS_URI_TO_PHP_NAME as $classUri => $className) {
         if ($argv[1] == $className) {
           Registre::import();
           import($urlPrefix, true, $lastPage, $firstPage);
@@ -274,8 +274,8 @@ else { // affichage interactif de la version corrigée page par page en Yaml, JS
       echo htmlspecialchars($output); // affichage Yaml
       break;
     }
-    case 'jsonld': { // affiche le JSON-LD généré par RdfClass 
-      echo htmlspecialchars(json_encode(RdfClass::exportAllAsJsonLd(), JSON_OPTIONS));
+    case 'jsonld': { // affiche le JSON-LD généré par RdfResource 
+      echo htmlspecialchars(json_encode(RdfResource::exportAllAsJsonLd(), JSON_OPTIONS));
       break;
     }
     case 'jsonLdContext': {
@@ -284,7 +284,7 @@ else { // affichage interactif de la version corrigée page par page en Yaml, JS
     }
     case 'jsonldc': { // affiche le JSON-LD compacté avec JsonLD
       if (!is_dir('tmp')) mkdir('tmp');
-      file_put_contents('tmp/document.jsonld', json_encode(RdfClass::exportAllAsJsonLd(), JSON_OPTIONS));
+      file_put_contents('tmp/document.jsonld', json_encode(RdfResource::exportAllAsJsonLd(), JSON_OPTIONS));
       file_put_contents('tmp/context.jsonld', json_encode(Registre::jsonLdContext(), JSON_OPTIONS));
       $compacted = JsonLD::compact('tmp/document.jsonld', 'tmp/context.jsonld');
       echo htmlspecialchars(json_encode($compacted, JSON_OPTIONS));
@@ -292,7 +292,7 @@ else { // affichage interactif de la version corrigée page par page en Yaml, JS
     }
     case 'jsonldf': { // affiche le JSON-LD structuré (framed) avec JsonLD
       if (!is_dir('tmp')) mkdir('tmp');
-      file_put_contents('tmp/document.jsonld', json_encode(RdfClass::exportAllAsJsonLd(), JSON_OPTIONS));
+      file_put_contents('tmp/document.jsonld', json_encode(RdfResource::exportAllAsJsonLd(), JSON_OPTIONS));
       file_put_contents('tmp/frame.jsonld', json_encode(Registre::jsonLdFrame(), JSON_OPTIONS));
       $framed = JsonLD::frame('tmp/document.jsonld', 'tmp/frame.jsonld');
       echo htmlspecialchars(json_encode($framed, JSON_OPTIONS));
@@ -300,7 +300,7 @@ else { // affichage interactif de la version corrigée page par page en Yaml, JS
     }
     case 'turtle': { // traduction en Turtle avec EasyRdf
       $graph = new \EasyRdf\Graph('https://preprod.data.developpement-durable.gouv.fr/');
-      $graph->parse(json_encode(RdfClass::exportAllAsJsonLd()), 'jsonld', 'https://preprod.data.developpement-durable.gouv.fr/');
+      $graph->parse(json_encode(RdfResource::exportAllAsJsonLd()), 'jsonld', 'https://preprod.data.developpement-durable.gouv.fr/');
       echo htmlspecialchars($graph->serialise('turtle'));
       break;
     }

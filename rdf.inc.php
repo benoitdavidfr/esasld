@@ -5,7 +5,7 @@ doc: |
   La classe PropVal facilite l'utilisation en Php de la représentation JSON-LD en définissant
   une structuration d'une valeur RDF d'une propriété RDF d'une ressource.
 
-  La classe abstraite RdfClass porte une grande partie du code et est la classe mère de toutes les classes Php
+  La classe abstraite RdfResource porte une grande partie du code et est la classe mère de toutes les classes Php
   traduisant les classes RDF.
   
   Chaque classe RDF est soit traduite en une classe Php, soit, si elle ne porte pas de traitement spécifique,
@@ -31,7 +31,7 @@ journal: |
 use Symfony\Component\Yaml\Yaml;
 use Symfony\Component\Yaml\Exception\ParseException;
 
-{/* Classe dont chaque objet correspond à une valeur RDF d'une propriété RDF
+{/* Classe des valeurs RDF d'une propriété RDF
 ** En JSON-LD une PropVal est structurée sous la forme [{key} => {val}]
 **  - {key} contient une des valeurs
 **    - '@id' indique que {val} correspond à un URI ou un id de blank node
@@ -212,12 +212,12 @@ class RdfResRef extends PropVal {
   }
 };
 
-{/* Classe abstraite portant les méthodes communes à toutes les classes RDF
+{/* Classe abstraite portant les méthodes communes à toutes les classes de ressources RDF
 ** ainsi que la constantes CLASS_URI_TO_PHP_NAME définissant le mapping URI du type ou liste des URI -> nom de la classe Php
-** La propriété $props est le dict. des propriétés de la ressource de la forme [{propUri} => [PropVal|RdfClass]]
+** La propriété $props est le dict. des propriétés de la ressource de la forme [{propUri} => [PropVal|RdfResource]]
 ** Lorsque la représentation est applatie (flatten) la forme est [{propUri} => [PropVal]]
 */}
-abstract class RdfClass {
+abstract class RdfResource {
   // Dict. [{URI de classe RDF ou liste d'URI} => {Nom de classe Php}]
   const CLASS_URI_TO_PHP_NAME = [
     'http://www.w3.org/ns/dcat#Catalog' => 'Catalog',
@@ -249,8 +249,12 @@ abstract class RdfClass {
   
   protected string $id; // le champ '@id' de la repr. JSON-LD, cad l'URI de la ressource ou l'id blank node
   protected array $types; // le champ '@type' de la repr. JSON-LD, cad la liste des URI des classes RDF de la ressource
-  protected array $props=[]; // dict. des propriétés de la ressource de la forme [{propUri} => [PropVal|RdfClass]]
+  protected array $props=[]; // dict. des propriétés de la ressource de la forme [{propUri} => [PropVal|RdfResource]]
   
+  static function increment(string $var, string $label): void { // incrémente une des sous-variables de la variable $var
+    self::$$var[$label] = 1 + (self::$$var[$label] ?? 0);
+  }
+    
   static function add(array $resource): self { // ajout d'une ressource à la classe
     $class = get_called_class();
     if (!isset($class::$all[$resource['@id']])) {
@@ -269,7 +273,7 @@ abstract class RdfClass {
     if (isset($class::$all[$id]))
       return $class::$all[$id];
     else {
-      echo "RdfClass::get($id) sur la classe $class\n";
+      echo "RdfResource::get($id) sur la classe $class\n";
       throw new Exception("DEREF_ERROR on $id");
     }
   }
@@ -298,15 +302,17 @@ abstract class RdfClass {
   // retourne PROP_KEY_URI, redéfini sur GenClass pour retourner le PROP_KEY_URI en fonction du type de l'objet
   function prop_key_uri(): array { return (get_called_class())::PROP_KEY_URI; }
   
-  // crée un objet à partir de la description JSON-LD, réordonne les propriétés selon l'ordre de PROP_KEY_URI
+  // crée un objet à partir de la description JSON-LD
   function __construct(array $resource) {
-    $this->id = $resource['@id'];
-    unset($resource['@id']);
-    $this->types = $resource['@type'];
-    unset($resource['@type']);
     foreach ($resource as $pUri => $pvals) {
-      foreach ($pvals as $pval) {
-        $this->props[$pUri][] = PropVal::create($pval);
+      switch($pUri) {
+        case '@id': { $this->id = $resource['@id']; break; }
+        case '@type': { $this->types = $resource['@type']; break; }
+        default: {
+          foreach ($pvals as $pval) {
+            $this->props[$pUri][] = PropVal::create($pval);
+          }
+        }
       }
     }
   }
@@ -315,10 +321,6 @@ abstract class RdfClass {
     return Yaml::dump([$this->asJsonLd()]);
   }
   
-  static function increment(string $var, string $label): void { // incrémente une des sous-variables de la variable $var
-    self::$$var[$label] = 1 + (self::$$var[$label] ?? 0);
-  }
-    
   // corrections d'erreurs ressource par ressource et pas celles qui nécessittent un accès à d'autres ressources
   function rectification(): void {
     // remplacer les URI erronés de propriétés
@@ -441,38 +443,38 @@ abstract class RdfClass {
     // Le Yaml est un label avec uniquement la langue française de fournie
     if ((array_keys($yaml) == ['label']) && is_array($yaml['label'])
       && (array_keys($yaml['label']) == ['fr','en']) && $yaml['label']['fr'] && !$yaml['label']['en'])
-        return PropVal::create(['@language'=> 'fr', '@value'=> $yaml['label']['fr']]);
+        return new RdfLiteral(['@language'=> 'fr', '@value'=> $yaml['label']['fr']]);
     
     // Le Yaml est un label avec uniquement la langue française de fournie + un type vide
     if ((array_keys($yaml) == ['label','type']) && !$yaml['type'] && is_array($yaml['label'])
       && (array_keys($yaml['label']) == ['fr','en']) && $yaml['label']['fr'] && !$yaml['label']['en'])
-        return PropVal::create(['@language'=> 'fr', '@value'=> $yaml['label']['fr']]);
+        return new RdfLiteral(['@language'=> 'fr', '@value'=> $yaml['label']['fr']]);
     
     // Le Yaml est un label sans le champ label avec uniquement la langue française de fournie
     if ((array_keys($yaml) == ['fr','en']) && $yaml['fr'] && !$yaml['en'] && is_string($yaml['fr'])) {
         //echo "Dans yamlToPropVal2: "; print_r($yaml);
-        return PropVal::create(['@language'=> 'fr', '@value'=> $yaml['fr']]);
+        return new RdfLiteral(['@language'=> 'fr', '@value'=> $yaml['fr']]);
     }
     
     // Le Yaml est un label sans le champ label avec uniquement la langue française de fournie et $yaml['fr] est un array
     if ((array_keys($yaml) == ['fr','en']) && $yaml['fr'] && !$yaml['en']
       && is_array($yaml['fr']) && array_is_list($yaml['fr']) && (count($yaml['fr']) == 1)) {
         //echo "Dans yamlToPropVal2: "; print_r($yaml);
-        return PropVal::create(['@language'=> 'fr', '@value'=> $yaml['fr'][0]]);
+        return new RdfLiteral(['@language'=> 'fr', '@value'=> $yaml['fr'][0]]);
     }
     
     // Le Yaml définit un URI
     // https://preprod.data.developpement-durable.gouv.fr/dataset/606123c6-d537-485d-ba99-182b0b54d971:
     //  license: '[{''label'': {''fr'': '''', ''en'': ''''}, ''type'': [], ''uri'': ''https://spdx.org/licenses/etalab-2.0''}]'
     if (isset($yaml['uri']) && $yaml['uri'])
-      return PropVal::create(['@id'=> $yaml['uri']]);
+      return new RdfResRef(['@id'=> $yaml['uri']]);
     
     echo "Dans yamlToPropVal: "; print_r($yaml);
     throw new Exception("Cas non traité dans yamlToPropVal()");
   }
   
   // nettoie une valeur codée en Yaml, renvoie une [PropVal] ou []
-  // Certaines chaines sont mal encodées en yaml
+  // Certaines chaines sont mal encodées en Yaml
   function cleanYaml(string $value): array {
     // certaines propriétés contiennent des chaines encodées en Yaml et sans information
     //        '{''fr'': [], ''en'': []}' ou '{''fr'': '''', ''en'': ''''}'
@@ -483,14 +485,14 @@ abstract class RdfClass {
       $yaml = Yaml::parse($value);
       //echo "value=$value\n";
     } catch (ParseException $e) {
-      //fwrite(STDERR, "Erreur de Yaml::parse() dans RdfClass::rectification() sur $value\n");
+      //fwrite(STDERR, "Erreur de Yaml::parse() dans RdfResource::rectification() sur $value\n");
       $value2 = str_replace("\\'", "''", $value);
       //fwrite(STDERR, "value=$value\n\n");
       try {
         $yaml = Yaml::parse($value2);
         //echo "value=$value\n";
       } catch (ParseException $e) {
-        StdErr::write("Erreur2 de Yaml::parse() dans RdfClass::rectification() sur $value\n");
+        StdErr::write("Erreur2 de Yaml::parse() dans RdfResource::rectification() sur $value\n");
         return [PropVal::create(['@value'=> "Erreur de yaml::parse() sur $value"])];
       }
     }
@@ -564,7 +566,7 @@ abstract class RdfClass {
   }
   
   // modifie l'objet en intégrant pour les propriétés définies (par la liste [{propUri}]),
-  // les ressources référencées par la ressource
+  // les références à une ressource par la ressource elle-même
   function frame(array $propUris): void {
     foreach ($this->props as $pUri => &$pvals) {
       if (!in_array($pUri, $propUris)) continue;
@@ -580,7 +582,7 @@ abstract class RdfClass {
 };
 
 // Classe générique regroupant les classes de ressources RDF n'ayant pas de traitement spécifique 
-class GenClass extends RdfClass {
+class GenClass extends RdfResource {
   const PROP_KEY_URI_PER_CLASS = [
     'http://www.w3.org/ns/dcat#CatalogRecord' => [
       'http://purl.org/dc/terms/identifier' => 'identifier',
@@ -681,7 +683,7 @@ class GenClass extends RdfClass {
   static array $all=[];
 };
 
-class Dataset extends RdfClass {
+class Dataset extends RdfResource {
   const PROP_KEY_URI = [
     'http://purl.org/dc/terms/title' => 'title',
     'http://purl.org/dc/terms/description' => 'description',
@@ -806,7 +808,7 @@ class DataService extends Dataset {
   static array $all=[];
 };
 
-class Location extends RdfClass {
+class Location extends RdfResource {
   const TYPES_INSEE = [
     'region' => "Région",
     'departement' => "Département",
@@ -851,7 +853,7 @@ class Location extends RdfClass {
   }
 };
 
-class PagedCollection extends RdfClass {
+class PagedCollection extends RdfResource {
   const PROP_KEY_URI = [
     'http://www.w3.org/ns/hydra/core#firstPage' => 'firstPage',
     'http://www.w3.org/ns/hydra/core#lastPage' => 'lastPage',
