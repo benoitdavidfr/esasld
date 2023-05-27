@@ -62,31 +62,8 @@ use Symfony\Component\Yaml\Exception\ParseException;
       { "@type": "http://www.w3.org/2001/XMLSchema#dateTime", "@value": "2022-09-21T13:31:46.000249" }
     ],
 ** Les URI sont des RdfResRef et les autres des RdfLiteral
-** PROP_RANGE indique le range de certaines propriétés afin de permettre leur déréférencement
 */}
 abstract class PropVal {
-  // indique par propriété sa classe d'arrivée (range), nécessaire pour le déréférencement pour la simplification
-  const PROP_RANGE = [
-    'publisher' => 'GenClass',
-    'creator' => 'GenClass',
-    'rightsHolder' => 'GenClass',
-    'spatial' => 'Location',
-    'temporal' => 'GenClass',
-    'isPrimaryTopicOf' => 'GenClass',
-    'inCatalog' => 'Catalog',
-    'contactPoint' => 'GenClass',
-    'conformsTo' => 'GenClass',
-    'accessRights' => 'GenClass',
-    'license' => 'GenClass',
-    'provenance' => 'GenClass',
-    'format' => 'GenClass',
-    'mediaType' => 'GenClass',
-    'language' => 'GenClass',
-    'accrualPeriodicity' => 'GenClass',
-    'accessService' => 'DataService',
-    'distribution' => 'GenClass',
-  ];
-  
   static function create(array $pval) {
     if (array_keys($pval) == ['@id'])
       return new RdfResRef($pval);
@@ -170,7 +147,30 @@ class RdfLiteral extends PropVal {
 };
 
 // Classe des références vers une ressource
+// PROP_RANGE indique le range de certaines propriétés afin de permettre leur déréférencement
 class RdfResRef extends PropVal {
+  // indique par propriété sa classe d'arrivée (range), nécessaire pour le déréférencement pour la simplification
+  const PROP_RANGE = [
+    'publisher' => 'GenClass',
+    'creator' => 'GenClass',
+    'rightsHolder' => 'GenClass',
+    'spatial' => 'Location',
+    'temporal' => 'GenClass',
+    'isPrimaryTopicOf' => 'GenClass',
+    'inCatalog' => 'Catalog',
+    'contactPoint' => 'GenClass',
+    'conformsTo' => 'GenClass',
+    'accessRights' => 'GenClass',
+    'license' => 'GenClass',
+    'provenance' => 'GenClass',
+    'format' => 'GenClass',
+    'mediaType' => 'GenClass',
+    'language' => 'GenClass',
+    'accrualPeriodicity' => 'GenClass',
+    'accessService' => 'DataService',
+    'distribution' => 'GenClass',
+  ];
+  
   public readonly ?string $id;
 
   function __construct(array $pval) {
@@ -207,7 +207,7 @@ class RdfResRef extends PropVal {
     }
     // si le pointeur pointe sur un blank node alors déréférencement du pointeur
     if (!($class = (self::PROP_RANGE[$pKey] ?? null)))
-      throw new Exception("Erreur $pKey absent de PropVal::PROP_RANGE");
+      throw new Exception("Erreur $pKey absent de RdfResRef::PROP_RANGE");
     return $class::get($id)->simplify();
   }
 };
@@ -569,7 +569,7 @@ abstract class RdfClass {
     foreach ($this->props as $pUri => &$pvals) {
       if (!in_array($pUri, $propUris)) continue;
       $propShortName = $this->prop_key_uri()[$pUri];
-      $rangeClass = PropVal::PROP_RANGE[$propShortName];
+      $rangeClass = RdfResRef::PROP_RANGE[$propShortName];
       foreach ($pvals as $i => $pval) {
         if ($pval->keys == ['@id']) {
           $pvals[$i] = $rangeClass::get($pval->id);
@@ -579,7 +579,7 @@ abstract class RdfClass {
   }
 };
 
-// Classe générique regroupant plusieurs classes n'ayant pas de traitement spécifique 
+// Classe générique regroupant les classes de ressources RDF n'ayant pas de traitement spécifique 
 class GenClass extends RdfClass {
   const PROP_KEY_URI_PER_CLASS = [
     'http://www.w3.org/ns/dcat#CatalogRecord' => [
