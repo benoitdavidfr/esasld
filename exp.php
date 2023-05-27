@@ -31,7 +31,7 @@ doc: |
   21/5 17h30 Les dernières modifs ne machent pas
 journal: |
  21/5/2023:
-  - regroupement dans la classe GenClass de classes simples n'ayant aucun traitement spécifique
+  - regroupement dans la classe GenResource de classes simples n'ayant aucun traitement spécifique
  19/5/2023:
   - gestion des ressources PagedCollection comme les autres ressources Rdf permettant de les visualiser
   - extension du registre avec la déf. des ontologies

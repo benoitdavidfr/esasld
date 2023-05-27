@@ -9,12 +9,12 @@ doc: |
   traduisant les classes RDF.
   
   Chaque classe RDF est soit traduite en une classe Php, soit, si elle ne porte pas de traitement spécifique,
-  fusionnée dans la classe GenClass.
+  fusionnée dans la classe GenResource.
   Chacune de ces classes Php définit la propriété statique $all contient les objets correspondant aux ressources lues
   à partir du registre et des fichiers JSON-LD.
   Les classes non fusionnées définissent la constante de classe PROP_KEY_URI qui liste les propriétés RDF en définissant
   leur raccourci,
-  La classe GenClass définit la méthode prop_key_uri() qui retourne la même liste en fonction du type de l'objet.
+  La classe GenResource définit la méthode prop_key_uri() qui retourne la même liste en fonction du type de l'objet.
   
   A voir:
     - 
@@ -22,7 +22,7 @@ journal: |
  27/5/2023:
   - scission de la clase PropVal en RdfLiteral et RdfResRef
  21/5/2023:
-  - regroupement dans la classe GenClass de classes simples n'ayant aucun traitement spécifique
+  - regroupement dans la classe GenResource de classes simples n'ayant aucun traitement spécifique
   - première version de l'opération frame sur les objets d'une classe
  18/5/2023:
   - création par scission de exp.php
@@ -151,24 +151,24 @@ class RdfLiteral extends PropVal {
 class RdfResRef extends PropVal {
   // indique par propriété sa classe d'arrivée (range), nécessaire pour le déréférencement pour la simplification
   const PROP_RANGE = [
-    'publisher' => 'GenClass',
-    'creator' => 'GenClass',
-    'rightsHolder' => 'GenClass',
+    'publisher' => 'GenResource',
+    'creator' => 'GenResource',
+    'rightsHolder' => 'GenResource',
     'spatial' => 'Location',
-    'temporal' => 'GenClass',
-    'isPrimaryTopicOf' => 'GenClass',
+    'temporal' => 'GenResource',
+    'isPrimaryTopicOf' => 'GenResource',
     'inCatalog' => 'Catalog',
-    'contactPoint' => 'GenClass',
-    'conformsTo' => 'GenClass',
-    'accessRights' => 'GenClass',
-    'license' => 'GenClass',
-    'provenance' => 'GenClass',
-    'format' => 'GenClass',
-    'mediaType' => 'GenClass',
-    'language' => 'GenClass',
-    'accrualPeriodicity' => 'GenClass',
+    'contactPoint' => 'GenResource',
+    'conformsTo' => 'GenResource',
+    'accessRights' => 'GenResource',
+    'license' => 'GenResource',
+    'provenance' => 'GenResource',
+    'format' => 'GenResource',
+    'mediaType' => 'GenResource',
+    'language' => 'GenResource',
+    'accrualPeriodicity' => 'GenResource',
     'accessService' => 'DataService',
-    'distribution' => 'GenClass',
+    'distribution' => 'GenResource',
   ];
   
   public readonly ?string $id;
@@ -225,20 +225,20 @@ abstract class RdfResource {
     'http://www.w3.org/ns/dcat#Dataset, http://www.w3.org/ns/dcat#DatasetSeries' => 'Dataset',
     'http://www.w3.org/ns/dcat#DatasetSeries, http://www.w3.org/ns/dcat#Dataset' => 'Dataset',
     'http://www.w3.org/ns/dcat#DataService' => 'DataService',
-    'http://www.w3.org/ns/dcat#Distribution' => 'GenClass',
-    'http://www.w3.org/ns/dcat#CatalogRecord' => 'GenClass',
+    'http://www.w3.org/ns/dcat#Distribution' => 'GenResource',
+    'http://www.w3.org/ns/dcat#CatalogRecord' => 'GenResource',
     'http://purl.org/dc/terms/Location' => 'Location',
-    'http://purl.org/dc/terms/Standard' => 'GenClass',
-    'http://purl.org/dc/terms/LicenseDocument' => 'GenClass',
-    'http://purl.org/dc/terms/RightsStatement' => 'GenClass',
-    'http://purl.org/dc/terms/ProvenanceStatement' => 'GenClass',
-    'http://purl.org/dc/terms/MediaTypeOrExtent' => 'GenClass',
-    'http://purl.org/dc/terms/MediaType' => 'GenClass',
-    'http://purl.org/dc/terms/PeriodOfTime' => 'GenClass',
-    'http://purl.org/dc/terms/Frequency' => 'GenClass',
-    'http://purl.org/dc/terms/LinguisticSystem' => 'GenClass',
-    'http://xmlns.com/foaf/0.1/Organization' => 'GenClass',
-    'http://www.w3.org/2006/vcard/ns#Kind' => 'GenClass',
+    'http://purl.org/dc/terms/Standard' => 'GenResource',
+    'http://purl.org/dc/terms/LicenseDocument' => 'GenResource',
+    'http://purl.org/dc/terms/RightsStatement' => 'GenResource',
+    'http://purl.org/dc/terms/ProvenanceStatement' => 'GenResource',
+    'http://purl.org/dc/terms/MediaTypeOrExtent' => 'GenResource',
+    'http://purl.org/dc/terms/MediaType' => 'GenResource',
+    'http://purl.org/dc/terms/PeriodOfTime' => 'GenResource',
+    'http://purl.org/dc/terms/Frequency' => 'GenResource',
+    'http://purl.org/dc/terms/LinguisticSystem' => 'GenResource',
+    'http://xmlns.com/foaf/0.1/Organization' => 'GenResource',
+    'http://www.w3.org/2006/vcard/ns#Kind' => 'GenResource',
     'http://www.w3.org/ns/hydra/core#PagedCollection' => 'PagedCollection',
   ];
   
@@ -299,7 +299,7 @@ abstract class RdfResource {
     }
   }
 
-  // retourne PROP_KEY_URI, redéfini sur GenClass pour retourner le PROP_KEY_URI en fonction du type de l'objet
+  // retourne PROP_KEY_URI, redéfini sur GenResource pour retourner le PROP_KEY_URI en fonction du type de l'objet
   function prop_key_uri(): array { return (get_called_class())::PROP_KEY_URI; }
   
   // crée un objet à partir de la description JSON-LD
@@ -581,9 +581,9 @@ abstract class RdfResource {
   }
 };
 
-// Classe générique regroupant les classes de ressources RDF n'ayant pas de traitement spécifique 
-class GenClass extends RdfResource {
-  const PROP_KEY_URI_PER_CLASS = [
+// Classe générique regroupant les ressources RDF n'ayant pas de traitement spécifique 
+class GenResource extends RdfResource {
+  const PROP_KEY_URI_PER_TYPE = [
     'http://www.w3.org/ns/dcat#CatalogRecord' => [
       'http://purl.org/dc/terms/identifier' => 'identifier',
       'http://purl.org/dc/terms/language' => 'language',
@@ -649,7 +649,7 @@ class GenClass extends RdfResource {
   // retourne le dictionnaire PROP_KEY_URI pour l'objet
   function prop_key_uri(): array {
     $type = $this->types[0];
-    if ($prop_key_uri = self::PROP_KEY_URI_PER_CLASS[$type] ?? null) {
+    if ($prop_key_uri = self::PROP_KEY_URI_PER_TYPE[$type] ?? null) {
       return $prop_key_uri;
     }
     else {
@@ -670,7 +670,7 @@ class GenClass extends RdfResource {
     }
     if (!$uri) {
       echo "__get($name) retourne null\n";
-      throw new Exception("$name non défini dans GenClass::__get()");
+      throw new Exception("$name non défini dans GenResource::__get()");
       //return null;
     }
     //echo "uri=$uri\n";
@@ -767,7 +767,7 @@ class Dataset extends RdfResource {
           break;
         }
         case ['@id'] : {
-          $statement = GenClass::get($pval->id);
+          $statement = GenResource::get($pval->id);
           $mlStr = MLString::fromStatementLabel($statement->label);
           $arrayOfMLStrings[$mlStr->md5()] = ['mlStr'=> $mlStr, 'bn'=>$pval->id];
           break;
@@ -789,7 +789,7 @@ class Dataset extends RdfResource {
           '@type'=> ["http://purl.org/dc/terms/$statementClass"],
           'http://www.w3.org/2000/01/rdf-schema#label'=> $mlStrAndBn['mlStr']->toStatementLabel(),
         ];
-        GenClass::$all[$id] = new GenClass($resource);
+        GenResource::$all[$id] = new GenResource($resource);
         $pvals[] = PropVal::create(['@id'=> $id]);
       }
     }
