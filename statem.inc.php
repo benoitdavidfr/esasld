@@ -22,7 +22,7 @@ class MLString { // chaine de caractères multilingue
   static function fromStatementLabel(array $label): self {
     $langstr = []; // [{lang} => {str}]
     foreach ($label as $pval) {
-      if ($pval->keys == ['@language','@value']) {
+      if ($pval->keys() == ['@language','@value']) {
         $langstr[$pval->language] = $pval->value;
       }
       else {
