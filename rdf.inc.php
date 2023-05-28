@@ -286,6 +286,14 @@ abstract class RdfResource {
         }
         elseif ((count($pvals)==1) && ($pvals[0]->keys() == ['@value'])) { // si chaine encodée en Yaml avec URI alors URI
           if ($pvals[0]->value == "{'uri': 'http://publications.europa.eu/resource/authority/language/FRA'}") {
+            //echo 'language avant rectif = '; print_r($pvals);
+            $pvals = [PropVal::create(['@id'=> 'http://publications.europa.eu/resource/authority/language/FRA'])];
+            //echo 'language rectifié = '; print_r($pvals);
+            $graph->increment('rectifStats', "rectification langue");
+          }
+        }
+        if ((count($pvals)==1) && ($pvals[0]->keys() == ['@id'])) { // si URI 'fr'
+          if ($pvals[0]->id == 'fr') {
             $pvals = [PropVal::create(['@id'=> 'http://publications.europa.eu/resource/authority/language/FRA'])];
             //echo 'language rectifié = '; print_r($pvals);
             $graph->increment('rectifStats', "rectification langue");
@@ -781,11 +789,11 @@ class PagedCollection extends RdfResource {
   }
 };
 
+
 // extrait le code HTTP de retour de l'en-tête HTTP
 function httpResponseCode(array $header) { return substr($header[0], 9, 3); }
 
-// graphe RDF
-class RdfGraph {
+class RdfGraph { // graphe RDF
   protected string $name; // nom du graphe
   protected array $stats = ["nbre de ressources lues"=> 0]; // statistiques
   protected array $rectifStats = []; // [{type} => {nbre}] - nbre de rectifications effectuées par type
@@ -894,7 +902,7 @@ class RdfGraph {
   
   function show(string $className, bool $echo=true): string { // affiche en Yaml les ressources de la classe hors blank nodes 
     $result = '';
-    foreach ($this->resources[$className] as $id => $resource) {
+    foreach ($this->resources[$className] ?? [] as $id => $resource) {
       if (substr($id, 0, 2) <> '_:') {
         if ($echo)
           echo Yaml::dump([$id => $resource->simplify($this)], 7, 2, Yaml::DUMP_MULTI_LINE_LITERAL_BLOCK);
@@ -914,7 +922,7 @@ class RdfGraph {
   function exportAllAsJsonLd(): array { // extraction du contenu en JSON-LD comme array Php
     $jsonld = [];
     foreach (RdfResource::CLASS_URI_TO_PHP_NAME as $className) {
-      foreach ($this->resources[$className] as $id => $resource)
+      foreach ($this->resources[$className] ?? [] as $id => $resource)
         $jsonld[] = $resource->asJsonLd();
     }
     return $jsonld;

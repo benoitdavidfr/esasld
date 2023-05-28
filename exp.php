@@ -131,7 +131,7 @@ if (php_sapi_name()=='cli') { // traitement CLI en fonction de l'action demandé
       Registre::show();
       echo "\nRessources prédéfinies:\n";
       foreach (RdfResource::CLASS_URI_TO_PHP_NAME as $classUri => $className)
-        $className::show();
+        $graph->show($className);
       break;
     }
     case 'import': { // effectue uniquement l'import de l'export
@@ -154,7 +154,7 @@ if (php_sapi_name()=='cli') { // traitement CLI en fonction de l'action demandé
       Registre::import($graph);
       $graph->import($urlPrefix, true, $lastPage, $firstPage);
       //print_r(RdfResource::$pkeys);
-      Catalog::show();
+      $graph->show('Catalog');
       break;
     }
     case 'datasets': { // import du registre et de l'export puis affichage des datasets
@@ -211,14 +211,15 @@ else { // affichage interactif de la version corrigée page par page en Yaml, JS
       <input type='submit' value='Submit' /></form><pre>\n";
   }
   
-  Registre::import();
-  if ($errors = import($urlPrefix, true, $page, $page)) {
+  $graph = new RdfGraph('default');
+  Registre::import($graph);
+  if ($errors = $graph->import($urlPrefix, true, $page, $page)) {
     echo 'errors = '; print_r($errors);
   }
   echo "---\n";
   switch ($outputFormat) {
     case 'yaml': { // affichage simplifié des datasets en Yaml 
-      $output = Dataset::show(false);
+      $output = $graph->show('Dataset', false);
       if (StdErr::$messages) {
         echo 'StdErr::$messages = '; print_r(StdErr::$messages);
         echo "---\n";
@@ -226,8 +227,8 @@ else { // affichage interactif de la version corrigée page par page en Yaml, JS
       echo htmlspecialchars($output); // affichage Yaml
       break;
     }
-    case 'jsonld': { // affiche le JSON-LD généré par RdfResource 
-      echo htmlspecialchars(json_encode(RdfResource::exportAllAsJsonLd(), JSON_OPTIONS));
+    case 'jsonld': { // affiche le JSON-LD généré par $graph 
+      echo htmlspecialchars(json_encode($graph->exportAllAsJsonLd(), JSON_OPTIONS));
       break;
     }
     case 'jsonLdContext': {
@@ -236,7 +237,7 @@ else { // affichage interactif de la version corrigée page par page en Yaml, JS
     }
     case 'jsonldc': { // affiche le JSON-LD compacté avec JsonLD
       if (!is_dir('tmp')) mkdir('tmp');
-      file_put_contents('tmp/document.jsonld', json_encode(RdfResource::exportAllAsJsonLd(), JSON_OPTIONS));
+      file_put_contents('tmp/document.jsonld', json_encode($graph->exportAllAsJsonLd(), JSON_OPTIONS));
       file_put_contents('tmp/context.jsonld', json_encode(Registre::jsonLdContext(), JSON_OPTIONS));
       $compacted = JsonLD::compact('tmp/document.jsonld', 'tmp/context.jsonld');
       echo htmlspecialchars(json_encode($compacted, JSON_OPTIONS));
@@ -244,16 +245,16 @@ else { // affichage interactif de la version corrigée page par page en Yaml, JS
     }
     case 'jsonldf': { // affiche le JSON-LD structuré (framed) avec JsonLD
       if (!is_dir('tmp')) mkdir('tmp');
-      file_put_contents('tmp/document.jsonld', json_encode(RdfResource::exportAllAsJsonLd(), JSON_OPTIONS));
+      file_put_contents('tmp/document.jsonld', json_encode($graph->exportAllAsJsonLd(), JSON_OPTIONS));
       file_put_contents('tmp/frame.jsonld', json_encode(Registre::jsonLdFrame(), JSON_OPTIONS));
       $framed = JsonLD::frame('tmp/document.jsonld', 'tmp/frame.jsonld');
       echo htmlspecialchars(json_encode($framed, JSON_OPTIONS));
       break;
     }
     case 'turtle': { // traduction en Turtle avec EasyRdf
-      $graph = new \EasyRdf\Graph('https://preprod.data.developpement-durable.gouv.fr/');
-      $graph->parse(json_encode(RdfResource::exportAllAsJsonLd()), 'jsonld', 'https://preprod.data.developpement-durable.gouv.fr/');
-      echo htmlspecialchars($graph->serialise('turtle'));
+      $erGraph = new \EasyRdf\Graph('https://preprod.data.developpement-durable.gouv.fr/');
+      $erGraph->parse(json_encode($graph->exportAllAsJsonLd()), 'jsonld', 'https://preprod.data.developpement-durable.gouv.fr/');
+      echo htmlspecialchars($erGraph->serialise('turtle'));
       break;
     }
     default: {
