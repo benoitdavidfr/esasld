@@ -1,9 +1,9 @@
 <?php
 {/*PhpDoc:
-title: export.php - script de lecture de l'export du catalogue Ecosphères - 18/5/2023
+title: exp.php - script de lecture de l'export du catalogue Ecosphères - 29/5/2023
 doc: |
   L'objectif de ce script est de lire l'export DCAT d'Ecosphères en JSON-LD afin d'y détecter d'éventuelles erreurs.
-  Chaque clase RDF est traduite par une classe Php avec un mapping trivial défini dans RdfResource::CLASS_URI_TO_PHP_NAME
+  Les classes RDF sont traduites par une classe Php avec un mapping défini dans RdfResource::CLASS_URI_TO_PHP_NAME
   Outre la détection et correction d'erreurs, le script affiche différents types d'objets de manière simplifiée
   et plus lisible pour les néophytes.
   Cette simplification correspond, d'une part, à une "compaction JSON-LD" avec un contexte non explicité
@@ -28,7 +28,6 @@ doc: |
    - réexporter le contenu importé pour bénéficier des corrections, y compris en le paginant
    - définir des shapes SHACL pour valider le graphe DCAT en s'inspirant de ceux de DCTA-AP
 
-  21/5 17h30 Les dernières modifs ne machent pas
 journal: |
  28/5/2023:
   - ajout classe RdfGraph pour gérer les ressources par graphe
@@ -116,18 +115,17 @@ if (php_sapi_name()=='cli') { // traitement CLI en fonction de l'action demandé
   $firstPage = $argv[2] ?? 1; // Par défaut démarrage à la première page
   $lastPage = $argv[3] ?? 0;  // Par défaut fin à la dernière page définie dans l'import
 
+  $graph = new RdfGraph('default');
+  Registre::import($graph);
+
   switch ($argv[1]) {
     case 'rectifStats': {
-      $graph = new RdfGraph('default');
-      Registre::import($graph);
       $graph->import($urlPrefix, true, $lastPage, $firstPage);
       echo '$stats = '; print_r($graph->stats());
       echo '$rectifStats = '; print_r($graph->rectifStats());
       break;
     }
     case 'registre': { // effectue uniquement l'import du registre et affiche ce qui a été importé 
-      $graph = new RdfGraph('default');
-      Registre::import($graph);
       Registre::show();
       echo "\nRessources prédéfinies:\n";
       foreach (RdfResource::CLASS_URI_TO_PHP_NAME as $classUri => $className)
@@ -135,14 +133,10 @@ if (php_sapi_name()=='cli') { // traitement CLI en fonction de l'action demandé
       break;
     }
     case 'import': { // effectue uniquement l'import de l'export
-      $graph = new RdfGraph('default');
-      Registre::import($graph);
       $graph->import($urlPrefix, true, $lastPage, $firstPage);
       break;
     }
     case 'errors': {
-      $graph = new RdfGraph('default');
-      Registre::import($graph);
       $errors = $graph->import($urlPrefix, true, $lastPage, $firstPage);
       echo "Pages en erreur:\n";
       foreach ($errors as $page => $error)
@@ -150,24 +144,18 @@ if (php_sapi_name()=='cli') { // traitement CLI en fonction de l'action demandé
       break;
     }
     case 'catalogs': {
-      $graph = new RdfGraph('default');
-      Registre::import($graph);
       $graph->import($urlPrefix, true, $lastPage, $firstPage);
       //print_r(RdfResource::$pkeys);
       $graph->show('Catalog');
       break;
     }
     case 'datasets': { // import du registre et de l'export puis affichage des datasets
-      $graph = new RdfGraph('default');
-      Registre::import($graph); // importe le registre dans le graphe
       $graph->import($urlPrefix, true, $lastPage, $firstPage);
       $graph->show('Dataset');
       break;
     }
     
     case 'frameDatasets': {
-      $graph = new RdfGraph('default');
-      Registre::import($graph);
       $graph->import($urlPrefix, true, $lastPage, $firstPage);
       Dataset::frameAll(['http://purl.org/dc/terms/publisher']);
       echo json_encode(Dataset::exportClassAsJsonLd(), JSON_OPTIONS);
@@ -175,17 +163,13 @@ if (php_sapi_name()=='cli') { // traitement CLI en fonction de l'action demandé
     }
     
     default: {
-      foreach (RdfResource::CLASS_URI_TO_PHP_NAME as $classUri => $className) {
-        if ($argv[1] == $className) {
-          $graph = new RdfGraph('default');
-          Registre::import($graph);
-          $graph->import($urlPrefix, true, $lastPage, $firstPage);
-          $graph->showIncludingBlankNodes($className);
-          die();
-        }
+      $graph->import($urlPrefix, true, $lastPage, $firstPage);
+      if (in_array($argv[1], RdfResource::CLASS_URI_TO_PHP_NAME)) {
+        $graph->showIncludingBlankNodes($argv[1]);
       }
-    
-      die("$argv[1] ne correspond à aucune action\n");
+      else {
+        die("Ereur, $argv[1] ne correspond à aucune action\n");        
+      }
     }
   }
 }
@@ -227,7 +211,7 @@ else { // affichage interactif de la version corrigée page par page en Yaml, JS
       echo htmlspecialchars($output); // affichage Yaml
       break;
     }
-    case 'jsonld': { // affiche le JSON-LD généré par $graph 
+    case 'jsonld': { // affiche le JSON-LD rectifié généré par $graph 
       echo htmlspecialchars(json_encode($graph->exportAllAsJsonLd(), JSON_OPTIONS));
       break;
     }

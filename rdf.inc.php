@@ -1,8 +1,8 @@
 <?php
 {/*PhpDoc:
-title: rdf.inc.php - classes utilisées par exp.php pour gérer les données RDF - 18/5/2023
+title: rdf.inc.php - classes utilisées par exp.php pour gérer les données RDF - 29/5/2023
 doc: |
-  La classe PropVal facilite l'utilisation en Php de la représentation JSON-LD en définissant
+  La classe abstraite PropVal et ses sous-classes facilitent l'utilisation en Php de la représentation JSON-LD en définissant
   une structuration d'une valeur RDF d'une propriété RDF d'une ressource.
 
   La classe abstraite RdfResource porte une grande partie du code et est la classe mère de toutes les classes Php
@@ -71,9 +71,81 @@ abstract class PropVal {
       return new RdfLiteral($pval);
   }
   
-  abstract function isA(): string;
-  abstract function keys(): array;
-  abstract function asJsonLd(): array;
+  abstract function isA(): string; // retourne 'RdfLiteral' ou 'RdfResRef'
+  abstract function keys(): array; // liste les clés
+  abstract function asJsonLd(): array; // regénère un JSON-LD pour la valeur
+
+  // construit un PropVal à partir d'une structure Yaml en excluant les listes
+  static function yamlToPropVal(array $yaml): PropVal {
+    // Le Yaml est un label avec uniquement la langue française de fournie
+    if ((array_keys($yaml) == ['label']) && is_array($yaml['label'])
+      && (array_keys($yaml['label']) == ['fr','en']) && $yaml['label']['fr'] && !$yaml['label']['en'])
+        return new RdfLiteral(['@language'=> 'fr', '@value'=> $yaml['label']['fr']]);
+    
+    // Le Yaml est un label avec uniquement la langue française de fournie + un type vide
+    if ((array_keys($yaml) == ['label','type']) && !$yaml['type'] && is_array($yaml['label'])
+      && (array_keys($yaml['label']) == ['fr','en']) && $yaml['label']['fr'] && !$yaml['label']['en'])
+        return new RdfLiteral(['@language'=> 'fr', '@value'=> $yaml['label']['fr']]);
+    
+    // Le Yaml est un label sans le champ label avec uniquement la langue française de fournie
+    if ((array_keys($yaml) == ['fr','en']) && $yaml['fr'] && !$yaml['en'] && is_string($yaml['fr'])) {
+        //echo "Dans yamlToPropVal2: "; print_r($yaml);
+        return new RdfLiteral(['@language'=> 'fr', '@value'=> $yaml['fr']]);
+    }
+    
+    // Le Yaml est un label sans le champ label avec uniquement la langue française de fournie et $yaml['fr] est un array
+    if ((array_keys($yaml) == ['fr','en']) && $yaml['fr'] && !$yaml['en']
+      && is_array($yaml['fr']) && array_is_list($yaml['fr']) && (count($yaml['fr']) == 1)) {
+        //echo "Dans yamlToPropVal2: "; print_r($yaml);
+        return new RdfLiteral(['@language'=> 'fr', '@value'=> $yaml['fr'][0]]);
+    }
+    
+    // Le Yaml définit un URI
+    // https://preprod.data.developpement-durable.gouv.fr/dataset/606123c6-d537-485d-ba99-182b0b54d971:
+    //  license: '[{''label'': {''fr'': '''', ''en'': ''''}, ''type'': [], ''uri'': ''https://spdx.org/licenses/etalab-2.0''}]'
+    if (isset($yaml['uri']) && $yaml['uri'])
+      return new RdfResRef(['@id'=> $yaml['uri']]);
+    
+    echo "Dans yamlToPropVal: "; print_r($yaml);
+    throw new Exception("Cas non traité dans yamlToPropVal()");
+  }
+  
+  // nettoie une valeur codée en Yaml, renvoie une [PropVal] ou []
+  // Certaines chaines sont mal encodées en Yaml
+  static function cleanYaml(string $value): array {
+    // certaines propriétés contiennent des chaines encodées en Yaml et sans information
+    //        '{''fr'': [], ''en'': []}' ou '{''fr'': '''', ''en'': ''''}'
+    if (in_array($value, ["{'fr': [], 'en': []}", "{'fr': '', 'en': ''}"])) {
+      return [];
+    }
+    try {
+      $yaml = Yaml::parse($value);
+      //echo "value=$value\n";
+    } catch (ParseException $e) {
+      //fwrite(STDERR, "Erreur de Yaml::parse() dans RdfResource::rectification() sur $value\n");
+      $value2 = str_replace("\\'", "''", $value);
+      //fwrite(STDERR, "value=$value\n\n");
+      try {
+        $yaml = Yaml::parse($value2);
+        //echo "value=$value\n";
+      } catch (ParseException $e) {
+        StdErr::write("Erreur2 de Yaml::parse() dans RdfResource::rectification() sur $value\n");
+        return [PropVal::create(['@value'=> "Erreur de yaml::parse() sur $value"])];
+      }
+    }
+      
+    if (array_is_list($yaml)) {
+      $list = [];
+      foreach ($yaml as $elt) {
+        $list[] = self::yamlToPropVal($elt);
+      }
+      return $list;
+    }
+    else {
+      return [self::yamlToPropVal($yaml)];
+    }
+  }
+  
 };
 
 // Classe des littéraux RDF
@@ -363,7 +435,7 @@ abstract class RdfResource {
         $rectifiedPvals = []; // [ PropVal ]
         foreach ($pvals as $pval) {
           if (($pval->keys() == ['@value']) && ((substr($pval->value, 0, 1) == '{') || (substr($pval->value, 0, 2) == '[{'))) {
-            if ($yaml = self::cleanYaml($pval->value)) {
+            if ($yaml = PropVal::cleanYaml($pval->value)) {
               $rectifiedPvals = array_merge($rectifiedPvals, $yaml);
             }
             $graph->increment('rectifStats', "propriété contenant une chaine encodée en Yaml");
@@ -381,77 +453,6 @@ abstract class RdfResource {
   }
   
   static function get(string $id): ?self { return null; } // interprétation d'un URI spécifique à la classe
-  
-  // construit un PropVal à partir d'une structure Yaml en excluant les listes
-  function yamlToPropVal(array $yaml): PropVal {
-    // Le Yaml est un label avec uniquement la langue française de fournie
-    if ((array_keys($yaml) == ['label']) && is_array($yaml['label'])
-      && (array_keys($yaml['label']) == ['fr','en']) && $yaml['label']['fr'] && !$yaml['label']['en'])
-        return new RdfLiteral(['@language'=> 'fr', '@value'=> $yaml['label']['fr']]);
-    
-    // Le Yaml est un label avec uniquement la langue française de fournie + un type vide
-    if ((array_keys($yaml) == ['label','type']) && !$yaml['type'] && is_array($yaml['label'])
-      && (array_keys($yaml['label']) == ['fr','en']) && $yaml['label']['fr'] && !$yaml['label']['en'])
-        return new RdfLiteral(['@language'=> 'fr', '@value'=> $yaml['label']['fr']]);
-    
-    // Le Yaml est un label sans le champ label avec uniquement la langue française de fournie
-    if ((array_keys($yaml) == ['fr','en']) && $yaml['fr'] && !$yaml['en'] && is_string($yaml['fr'])) {
-        //echo "Dans yamlToPropVal2: "; print_r($yaml);
-        return new RdfLiteral(['@language'=> 'fr', '@value'=> $yaml['fr']]);
-    }
-    
-    // Le Yaml est un label sans le champ label avec uniquement la langue française de fournie et $yaml['fr] est un array
-    if ((array_keys($yaml) == ['fr','en']) && $yaml['fr'] && !$yaml['en']
-      && is_array($yaml['fr']) && array_is_list($yaml['fr']) && (count($yaml['fr']) == 1)) {
-        //echo "Dans yamlToPropVal2: "; print_r($yaml);
-        return new RdfLiteral(['@language'=> 'fr', '@value'=> $yaml['fr'][0]]);
-    }
-    
-    // Le Yaml définit un URI
-    // https://preprod.data.developpement-durable.gouv.fr/dataset/606123c6-d537-485d-ba99-182b0b54d971:
-    //  license: '[{''label'': {''fr'': '''', ''en'': ''''}, ''type'': [], ''uri'': ''https://spdx.org/licenses/etalab-2.0''}]'
-    if (isset($yaml['uri']) && $yaml['uri'])
-      return new RdfResRef(['@id'=> $yaml['uri']]);
-    
-    echo "Dans yamlToPropVal: "; print_r($yaml);
-    throw new Exception("Cas non traité dans yamlToPropVal()");
-  }
-  
-  // nettoie une valeur codée en Yaml, renvoie une [PropVal] ou []
-  // Certaines chaines sont mal encodées en Yaml
-  function cleanYaml(string $value): array {
-    // certaines propriétés contiennent des chaines encodées en Yaml et sans information
-    //        '{''fr'': [], ''en'': []}' ou '{''fr'': '''', ''en'': ''''}'
-    if (in_array($value, ["{'fr': [], 'en': []}", "{'fr': '', 'en': ''}"])) {
-      return [];
-    }
-    try {
-      $yaml = Yaml::parse($value);
-      //echo "value=$value\n";
-    } catch (ParseException $e) {
-      //fwrite(STDERR, "Erreur de Yaml::parse() dans RdfResource::rectification() sur $value\n");
-      $value2 = str_replace("\\'", "''", $value);
-      //fwrite(STDERR, "value=$value\n\n");
-      try {
-        $yaml = Yaml::parse($value2);
-        //echo "value=$value\n";
-      } catch (ParseException $e) {
-        StdErr::write("Erreur2 de Yaml::parse() dans RdfResource::rectification() sur $value\n");
-        return [PropVal::create(['@value'=> "Erreur de yaml::parse() sur $value"])];
-      }
-    }
-      
-    if (array_is_list($yaml)) {
-      $list = [];
-      foreach ($yaml as $elt) {
-        $list[] = self::yamlToPropVal($elt);
-      }
-      return $list;
-    }
-    else {
-      return [self::yamlToPropVal($yaml)];
-    }
-  }
   
   function asJsonLd(): array { // retourne la ressource comme JSON-LD 
     $jsonld = [
