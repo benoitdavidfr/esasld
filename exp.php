@@ -30,6 +30,8 @@ doc: |
 
   21/5 17h30 Les dernières modifs ne machent pas
 journal: |
+ 28/5/2023:
+  - ajout classe RdfGraph pour gérer les ressources par graphe
  21/5/2023:
   - regroupement dans la classe GenResource de classes simples n'ayant aucun traitement spécifique
  19/5/2023:
@@ -90,64 +92,6 @@ class StdErr { // afffichage de messages d'info, d'alerte ou d'erreur non fatale
   }
 };
 
-// extrait le code HTTP de retour de l'en-tête HTTP
-function httpResponseCode(array $header) { return substr($header[0], 9, 3); }
-
-{/* importe l'export JSON-LD et construit les objets chacun dans leur classe
-  lorque le fichier est absent:
-    si $skip est faux alors le site est interrogé
-    sinon ($skip vrai) alors la page est sautée et marquée comme erreur
-  Si $lastPage est indiquée et différente de 0 alors la lecture s'arrête à cette page,
-  sinon elle vaut 0 et le numéro de la dernière page est lu dans une des pages.
-  Si $firstPage est indiquée alors la lecture commence à cette page, sinon elle vaut 1.
-*/}
-function import(string $urlPrefix, bool $skip=false, int $lastPage=0, int $firstPage=1): array {
-  $errors = []; // erreur en array [{nopage} => {libellé}]
-  for ($page = $firstPage; ($lastPage == 0) || ($page <= $lastPage); $page++) {
-    if (!is_file("json/export$page.json")) { // le fichier n'existe pas
-      if ($skip) {
-        $errors[$page] = "fichier absent";
-        continue;
-      }
-      $urlPage = "$urlPrefix/jsonld?page=$page";
-      echo "lecture de $urlPage\n";
-      $content = @file_get_contents($urlPage);
-      if (httpResponseCode($http_response_header) <> 200) { // erreur de lecture
-        echo "code=",httpResponseCode($http_response_header),"\n";
-        echo "http_response_header[0] = ",$http_response_header[0],"\n";
-        $errors[$page] = $http_response_header[0];
-        continue;
-      }
-      else { // la lecture s'est bien passée -> j'enregistre le résultat
-        file_put_contents("json/export$page.json", $content);
-      }
-    }
-    else {
-      $content = file_get_contents("json/export$page.json");
-    }
-    $content = json_decode($content, true, 512, JSON_THROW_ON_ERROR);
-    
-    //echo "content of page $page = "; print_r($content);
-    //StdErr::write("Info: nbelts de la page $page = ".count($content)."\n");
-    
-    foreach ($content as $no => $resource) {
-      RdfResource::increment('stats', "nbre de ressources lues");
-      $types = implode(', ', $resource['@type']); 
-      if ($className = (RdfResource::CLASS_URI_TO_PHP_NAME[$types] ?? null)) {
-        $resource = $className::add($resource);
-        if (($className == 'PagedCollection') && ($lastPage == 0)) {
-          $lastPage = $resource->lastPage();
-          StdErr::write("Info: lastPage=$lastPage\n");
-        }
-      }
-      else
-        throw new Exception("Types $types non traité");
-    }
-  }
-  Dataset::rectifAllStatements(); // rectification des propriétés accessRights et provenance qui nécessitent que tous les objets soient chargés avant la rectification
-  return $errors;
-}
-
 
 define('JSON_OPTIONS',
         JSON_PRETTY_PRINT|JSON_UNESCAPED_LINE_TERMINATORS|JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR);
@@ -174,14 +118,16 @@ if (php_sapi_name()=='cli') { // traitement CLI en fonction de l'action demandé
 
   switch ($argv[1]) {
     case 'rectifStats': {
-      Registre::import();
-      import($urlPrefix, true, $lastPage, $firstPage);
-      echo '$stats = '; print_r(RdfResource::$stats);
-      echo '$rectifStats = '; print_r(RdfResource::$rectifStats);
+      $graph = new RdfGraph('default');
+      Registre::import($graph);
+      $graph->import($urlPrefix, true, $lastPage, $firstPage);
+      echo '$stats = '; print_r($graph->stats());
+      echo '$rectifStats = '; print_r($graph->rectifStats());
       break;
     }
     case 'registre': { // effectue uniquement l'import du registre et affiche ce qui a été importé 
-      Registre::import();
+      $graph = new RdfGraph('default');
+      Registre::import($graph);
       Registre::show();
       echo "\nRessources prédéfinies:\n";
       foreach (RdfResource::CLASS_URI_TO_PHP_NAME as $classUri => $className)
@@ -189,35 +135,40 @@ if (php_sapi_name()=='cli') { // traitement CLI en fonction de l'action demandé
       break;
     }
     case 'import': { // effectue uniquement l'import de l'export
-      Registre::import();
-      import($urlPrefix, true, $lastPage, $firstPage);
+      $graph = new RdfGraph('default');
+      Registre::import($graph);
+      $graph->import($urlPrefix, true, $lastPage, $firstPage);
       break;
     }
     case 'errors': {
-      Registre::import();
-      $errors = import($urlPrefix, true, $lastPage, $firstPage);
+      $graph = new RdfGraph('default');
+      Registre::import($graph);
+      $errors = $graph->import($urlPrefix, true, $lastPage, $firstPage);
       echo "Pages en erreur:\n";
       foreach ($errors as $page => $error)
         echo "  $page: $error\n";
       break;
     }
     case 'catalogs': {
-      Registre::import();
-      import($urlPrefix, true, $lastPage, $firstPage);
+      $graph = new RdfGraph('default');
+      Registre::import($graph);
+      $graph->import($urlPrefix, true, $lastPage, $firstPage);
       //print_r(RdfResource::$pkeys);
       Catalog::show();
       break;
     }
     case 'datasets': { // import du registre et de l'export puis affichage des datasets
-      Registre::import();
-      import($urlPrefix, true, $lastPage, $firstPage);
-      Dataset::show();
+      $graph = new RdfGraph('default');
+      Registre::import($graph); // importe le registre dans le graphe
+      $graph->import($urlPrefix, true, $lastPage, $firstPage);
+      $graph->show('Dataset');
       break;
     }
     
     case 'frameDatasets': {
-      Registre::import();
-      import($urlPrefix, true, $lastPage, $firstPage);
+      $graph = new RdfGraph('default');
+      Registre::import($graph);
+      $graph->import($urlPrefix, true, $lastPage, $firstPage);
       Dataset::frameAll(['http://purl.org/dc/terms/publisher']);
       echo json_encode(Dataset::exportClassAsJsonLd(), JSON_OPTIONS);
       break;

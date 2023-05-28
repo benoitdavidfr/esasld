@@ -45,7 +45,7 @@ class Registre { // stockage du registre
     return self::$namespaces[$parts[0]].$parts[1];
   }
   
-  static function import(): array {
+  static function import(RdfGraph $graph): array { // importe le registre dans le graphe 
     try {
       $registre = Yaml::parseFile(__DIR__.'/registre.yaml');
     } catch (ParseException $exception) {
@@ -74,7 +74,7 @@ class Registre { // stockage du registre
             $r['http://www.w3.org/2000/01/rdf-schema#label'][] =
               $lang ? ['@language'=> $lang, '@value'=> $value] : ['@value'=> $value];
           }
-          $className::add($r);
+          $graph->addResource($r, $className);
         }
       }
     }

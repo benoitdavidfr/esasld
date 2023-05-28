@@ -10,8 +10,6 @@ doc: |
   
   Chaque classe RDF est soit traduite en une classe Php, soit, si elle ne porte pas de traitement spécifique,
   fusionnée dans la classe GenResource.
-  Chacune de ces classes Php définit la propriété statique $all contient les objets correspondant aux ressources lues
-  à partir du registre et des fichiers JSON-LD.
   Les classes non fusionnées définissent la constante de classe PROP_KEY_URI qui liste les propriétés RDF en définissant
   leur raccourci,
   La classe GenResource définit la méthode prop_key_uri() qui retourne la même liste en fonction du type de l'objet.
@@ -19,6 +17,8 @@ doc: |
   A voir:
     - 
 journal: |
+ 28/5/2023:
+  - ajout classe RdfGraph pour gérer les ressources par graphe
  27/5/2023:
   - scission de la clase PropVal en RdfLiteral et RdfResRef
  21/5/2023:
@@ -74,20 +74,6 @@ abstract class PropVal {
   abstract function isA(): string;
   abstract function keys(): array;
   abstract function asJsonLd(): array;
- 
-  // simplification des valeurs de propriété $pvals de la forme [[{key} => {value}]], $pKey est le nom court de la prop.
-  static function simplifPvals(array $pvals, string $pKey): string|array {
-    // $pvals ne contient qu'un seul $pval alors simplif de cette valeur
-    if (count($pvals) == 1)
-      return $pvals[0]->simplifPval($pKey);
-    
-    // SI $pvals est une liste de $pval alors simplif de chaque valeur
-    $list = [];
-    foreach ($pvals as $pval) {
-      $list[] = $pval->simplifPval($pKey);
-    }
-    return $list;
-  }
 };
 
 // Classe des littéraux RDF
@@ -130,7 +116,7 @@ class RdfLiteral extends PropVal {
   }
   
   // simplification d'une des valeurs d'une propriété, $pKey est le nom court de la prop.
-  function simplifPval(string $pKey): string|array {
+  function simplifPval(RdfGraph $graph, string $pKey): string|array {
     if ($this->type) {
       if (in_array($this->type, ['http://www.w3.org/2001/XMLSchema#dateTime','http://www.w3.org/2001/XMLSchema#date']))
         return $this->value;
@@ -192,13 +178,13 @@ class RdfResRef extends PropVal {
   }
   
   // simplification d'une des valeurs d'une propriété, $pKey est le nom court de la prop.
-  function simplifPval(string $pKey): string|array {
+  function simplifPval(RdfGraph $graph, string $pKey): string|array {
     $id = $this->id;
     if (substr($id, 0, 2) <> '_:') {// si PAS blank node alors retourne l'URI + evt. déref.
       if (!($class = (self::PROP_RANGE[$pKey] ?? null)))
         return "<$id>";
       try {
-        $simple = $class::get($id)->simplify();
+        $simple = $graph->get($class, $id)->simplify($graph);
       } catch (Exception $e) {
         StdErr::write("Alerte, ressource $id non trouvée dans $class");
         return "<$id>";
@@ -208,11 +194,12 @@ class RdfResRef extends PropVal {
     // si le pointeur pointe sur un blank node alors déréférencement du pointeur
     if (!($class = (self::PROP_RANGE[$pKey] ?? null)))
       throw new Exception("Erreur $pKey absent de RdfResRef::PROP_RANGE");
-    return $class::get($id)->simplify();
+    return $graph->get($class, $id)->simplify($graph);
   }
 };
 
-{/* Classe abstraite portant les méthodes communes à toutes les classes de ressources RDF
+
+{/* Classe abstraite portant les méthodes communes à toutes les ressources RDF
 ** ainsi que la constantes CLASS_URI_TO_PHP_NAME définissant le mapping URI du type ou liste des URI -> nom de la classe Php
 ** La propriété $props est le dict. des propriétés de la ressource de la forme [{propUri} => [PropVal|RdfResource]]
 ** Lorsque la représentation est applatie (flatten) la forme est [{propUri} => [PropVal]]
@@ -241,64 +228,11 @@ abstract class RdfResource {
     'http://www.w3.org/2006/vcard/ns#Kind' => 'GenResource',
     'http://www.w3.org/ns/hydra/core#PagedCollection' => 'PagedCollection',
   ];
-  
-  static array $stats = [
-    "nbre de ressources lues"=> 0,
-  ]; // statistiques
-  static array $rectifStats = []; // [{type} => {nbre}] - nbre de rectifications effectuées par type
-  
+    
   protected string $id; // le champ '@id' de la repr. JSON-LD, cad l'URI de la ressource ou l'id blank node
   protected array $types; // le champ '@type' de la repr. JSON-LD, cad la liste des URI des classes RDF de la ressource
   protected array $props=[]; // dict. des propriétés de la ressource de la forme [{propUri} => [PropVal|RdfResource]]
-  
-  static function increment(string $var, string $label): void { // incrémente une des sous-variables de la variable $var
-    self::$$var[$label] = 1 + (self::$$var[$label] ?? 0);
-  }
     
-  static function add(array $resource): self { // ajout d'une ressource à la classe
-    $class = get_called_class();
-    if (!isset($class::$all[$resource['@id']])) {
-      $class::$all[$resource['@id']] = new $class($resource);
-    }
-    else {
-      $class::$all[$resource['@id']]->concat($resource);
-    }
-    $class::$all[$resource['@id']]->rectification();
-    self::increment('stats', "nbre de ressources pour $class");
-    return $class::$all[$resource['@id']];
-  }
-
-  static function get(string $id) { // retourne la ressource de la classe get_called_class() ayant cet $id 
-    $class = get_called_class();
-    if (isset($class::$all[$id]))
-      return $class::$all[$id];
-    else {
-      echo "RdfResource::get($id) sur la classe $class\n";
-      throw new Exception("DEREF_ERROR on $id");
-    }
-  }
-  
-  static function show(bool $echo=true): string { // affiche en Yaml les ressources de la classe hors blank nodes 
-    //echo "Appel de ",get_called_class(),"::show()\n";
-    //var_dump((get_called_class())::$all); die();
-    $result = '';
-    foreach ((get_called_class())::$all as $id => $resource) {
-      if (substr($id, 0, 2) <> '_:') {
-        if ($echo)
-          echo Yaml::dump([$id => $resource->simplify()], 7, 2, Yaml::DUMP_MULTI_LINE_LITERAL_BLOCK);
-        else
-          $result .= Yaml::dump([$id => $resource->simplify()], 7, 2, Yaml::DUMP_MULTI_LINE_LITERAL_BLOCK);
-      }
-    }
-    return $result;
-  }
-  
-  static function showIncludingBlankNodes(): void { // affiche en Yaml toutes les ressources de la classe y compris les blank nodes 
-    foreach ((get_called_class())::$all as $id => $elt) {
-      echo Yaml::dump([$id => $elt->simplify()], 7, 2, Yaml::DUMP_MULTI_LINE_LITERAL_BLOCK);
-    }
-  }
-
   // retourne PROP_KEY_URI, redéfini sur GenResource pour retourner le PROP_KEY_URI en fonction du type de l'objet
   function prop_key_uri(): array { return (get_called_class())::PROP_KEY_URI; }
   
@@ -322,7 +256,7 @@ abstract class RdfResource {
   }
   
   // corrections d'erreurs ressource par ressource et pas celles qui nécessittent un accès à d'autres ressources
-  function rectification(): void {
+  function rectification(RdfGraph $graph): void {
     // remplacer les URI erronés de propriétés
     foreach ([
         'http://purl.org/dc/terms/rights_holder' => 'http://purl.org/dc/terms/rightsHolder',
@@ -343,18 +277,18 @@ abstract class RdfResource {
         if ((count($pvals)==2) && ($pvals[0]->keys() == ['@id']) && ($pvals[1]->keys() == ['@value'])) {
           $pvals = [$pvals[0]]; // si URI et chaine alors je ne conserve que l'URI
           //echo 'language rectifié = '; print_r($pvals);
-          self::increment('rectifStats', "rectification langue");
+          $graph->increment('rectifStats', "rectification langue");
         }
         elseif ((count($pvals)==2) && ($pvals[0]->keys() == ['@value']) && ($pvals[1]->keys() == ['@id'])) {
           $pvals = [$pvals[1]]; // si URI et chaine alors je ne conserve que l'URI
           //echo 'language rectifié = '; print_r($pvals);
-          self::increment('rectifStats', "rectification langue");
+          $graph->increment('rectifStats', "rectification langue");
         }
         elseif ((count($pvals)==1) && ($pvals[0]->keys() == ['@value'])) { // si chaine encodée en Yaml avec URI alors URI
           if ($pvals[0]->value == "{'uri': 'http://publications.europa.eu/resource/authority/language/FRA'}") {
             $pvals = [PropVal::create(['@id'=> 'http://publications.europa.eu/resource/authority/language/FRA'])];
             //echo 'language rectifié = '; print_r($pvals);
-            self::increment('rectifStats', "rectification langue");
+            $graph->increment('rectifStats', "rectification langue");
           }
         }
         continue;
@@ -369,26 +303,26 @@ abstract class RdfResource {
         //print_r($pvals);
         if ($pvals[0]->keys() == ['@value']) {
           $pvals = [PropVal::create(['@id'=> 'mailto:'.$pvals[0]->value])];
-          self::increment('rectifStats', "rectification mbox");
+          $graph->increment('rectifStats', "rectification mbox");
         }
         elseif (($pvals[0]->keys() == ['@id']) && (substr($pvals[0]->id, 7, 0)<>'mailto:')) {
           $pvals = [PropVal::create(['@id'=> 'mailto:'.$pvals[0]->id])];
-          self::increment('rectifStats', "rectification mbox");
+          $graph->increment('rectifStats', "rectification mbox");
         }
         continue;
       }
       
       { // les chaines de caractères comme celles du titre sont dupliquées avec un élément avec langue et l'autre sans
-        if ((count($pvals)==2) && ($pvals[0]->isA()=='RdfLiteral') && ($pvals[1]->isA()=='RdfLitteral')
+        if ((count($pvals)==2) && ($pvals[0]->isA()=='RdfLiteral') && ($pvals[1]->isA()=='RdfLiteral')
          && ($pvals[0]->value == $pvals[1]->value)) {
           if ($pvals[0]->language && !$pvals[1]->language) {
             $pvals = [$pvals[0]];
-            self::increment('rectifStats', "duplication littéral avec et sans langue");
+            $graph->increment('rectifStats', "duplication littéral avec et sans langue");
             continue;
           }
           elseif (!$pvals[0]->language && $pvals[1]->language) {
             $pvals = [$pvals[1]];
-            self::increment('rectifStats', "duplication littéral avec et sans langue");
+            $graph->increment('rectifStats', "duplication littéral avec et sans langue");
             continue;
           }
         }
@@ -402,7 +336,7 @@ abstract class RdfResource {
             //print_r($pvals); print_r($this);
             $pvals = [$pvals[0]];
             //echo "rectification -> "; print_r($this->props[$pUri]);
-            self::increment('rectifStats', "dates dupliquées avec un élément dateTime et l'autre date");
+            $graph->increment('rectifStats', "dates dupliquées avec un élément dateTime et l'autre date");
             continue;
           }
           elseif (($pvals[0]->type == 'http://www.w3.org/2001/XMLSchema#dateTime')
@@ -411,7 +345,7 @@ abstract class RdfResource {
             //print_r($pvals);
             $pvals = [$pvals[1]];
             //echo "rectification -> "; print_r($this->props[$pUri]);
-            self::increment('rectifStats', "dates dupliquées avec un élément dateTime et l'autre date");
+            $graph->increment('rectifStats', "dates dupliquées avec un élément dateTime et l'autre date");
             continue;
           }
         }
@@ -424,7 +358,7 @@ abstract class RdfResource {
             if ($yaml = self::cleanYaml($pval->value)) {
               $rectifiedPvals = array_merge($rectifiedPvals, $yaml);
             }
-            self::increment('rectifStats', "propriété contenant une chaine encodée en Yaml");
+            $graph->increment('rectifStats', "propriété contenant une chaine encodée en Yaml");
           }
           else {
             $rectifiedPvals[] = $pval;
@@ -437,6 +371,8 @@ abstract class RdfResource {
       }
     }
   }
+  
+  static function get(string $id): ?self { return null; } // interprétation d'un URI spécifique à la classe
   
   // construit un PropVal à partir d'une structure Yaml en excluant les listes
   function yamlToPropVal(array $yaml): PropVal {
@@ -541,12 +477,12 @@ abstract class RdfResource {
   }
     
   // simplification des valeurs des propriétés 
-  function simplify(): string|array {
+  function simplify(RdfGraph $graph): string|array {
     $simple = [];
     $jsonld = $this->props;
     foreach ($this->prop_key_uri() as $uri => $key) {
       if (isset($this->props[$uri])) {
-        $simple[$key] = PropVal::simplifPvals($this->props[$uri], $key);
+        $simple[$key] = $graph->simplifPvals($this->props[$uri], $key);
         unset($jsonld[$uri]);
       }
     }
@@ -679,8 +615,6 @@ class GenResource extends RdfResource {
   
   // je fais l'hypothèse que les objets autres que Catalog quand ils sont définis plusieurs fois ont des defs identiques
   function concat(array $resource): void {}
-  
-  static array $all=[];
 };
 
 class Dataset extends RdfResource {
@@ -718,7 +652,6 @@ class Dataset extends RdfResource {
     'http://www.w3.org/ns/dcat#seriesMember' => 'seriesMember',
     'http://www.w3.org/ns/dcat#distribution' => 'distribution',
   ];
-  static array $all=[]; // [{id}=> self] -- dict. des objets de la classe
     
   function concat(array $resource): void { // concatene 2 valeurs pour un même URI 
     foreach (['http://www.w3.org/ns/dcat#catalog',
@@ -731,16 +664,16 @@ class Dataset extends RdfResource {
     }
   }
 
-  static function rectifAllStatements(): void { // rectifie les propriétés accessRights et provenance
-    foreach (self::$all as $id => $dataset) {
+  static function rectifAllStatements(array $datasets, RdfGraph $graph): void { // rectifie les propriétés accessRights et provenance
+    foreach ($datasets as $id => $dataset) {
       foreach ($dataset->props as $pUri => &$pvals) {
         switch ($pUri) {
           case 'http://purl.org/dc/terms/accessRights': {
-            $pvals = self::rectifOneStatement($pvals, 'RightsStatement');
+            $pvals = self::rectifOneStatement($pvals, 'RightsStatement', $graph);
             break;
           }
           case 'http://purl.org/dc/terms/provenance': {
-            $pvals = self::rectifOneStatement($pvals, 'ProvenanceStatement');
+            $pvals = self::rectifOneStatement($pvals, 'ProvenanceStatement', $graph);
             break;
           }
         }
@@ -749,13 +682,13 @@ class Dataset extends RdfResource {
   }
   
   // corrige si nécessaire une liste de valeurs correspondant à une propriété accessRights ou provenance
-  static function rectifOneStatement(array $pvals, string $statementClass): array {
+  static function rectifOneStatement(array $pvals, string $statementClass, RdfGraph $graph): array {
     $arrayOfMLStrings = []; // [{md5} => ['mlStr'=> MLString, 'bn'=>{bn}]] - liste de chaines correspondant au $pvals
     
     foreach ($pvals as $pval) {
       switch ($pval->keys()) {
         case ['@language','@value'] : {
-          self::increment('rectifStats', "propriété contenant un Littéral alors qu'elle exige une Resource");
+          $graph->increment('rectifStats', "propriété contenant un Littéral alors qu'elle exige une Resource");
           if ($pval->language == 'fr') {
             $md5 = md5($pval->value);
             if (!isset($arrayOfMLStrings[$md5]))
@@ -767,7 +700,7 @@ class Dataset extends RdfResource {
           break;
         }
         case ['@id'] : {
-          $statement = GenResource::get($pval->id);
+          $statement = $graph->get('GenResource', $pval->id);
           $mlStr = MLString::fromStatementLabel($statement->label);
           $arrayOfMLStrings[$mlStr->md5()] = ['mlStr'=> $mlStr, 'bn'=>$pval->id];
           break;
@@ -789,7 +722,7 @@ class Dataset extends RdfResource {
           '@type'=> ["http://purl.org/dc/terms/$statementClass"],
           'http://www.w3.org/2000/01/rdf-schema#label'=> $mlStrAndBn['mlStr']->toStatementLabel(),
         ];
-        GenResource::$all[$id] = new GenResource($resource);
+        $graph->addResource($resource, 'GenResource');
         $pvals[] = PropVal::create(['@id'=> $id]);
       }
     }
@@ -798,14 +731,12 @@ class Dataset extends RdfResource {
 };
 
 class Catalog extends Dataset {
-  static array $all=[]; // [{id}=> self] -- dict. de tous les objets de la classe
 };
 
 class DataService extends Dataset {
   const PROP_KEY_URI = [
     'http://purl.org/dc/terms/conformsTo' => 'conformsTo',
   ];
-  static array $all=[];
 };
 
 class Location extends RdfResource {
@@ -817,26 +748,22 @@ class Location extends RdfResource {
   const PROP_KEY_URI = [
     'http://www.w3.org/2000/01/rdf-schema#label' => 'label',
   ];
-
-  static array $all=[];
   
-  static function get(string $id) { // retourne la ressource de la classe get_called_class() ayant cet $id 
+  static function get(string $id): ?Location { // retourne la ressource de la classe ayant cet $id 
     $class = get_called_class();
-    if (isset($class::$all[$id]))
-      return $class::$all[$id];
-    elseif (preg_match('!^http://id.insee.fr/geo/(region|departement|commune)/(.*)$!', $id, $matches)) {
+    if (preg_match('!^http://id.insee.fr/geo/(region|departement|commune)/(.*)$!', $id, $matches)) {
       $type_insee = self::TYPES_INSEE[$matches[1]] ?? 'type inconnu';
-      return new $class([
+      return new Location([
         '@id'=> $id, 
         '@type'=> ["http://purl.org/dc/terms/$class"],
         'http://www.w3.org/2000/01/rdf-schema#label' => [['@language'=> 'fr', '@value'=> "$type_insee $matches[2]"]],
       ]);
     }
     else
-      throw new Exception("DEREF_ERROR on $id");
+      return null;
   }
   
-  function simplify(): string|array {
+  function simplify(RdfGraph $graph): string|array {
     if (isset($this->props['http://www.w3.org/ns/locn#geometry'])) {
       foreach ($this->props['http://www.w3.org/ns/locn#geometry'] as $geom) {
         if ($geom->type == 'http://www.opengis.net/ont/geosparql#wktLiteral')
@@ -849,7 +776,7 @@ class Location extends RdfResource {
           return ['bbox' => $bbox->value];
       }
     }
-    return parent::simplify();
+    return parent::simplify($graph);
   }
 };
 
@@ -869,6 +796,135 @@ class PagedCollection extends RdfResource {
       throw new Exception("erreur de preg_match sur $lastPage");
     return $m[1];
   }
+};
+
+// extrait le code HTTP de retour de l'en-tête HTTP
+function httpResponseCode(array $header) { return substr($header[0], 9, 3); }
+
+// graphe RDF
+class RdfGraph {
+  protected string $name; // nom du graphe
+  protected array $stats = ["nbre de ressources lues"=> 0]; // statistiques
+  protected array $rectifStats = []; // [{type} => {nbre}] - nbre de rectifications effectuées par type
+  protected array $resources; // [{className} => [{resid}=> {Resource}]]
   
-  static array $all=[];
+  function __construct(string $name) { $this->name = $name; }
+  
+  function increment(string $var, string $label): void { // incrémente une des sous-variables de la variable $var
+    $this->$var[$label] = 1 + ($this->$var[$label] ?? 0);
+  }
+  
+  function stats(): array { return $this->stats; }
+  function rectifStats(): array { return $this->rectifStats; }
+  
+  function addResource(array $resource, string $className): RdfResource { // ajoute la ressource à la classe $className
+    if (!isset($this->resources[$className][$resource['@id']])) {
+      $this->resources[$className][$resource['@id']] = new $className($resource);
+    }
+    else {
+      $this->resources[$className][$resource['@id']]->concat($resource);
+    }
+    $this->resources[$className][$resource['@id']]->rectification($this);
+    $this->increment('stats', "nbre de ressources pour $className");
+    return $this->resources[$className][$resource['@id']];
+  }
+  
+  function import(string $urlPrefix, bool $skip=false, int $lastPage=0, int $firstPage=1): array {
+    {/* importe l'export JSON-LD et construit les objets chacun dans leur classe
+      lorque le fichier est absent:
+        si $skip est faux alors le site est interrogé
+        sinon ($skip vrai) alors la page est sautée et marquée comme erreur
+      Si $lastPage est indiquée et différente de 0 alors la lecture s'arrête à cette page,
+      sinon elle vaut 0 et le numéro de la dernière page est lu dans une des pages.
+      Si $firstPage est indiquée alors la lecture commence à cette page, sinon elle vaut 1.
+    */}
+    $errors = []; // erreur en array [{nopage} => {libellé}]
+    for ($page = $firstPage; ($lastPage == 0) || ($page <= $lastPage); $page++) {
+      if (!is_file("json/export$page.json")) { // le fichier n'existe pas
+        if ($skip) {
+          $errors[$page] = "fichier absent";
+          continue;
+        }
+        $urlPage = "$urlPrefix/jsonld?page=$page";
+        echo "lecture de $urlPage\n";
+        $content = @file_get_contents($urlPage);
+        if (httpResponseCode($http_response_header) <> 200) { // erreur de lecture
+          echo "code=",httpResponseCode($http_response_header),"\n";
+          echo "http_response_header[0] = ",$http_response_header[0],"\n";
+          $errors[$page] = $http_response_header[0];
+          continue;
+        }
+        else { // la lecture s'est bien passée -> j'enregistre le résultat
+          file_put_contents("json/export$page.json", $content);
+        }
+      }
+      else {
+        $content = file_get_contents("json/export$page.json");
+      }
+      $content = json_decode($content, true, 512, JSON_THROW_ON_ERROR);
+    
+      //echo "content of page $page = "; print_r($content);
+      //StdErr::write("Info: nbelts de la page $page = ".count($content)."\n");
+    
+      foreach ($content as $no => $resource) {
+        $this->increment('stats', "nbre de ressources lues");
+        $types = implode(', ', $resource['@type']); 
+        if (!($className = (RdfResource::CLASS_URI_TO_PHP_NAME[$types] ?? null))) {
+          throw new Exception("Types $types non traité");
+        }
+        $resource = $this->addResource($resource, $className);
+        if (($className == 'PagedCollection') && ($lastPage == 0)) {
+          $lastPage = $resource->lastPage();
+          StdErr::write("Info: lastPage=$lastPage\n");
+        }
+      }
+    }
+     // rectification des propriétés accessRights et provenance qui nécessitent que tous les objets soient chargés avant la rectification
+    Dataset::rectifAllStatements($this->resources['Dataset'], $this);
+    return $errors;
+  }
+
+  function get(string $className, string $id): RdfResource { // retourne la ressource de la classe $className ayant cet $id 
+    if (isset($this->resources[$className][$id]))
+      return $this->resources[$className][$id];
+    elseif ($res = $className::get($id))
+      return $res;
+    else {
+      echo "RdfGraph::get($className, $id) sur le graphe $this->name\n";
+      throw new Exception("DEREF_ERROR on $id");
+    }
+  }
+
+  // simplification des valeurs de propriété $pvals de la forme [[{key} => {value}]], $pKey est le nom court de la prop.
+  function simplifPvals(array $pvals, string $pKey): string|array {
+    // $pvals ne contient qu'un seul $pval alors simplif de cette valeur
+    if (count($pvals) == 1)
+      return $pvals[0]->simplifPval($this, $pKey);
+    
+    // SI $pvals est une liste de $pval alors simplif de chaque valeur
+    $list = [];
+    foreach ($pvals as $pval) {
+      $list[] = $pval->simplifPval($this, $pKey);
+    }
+    return $list;
+  }
+  
+  function show(string $className, bool $echo=true): string { // affiche en Yaml les ressources de la classe hors blank nodes 
+    $result = '';
+    foreach ($this->resources[$className] as $id => $resource) {
+      if (substr($id, 0, 2) <> '_:') {
+        if ($echo)
+          echo Yaml::dump([$id => $resource->simplify($this)], 7, 2, Yaml::DUMP_MULTI_LINE_LITERAL_BLOCK);
+        else
+          $result .= Yaml::dump([$id => $resource->simplify($this)], 7, 2, Yaml::DUMP_MULTI_LINE_LITERAL_BLOCK);
+      }
+    }
+    return $result;
+  }
+  
+  function showIncludingBlankNodes(string $className): void { // affiche en Yaml toutes les ressources de la classe y compris les blank nodes 
+    foreach ((get_called_class())::$all as $id => $elt) {
+      echo Yaml::dump([$id => $elt->simplify()], 7, 2, Yaml::DUMP_MULTI_LINE_LITERAL_BLOCK);
+    }
+  }
 };
