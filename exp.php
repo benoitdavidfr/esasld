@@ -177,9 +177,10 @@ if (php_sapi_name()=='cli') { // traitement CLI en fonction de l'action demandé
     default: {
       foreach (RdfResource::CLASS_URI_TO_PHP_NAME as $classUri => $className) {
         if ($argv[1] == $className) {
-          Registre::import();
-          import($urlPrefix, true, $lastPage, $firstPage);
-          $className::showIncludingBlankNodes();
+          $graph = new RdfGraph('default');
+          Registre::import($graph);
+          $graph->import($urlPrefix, true, $lastPage, $firstPage);
+          $graph->showIncludingBlankNodes($className);
           die();
         }
       }

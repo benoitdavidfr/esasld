@@ -444,23 +444,6 @@ abstract class RdfResource {
       return [self::yamlToPropVal($yaml)];
     }
   }
-
-  static function exportAllAsJsonLd(): array { // extraction du contenu en JSON-LD comme array Php
-    $jsonld = [];
-    foreach (self::CLASS_URI_TO_PHP_NAME as $className) {
-      foreach ($className::$all as $id => $resource)
-        $jsonld[] = $resource->asJsonLd();
-    }
-    return $jsonld;
-  }
-  
-  static function exportClassAsJsonLd(): array { // extraction du contenu de la classe en JSON-LD comme array Php
-    //echo 'exportClassAsJsonLd()='; print_r((get_called_class())::$all);
-    $jsonld = [];
-    foreach ((get_called_class())::$all as $id => $resource)
-      $jsonld[] = $resource->asJsonLd();
-    return $jsonld;
-  }
   
   function asJsonLd(): array { // retourne la ressource comme JSON-LD 
     $jsonld = [
@@ -495,11 +478,11 @@ abstract class RdfResource {
   }
 
   // applique frame sur les objets de la classe
-  static function frameAll(array $propUris): void {
+  /*static function frameAll(array $propUris): void {
     foreach ((get_called_class())::$all as $id => &$resource) {
       $resource->frame($propUris);
     }
-  }
+  }*/
   
   // modifie l'objet en intégrant pour les propriétés définies (par la liste [{propUri}]),
   // les références à une ressource par la ressource elle-même
@@ -923,8 +906,24 @@ class RdfGraph {
   }
   
   function showIncludingBlankNodes(string $className): void { // affiche en Yaml toutes les ressources de la classe y compris les blank nodes 
-    foreach ((get_called_class())::$all as $id => $elt) {
-      echo Yaml::dump([$id => $elt->simplify()], 7, 2, Yaml::DUMP_MULTI_LINE_LITERAL_BLOCK);
+    foreach ($this->resources[$className] as $id => $elt) {
+      echo Yaml::dump([$id => $elt->simplify($this)], 7, 2, Yaml::DUMP_MULTI_LINE_LITERAL_BLOCK);
     }
+  }
+
+  function exportAllAsJsonLd(): array { // extraction du contenu en JSON-LD comme array Php
+    $jsonld = [];
+    foreach (RdfResource::CLASS_URI_TO_PHP_NAME as $className) {
+      foreach ($this->resources[$className] as $id => $resource)
+        $jsonld[] = $resource->asJsonLd();
+    }
+    return $jsonld;
+  }
+  
+  function exportClassAsJsonLd(string $className): array { // extraction du contenu de la classe en JSON-LD comme array Php
+    $jsonld = [];
+    foreach ($this->resources[$className] as $id => $resource)
+      $jsonld[] = $resource->asJsonLd();
+    return $jsonld;
   }
 };
