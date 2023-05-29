@@ -16,7 +16,7 @@ doc: |
   'https://tools.ietf.org/html/rfc4287' correspond au format de syndication Atom,
   
   A VOIR:
-    - l'export d'un grahe JSON-LD devrait être stutur avec 'graph'
+    - l'export d'un grahe JSON-LD devrait être stucturé avec 'graph'
   
   Prolongations éventuelles:
    - générer un affichage simplifié qui soit un export DCAT valide en YAML-LD
