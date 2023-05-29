@@ -15,6 +15,9 @@ doc: |
   nombre d'URIs utilisés mais non définis dans l'export DCAT ; par exemple dans la classe Standard l'URI
   'https://tools.ietf.org/html/rfc4287' correspond au format de syndication Atom,
   
+  A VOIR:
+    - l'export d'un grahe JSON-LD devrait être stutur avec 'graph'
+  
   Prolongations éventuelles:
    - générer un affichage simplifié qui soit un export DCAT valide en YAML-LD
      - l'enjeeu est
@@ -157,8 +160,8 @@ if (php_sapi_name()=='cli') { // traitement CLI en fonction de l'action demandé
     
     case 'frameDatasets': {
       $graph->import($urlPrefix, true, $lastPage, $firstPage);
-      Dataset::frameAll(['http://purl.org/dc/terms/publisher']);
-      echo json_encode(Dataset::exportClassAsJsonLd(), JSON_OPTIONS);
+      $graph->frame('Dataset', ['http://purl.org/dc/terms/publisher']);
+      echo json_encode($graph->exportClassAsJsonLd('Dataset'), JSON_OPTIONS);
       break;
     }
     

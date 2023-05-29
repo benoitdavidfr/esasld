@@ -323,7 +323,7 @@ abstract class RdfResource {
     }
   }
   
-  function __toString(): string { // génère une chaine pour afficher l'objet 
+  function __toString(): string { // génère une chaine pour afficher la ressource  
     return Yaml::dump([$this->asJsonLd()]);
   }
   
@@ -485,24 +485,17 @@ abstract class RdfResource {
     }
     return $simple;
   }
-
-  // applique frame sur les objets de la classe
-  /*static function frameAll(array $propUris): void {
-    foreach ((get_called_class())::$all as $id => &$resource) {
-      $resource->frame($propUris);
-    }
-  }*/
-  
-  // modifie l'objet en intégrant pour les propriétés définies (par la liste [{propUri}]),
-  // les références à une ressource par la ressource elle-même
-  function frame(array $propUris): void {
+    
+  // modifie l'objet en intégrant pour les propriétés définies (par la liste [{propUri}]), les références à une ressource
+  // par la ressource elle-même
+  function frame(RdfGraph $graph, array $propUris): void {
     foreach ($this->props as $pUri => &$pvals) {
       if (!in_array($pUri, $propUris)) continue;
       $propShortName = $this->prop_key_uri()[$pUri];
       $rangeClass = RdfResRef::PROP_RANGE[$propShortName];
       foreach ($pvals as $i => $pval) {
-        if ($pval->keys == ['@id']) {
-          $pvals[$i] = $rangeClass::get($pval->id);
+        if ($pval->isA() == 'RdfResRef') {
+          $pvals[$i] = $graph->get($rangeClass, $pval->id);
         }
       }
     }
@@ -934,5 +927,12 @@ class RdfGraph { // graphe RDF
     foreach ($this->resources[$className] as $id => $resource)
       $jsonld[] = $resource->asJsonLd();
     return $jsonld;
+  }
+
+  // applique frame sur les ressources de la classe
+  function frame(string $className, array $propUris): void {
+    foreach ($this->resources[$className] ?? [] as $id => &$resource) {
+      $resource->frame($this, $propUris);
+    }
   }
 };
