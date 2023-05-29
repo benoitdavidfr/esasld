@@ -17,6 +17,8 @@ doc: |
   A voir:
     - 
 journal: |
+ 29/5/2023:
+  - modularisation de la gestion des stats par la classe Stats
  28/5/2023:
   - ajout classe RdfGraph pour gérer les ressources par graphe
  27/5/2023:
@@ -328,7 +330,7 @@ abstract class RdfResource {
   }
   
   // corrections d'erreurs ressource par ressource et pas celles qui nécessittent un accès à d'autres ressources
-  function rectification(RdfGraph $graph): void {
+  function rectification(Stats $rectifStats): void {
     // remplacer les URI erronés de propriétés
     foreach ([
         'http://purl.org/dc/terms/rights_holder' => 'http://purl.org/dc/terms/rightsHolder',
@@ -349,26 +351,26 @@ abstract class RdfResource {
         if ((count($pvals)==2) && ($pvals[0]->keys() == ['@id']) && ($pvals[1]->keys() == ['@value'])) {
           $pvals = [$pvals[0]]; // si URI et chaine alors je ne conserve que l'URI
           //echo 'language rectifié = '; print_r($pvals);
-          $graph->increment('rectifStats', "rectification langue");
+          $rectifStats->increment("rectification langue");
         }
         elseif ((count($pvals)==2) && ($pvals[0]->keys() == ['@value']) && ($pvals[1]->keys() == ['@id'])) {
           $pvals = [$pvals[1]]; // si URI et chaine alors je ne conserve que l'URI
           //echo 'language rectifié = '; print_r($pvals);
-          $graph->increment('rectifStats', "rectification langue");
+          $rectifStats->increment("rectification langue");
         }
         elseif ((count($pvals)==1) && ($pvals[0]->keys() == ['@value'])) { // si chaine encodée en Yaml avec URI alors URI
           if ($pvals[0]->value == "{'uri': 'http://publications.europa.eu/resource/authority/language/FRA'}") {
             //echo 'language avant rectif = '; print_r($pvals);
             $pvals = [PropVal::create(['@id'=> 'http://publications.europa.eu/resource/authority/language/FRA'])];
             //echo 'language rectifié = '; print_r($pvals);
-            $graph->increment('rectifStats', "rectification langue");
+            $rectifStats->increment("rectification langue");
           }
         }
         if ((count($pvals)==1) && ($pvals[0]->keys() == ['@id'])) { // si URI 'fr'
           if ($pvals[0]->id == 'fr') {
             $pvals = [PropVal::create(['@id'=> 'http://publications.europa.eu/resource/authority/language/FRA'])];
             //echo 'language rectifié = '; print_r($pvals);
-            $graph->increment('rectifStats', "rectification langue");
+            $rectifStats->increment("rectification langue");
           }
         }
         continue;
@@ -383,11 +385,11 @@ abstract class RdfResource {
         //print_r($pvals);
         if ($pvals[0]->keys() == ['@value']) {
           $pvals = [PropVal::create(['@id'=> 'mailto:'.$pvals[0]->value])];
-          $graph->increment('rectifStats', "rectification mbox");
+          $rectifStats->increment("rectification mbox");
         }
         elseif (($pvals[0]->keys() == ['@id']) && (substr($pvals[0]->id, 7, 0)<>'mailto:')) {
           $pvals = [PropVal::create(['@id'=> 'mailto:'.$pvals[0]->id])];
-          $graph->increment('rectifStats', "rectification mbox");
+          $rectifStats->increment("rectification mbox");
         }
         continue;
       }
@@ -397,12 +399,12 @@ abstract class RdfResource {
          && ($pvals[0]->value == $pvals[1]->value)) {
           if ($pvals[0]->language && !$pvals[1]->language) {
             $pvals = [$pvals[0]];
-            $graph->increment('rectifStats', "duplication littéral avec et sans langue");
+            $rectifStats->increment("duplication littéral avec et sans langue");
             continue;
           }
           elseif (!$pvals[0]->language && $pvals[1]->language) {
             $pvals = [$pvals[1]];
-            $graph->increment('rectifStats', "duplication littéral avec et sans langue");
+            $rectifStats->increment("duplication littéral avec et sans langue");
             continue;
           }
         }
@@ -416,7 +418,7 @@ abstract class RdfResource {
             //print_r($pvals); print_r($this);
             $pvals = [$pvals[0]];
             //echo "rectification -> "; print_r($this->props[$pUri]);
-            $graph->increment('rectifStats', "dates dupliquées avec un élément dateTime et l'autre date");
+            $rectifStats->increment("dates dupliquées avec un élément dateTime et l'autre date");
             continue;
           }
           elseif (($pvals[0]->type == 'http://www.w3.org/2001/XMLSchema#dateTime')
@@ -425,7 +427,7 @@ abstract class RdfResource {
             //print_r($pvals);
             $pvals = [$pvals[1]];
             //echo "rectification -> "; print_r($this->props[$pUri]);
-            $graph->increment('rectifStats', "dates dupliquées avec un élément dateTime et l'autre date");
+            $rectifStats->increment("dates dupliquées avec un élément dateTime et l'autre date");
             continue;
           }
         }
@@ -438,7 +440,7 @@ abstract class RdfResource {
             if ($yaml = PropVal::cleanYaml($pval->value)) {
               $rectifiedPvals = array_merge($rectifiedPvals, $yaml);
             }
-            $graph->increment('rectifStats', "propriété contenant une chaine encodée en Yaml");
+            $rectifStats->increment("propriété contenant une chaine encodée en Yaml");
           }
           else {
             $rectifiedPvals[] = $pval;
@@ -673,7 +675,7 @@ class Dataset extends RdfResource {
     foreach ($pvals as $pval) {
       switch ($pval->keys()) {
         case ['@language','@value'] : {
-          $graph->increment('rectifStats', "propriété contenant un Littéral alors qu'elle exige une Resource");
+          $graph->rectifStats()->increment("propriété contenant un Littéral alors qu'elle exige une Resource");
           if ($pval->language == 'fr') {
             $md5 = md5($pval->value);
             if (!isset($arrayOfMLStrings[$md5]))
@@ -787,20 +789,31 @@ class PagedCollection extends RdfResource {
 // extrait le code HTTP de retour de l'en-tête HTTP
 function httpResponseCode(array $header) { return substr($header[0], 9, 3); }
 
-class RdfGraph { // graphe RDF
-  protected string $name; // nom du graphe
-  protected array $stats = ["nbre de ressources lues"=> 0]; // statistiques
-  protected array $rectifStats = []; // [{type} => {nbre}] - nbre de rectifications effectuées par type
-  protected array $resources; // [{className} => [{resid}=> {Resource}]]
+class Stats {
+  protected array $contents=[]; // [{label}=> {nbre}]
+  function __construct(array $contents=[]) { $this->contents = $contents; }
   
-  function __construct(string $name) { $this->name = $name; }
-  
-  function increment(string $var, string $label): void { // incrémente une des sous-variables de la variable $var
-    $this->$var[$label] = 1 + ($this->$var[$label] ?? 0);
+  function increment(string $label): void { // incrémente une des sous-variables
+    $this->contents[$label] = 1 + ($this->contents[$label] ?? 0);
   }
   
-  function stats(): array { return $this->stats; }
-  function rectifStats(): array { return $this->rectifStats; }
+  function contents(): array { return $this->contents; }
+};
+
+class RdfGraph { // graphe RDF
+  protected string $name; // nom du graphe
+  protected Stats $stats; // statistiques générales
+  protected Stats $rectifStats; // statistiques de rectification 
+  protected array $resources; // [{className} => [{resid}=> {Resource}]]
+  
+  function __construct(string $name) {
+    $this->name = $name;
+    $this->stats = new Stats(["nbre de ressources lues"=> 0]);
+    $this->rectifStats = new Stats;
+  }
+    
+  function stats(): Stats { return $this->stats; }
+  function rectifStats(): Stats { return $this->rectifStats; }
   
   function addResource(array $resource, string $className): RdfResource { // ajoute la ressource à la classe $className
     if (!isset($this->resources[$className][$resource['@id']])) {
@@ -809,8 +822,8 @@ class RdfGraph { // graphe RDF
     else {
       $this->resources[$className][$resource['@id']]->concat($resource);
     }
-    $this->resources[$className][$resource['@id']]->rectification($this);
-    $this->increment('stats', "nbre de ressources pour $className");
+    $this->resources[$className][$resource['@id']]->rectification($this->rectifStats);
+    $this->stats->increment("nbre de ressources pour $className");
     return $this->resources[$className][$resource['@id']];
   }
   
@@ -852,7 +865,7 @@ class RdfGraph { // graphe RDF
       //StdErr::write("Info: nbelts de la page $page = ".count($content)."\n");
     
       foreach ($content as $no => $resource) {
-        $this->increment('stats', "nbre de ressources lues");
+        $this->stats->increment("nbre de ressources lues");
         $types = implode(', ', $resource['@type']); 
         if (!($className = (RdfResource::CLASS_URI_TO_PHP_NAME[$types] ?? null))) {
           throw new Exception("Types $types non traité");

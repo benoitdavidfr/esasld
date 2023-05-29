@@ -16,7 +16,7 @@ doc: |
   'https://tools.ietf.org/html/rfc4287' correspond au format de syndication Atom,
   
   A VOIR:
-    - l'export d'un grahe JSON-LD devrait être stucturé avec 'graph'
+    - l'export d'un grahe JSON-LD devrait être stucturé avec 'graph' / ¨PAS s'il n'y a pas de contexte
   
   Prolongations éventuelles:
    - générer un affichage simplifié qui soit un export DCAT valide en YAML-LD
@@ -29,9 +29,17 @@ doc: |
         - les organizations
         - les JdD d'une organization donnée dans les différents catalogues
    - réexporter le contenu importé pour bénéficier des corrections, y compris en le paginant
-   - définir des shapes SHACL pour valider le graphe DCAT en s'inspirant de ceux de DCTA-AP
+   - définir des shapes SHACL pour valider le graphe DCAT en s'inspirant de ceux de DCAT-AP
 
 journal: |
+  29/5/2023:
+  - test affichage Yaml-LD d'une version framed avec RdfGraph puis compactée avec JsonLD
+    - nécessite une phase d'amélioration (improve) du contenu initial JSON-LD
+      - définition de la langue française par défaut pour la pluspart des propriétés littérales
+      - réduction des dateTime à des dates
+    - manque aussi
+      - le tri des propriétés après framing+compactage
+    -  puis une phase d'embellissement du Yaml
  28/5/2023:
   - ajout classe RdfGraph pour gérer les ressources par graphe
  21/5/2023:
@@ -192,8 +200,9 @@ else { // affichage interactif de la version corrigée page par page en Yaml, JS
         <option",($outputFormat=='jsonld') ? " selected='selected'": ''," value='jsonld'>JSON-LD</option>
         <option",($outputFormat=='jsonLdContext') ? " selected='selected'": ''," value='jsonLdContext'>JSON-LD contexte</option>
         <option",($outputFormat=='jsonldc') ? " selected='selected'": ''," value='jsonldc'>JSON-LD compacté</option>
-        <option",($outputFormat=='jsonldf') ? " selected='selected'": ''," value='jsonldf'>JSON-LD imbriqué</option>
+        <!-- <option",($outputFormat=='jsonldf') ? " selected='selected'": ''," value='jsonldf'>JSON-LD imbriqué</option> -->
         <option",($outputFormat=='turtle') ? " selected='selected'": ''," value='turtle'>Turtle</option>
+        <option",($outputFormat=='yamlldfc') ? " selected='selected'": ''," value='yamlldfc'>Yaml-ld framed et compacté</option>
       </select>
       <input type='submit' value='Submit' /></form><pre>\n";
   }
@@ -222,7 +231,7 @@ else { // affichage interactif de la version corrigée page par page en Yaml, JS
       echo htmlspecialchars(json_encode(Registre::jsonLdContext(), JSON_OPTIONS));
       break;
     }
-    case 'jsonldc': { // affiche le JSON-LD compacté avec JsonLD
+    case 'jsonldc': { // affiche le JSON-LD compacté avec JsonLD et le contexte déduit du registre
       if (!is_dir('tmp')) mkdir('tmp');
       file_put_contents('tmp/document.jsonld', json_encode($graph->exportAllAsJsonLd(), JSON_OPTIONS));
       file_put_contents('tmp/context.jsonld', json_encode(Registre::jsonLdContext(), JSON_OPTIONS));
@@ -230,18 +239,35 @@ else { // affichage interactif de la version corrigée page par page en Yaml, JS
       echo htmlspecialchars(json_encode($compacted, JSON_OPTIONS));
       break;
     }
-    case 'jsonldf': { // affiche le JSON-LD structuré (framed) avec JsonLD
+    /*case 'jsonldf': { // affiche le JSON-LD structuré (framed) avec JsonLD
       if (!is_dir('tmp')) mkdir('tmp');
       file_put_contents('tmp/document.jsonld', json_encode($graph->exportAllAsJsonLd(), JSON_OPTIONS));
       file_put_contents('tmp/frame.jsonld', json_encode(Registre::jsonLdFrame(), JSON_OPTIONS));
       $framed = JsonLD::frame('tmp/document.jsonld', 'tmp/frame.jsonld');
       echo htmlspecialchars(json_encode($framed, JSON_OPTIONS));
       break;
-    }
+    }*/
     case 'turtle': { // traduction en Turtle avec EasyRdf
       $erGraph = new \EasyRdf\Graph('https://preprod.data.developpement-durable.gouv.fr/');
       $erGraph->parse(json_encode($graph->exportAllAsJsonLd()), 'jsonld', 'https://preprod.data.developpement-durable.gouv.fr/');
       echo htmlspecialchars($erGraph->serialise('turtle'));
+      break;
+    }
+    case 'yamlldfc': { // affiche Yaml-ld framed (RdfGraph::frame()) et le contexte context.yaml puis compacté avec JsonLD
+      $graph->frame('Dataset', ['http://purl.org/dc/terms/publisher']);
+      //echo Yaml::dump($graph->exportClassAsJsonLd('Dataset'), 9, 2, Yaml::DUMP_MULTI_LINE_LITERAL_BLOCK);
+      file_put_contents('tmp/context.jsonld', json_encode(Yaml::parseFile('context.yaml')));
+      file_put_contents('tmp/expanded.jsonld', json_encode($graph->exportClassAsJsonLd('Dataset')));
+      try {
+        $comped = JsonLD::compact('tmp/expanded.jsonld', 'tmp/context.jsonld');
+        //unset($comped->{'@context'});
+        $comped = json_decode(json_encode($comped, JSON_OPTIONS), true); // suppr. StdClass
+        $comped = Yaml::dump($comped, 9, 2, Yaml::DUMP_MULTI_LINE_LITERAL_BLOCK); // convertit en Yaml
+        echo $comped;
+      } catch (ML\JsonLD\Exception\JsonLdException $e) {
+        echo $e->getMessage();
+        $comped = '';
+      }
       break;
     }
     default: {
