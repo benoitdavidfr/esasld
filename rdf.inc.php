@@ -484,10 +484,6 @@ abstract class RdfResource {
   
   function improve(Stats $rectifStats): void { // diverses améliorations ressource par ressource
     foreach ($this->props as $pUri => &$pvals) {
-      if (0 && !in_array($pUri, ['http://purl.org/dc/terms/title','http://www.w3.org/ns/dcat#theme'])) {
-        unset($this->props[$pUri]);
-        continue;
-      }
       // Pour plusieurs propriétés, les littéraux sont par défaut en français 
       if (in_array($pUri, [
           'http://purl.org/dc/terms/title',
