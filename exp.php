@@ -1,17 +1,15 @@
 <?php
 {/*PhpDoc:
-title: exp.php - script de lecture de l'export du catalogue Ecosphères - 29/5/2023
+title: exp.php - lecture de l'export du catalogue Ecosphères - 1/6/2023
 doc: |
-  L'objectif de ce script est de lire l'export DCAT d'Ecosphères en JSON-LD afin d'y détecter d'éventuelles erreurs.
+  L'objectif principal de ce script est de lire l'export DCAT d'Ecosphères en JSON-LD afin d'y détecter d'éventuelles erreurs.
   Les classes RDF sont traduites par une classe Php avec un mapping défini dans RdfResource::CLASS_URI_TO_PHP_NAME
   Outre la détection et correction d'erreurs, le script affiche différents types d'objets de manière simplifiée
   et plus lisible pour les néophytes.
-  Cette simplification correspond, d'une part, à une "compaction JSON-LD" avec un contexte non explicité
-  et, d'autre part, à un embedding d'un certain nombre de ressources associées, par exemple les publisher d'un Dataset.
-  Ces ressources associées sont définies par les propriétées définies dans PropVal::PROP_RANGE.
-  L'affichage est finalement effectuée en Yaml.
+  Le principal résultat correspond à un affichage Yaml-LD avec un contexte qui permet un affichage simplifié
+  des JdD du catalogue.
   
-  Le script utilise un registre stocké dans le fichier registre.yaml qui permet d'associer des étiquettes à un certain
+  Le script utilise un registre stocké dans le fichier registre.yaml qui associe des étiquettes à un certain
   nombre d'URIs utilisés mais non définis dans l'export DCAT ; par exemple dans la classe Standard l'URI
   'https://tools.ietf.org/html/rfc4287' correspond au format de syndication Atom,
   
@@ -20,16 +18,6 @@ doc: |
     - gestion des Location
   
   Prolongations éventuelles:
-   - générer un affichage simplifié qui soit un export DCAT valide en YAML-LD
-     - l'enjeeu est
-       - d'une part de définir le contexte adhoc qui formalise la structure de données d'export
-       - d'autre part d'effectuer le framing adhoc
-      - on pourrait avoir les exports suivants
-        - les catalogues moissonnés sans les JD
-        - les JdD d'un catalogue particulier
-        - les organizations
-        - les JdD d'une organization donnée dans les différents catalogues
-   - réexporter le contenu importé pour bénéficier des corrections, y compris en le paginant
    - définir des shapes SHACL pour valider le graphe DCAT en s'inspirant de ceux de DCAT-AP
 
 journal: |
