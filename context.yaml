@@ -13,7 +13,7 @@ inCatalog: dcat:inCatalog
 keyword: dcat:keyword
 landingPage: {'@id': dcat:landingPage, '@type': '@id'}
 distribution: {'@id': dcat:distribution, '@type': '@id'}
-contactPoint: {'@id': dcat:contactPoint, '@type': '@id'}
+contactPoint: dcat:contactPoint
 downloadURL: {'@id': dcat:downloadURL, '@type': '@id'}
 # DCT
 RightsStatement: dct:RightsStatement
@@ -36,6 +36,7 @@ mbox: {'@id': foaf:mbox, '@type': '@id'}
 workplaceHomepage: {'@id': foaf:workplaceHomepage, '@type': '@id'}
 homepage: {'@id': foaf:homepage, '@type': '@id'}
 page: {'@id': foaf:page, '@type': '@id'}
+isPrimaryTopicOf: foaf:isPrimaryTopicOf
 # VCARD
 Kind: vcard:Kind
 hasEmail: {'@id': vcard:hasEmail, '@type': '@id'}

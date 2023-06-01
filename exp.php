@@ -289,9 +289,15 @@ else { // affichage interactif de la version corrigée page par page en Yaml, JS
           'http://purl.org/dc/terms/spatial',
           'http://www.w3.org/ns/dcat#distribution',
           'http://purl.org/dc/terms/rightsHolder',
+          'http://xmlns.com/foaf/0.1/isPrimaryTopicOf',
         ],
         'Distribution' => [
           'http://purl.org/dc/terms/license',
+        ],
+        'CatalogRecord' => [
+          'http://purl.org/dc/terms/language',
+          'http://www.w3.org/ns/dcat#contactPoint',
+          'http://www.w3.org/ns/dcat#inCatalog',
         ],
       ]);
       //echo Yaml::dump($graph->exportClassAsJsonLd('Dataset'), 9, 2, Yaml::DUMP_MULTI_LINE_LITERAL_BLOCK);

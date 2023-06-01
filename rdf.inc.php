@@ -217,7 +217,7 @@ class RdfResRef extends PropVal {
     'rightsHolder' => 'GenResource',
     'spatial' => 'Location',
     'temporal' => 'GenResource',
-    'isPrimaryTopicOf' => 'GenResource',
+    'isPrimaryTopicOf' => 'CatalogRecord',
     'inCatalog' => 'Catalog',
     'contactPoint' => 'GenResource',
     'conformsTo' => 'GenResource',
@@ -288,7 +288,7 @@ abstract class RdfResource {
     'http://www.w3.org/ns/dcat#DatasetSeries, http://www.w3.org/ns/dcat#Dataset' => 'Dataset',
     'http://www.w3.org/ns/dcat#DataService' => 'DataService',
     'http://www.w3.org/ns/dcat#Distribution' => 'Distribution',
-    'http://www.w3.org/ns/dcat#CatalogRecord' => 'GenResource',
+    'http://www.w3.org/ns/dcat#CatalogRecord' => 'CatalogRecord',
     'http://purl.org/dc/terms/Location' => 'Location',
     'http://purl.org/dc/terms/Standard' => 'GenResource',
     'http://purl.org/dc/terms/LicenseDocument' => 'GenResource',
@@ -543,13 +543,6 @@ abstract class RdfResource {
 // Classe générique regroupant les ressources RDF n'ayant pas de traitement spécifique 
 class GenResource extends RdfResource {
   const PROP_KEY_URI_PER_TYPE = [
-    'http://www.w3.org/ns/dcat#CatalogRecord' => [
-      'http://purl.org/dc/terms/identifier' => 'identifier',
-      'http://purl.org/dc/terms/language' => 'language',
-      'http://purl.org/dc/terms/modified' => 'modified',
-      'http://www.w3.org/ns/dcat#contactPoint' => 'contactPoint',
-      'http://www.w3.org/ns/dcat#inCatalog' => 'inCatalog',
-    ],
     'http://xmlns.com/foaf/0.1/Organization' => [
       'http://xmlns.com/foaf/0.1/name' => 'name',
       'http://xmlns.com/foaf/0.1/mbox' => 'mbox',
@@ -753,6 +746,16 @@ class Distribution extends Dataset {
     'http://www.w3.org/ns/dcat#accessService' => 'accessService',
     'http://www.w3.org/ns/dcat#accessURL' => 'accessURL',
     'http://www.w3.org/ns/dcat#downloadURL' => 'downloadURL',
+  ];
+};
+
+class CatalogRecord extends RdfResource {
+  const PROP_KEY_URI = [
+    'http://purl.org/dc/terms/identifier' => 'identifier',
+    'http://purl.org/dc/terms/language' => 'language',
+    'http://purl.org/dc/terms/modified' => 'modified',
+    'http://www.w3.org/ns/dcat#contactPoint' => 'contactPoint',
+    'http://www.w3.org/ns/dcat#inCatalog' => 'inCatalog',
   ];
 };
 
