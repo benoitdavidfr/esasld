@@ -222,7 +222,7 @@ class RdfResRef extends PropVal {
     'contactPoint' => 'GenResource',
     'conformsTo' => 'GenResource',
     'status'=> 'GenResource',
-    //'theme'=> 'GenResource',
+    'theme'=> 'GenResource',
     'accessRights' => 'GenResource',
     'license' => 'GenResource',
     'provenance' => 'GenResource',
@@ -470,7 +470,7 @@ abstract class RdfResource {
           unset($this->props[$pUri]);
       }
     
-      { // certains themes sont mal définis 
+      if (0) { // certains themes sont mal définis 
         if ($pUri == 'http://www.w3.org/ns/dcat#theme') {
           foreach ($pvals as &$pval) {
             if ($pval->id == 'Énergie')
@@ -484,7 +484,7 @@ abstract class RdfResource {
   
   function improve(Stats $rectifStats): void { // diverses améliorations ressource par ressource
     foreach ($this->props as $pUri => &$pvals) {
-      if (!in_array($pUri, ['http://purl.org/dc/terms/title','http://www.w3.org/ns/dcat#theme'])) {
+      if (0 && !in_array($pUri, ['http://purl.org/dc/terms/title','http://www.w3.org/ns/dcat#theme'])) {
         unset($this->props[$pUri]);
         continue;
       }
@@ -540,9 +540,9 @@ abstract class RdfResource {
   // modifie récursivement l'objet en intégrant les références à une ressource par la ressource elle-même
   // pour les propriétés définies (par la liste $propUrisPerClassName: [{className}=> [{propUri}]],
   function frame(RdfGraph $graph, array $propUrisPerClassName): void {
-    echo "frame() sur ",$this->id,' - ',$this->label(),"\n";
+    //echo "frame() sur ",$this->id,' - ',$this->label(),"\n";
     $propUris = $propUrisPerClassName[get_called_class()] ?? [];
-    print_r(get_called_class()); echo " = "; print_r($propUris);
+    //print_r(get_called_class()); echo " = "; print_r($propUris);
     foreach ($this->props as $pUri => &$pvals) {
       if (!in_array($pUri, $propUris)) continue;
       $propShortName = $this->prop_key_uri()[$pUri];
@@ -601,6 +601,9 @@ class GenResource extends RdfResource {
       'http://www.w3.org/2006/vcard/ns#hasEmail' => 'hasEmail',
       'http://www.w3.org/2006/vcard/ns#hasURL' => 'hasURL',
     ],
+    'http://www.w3.org/2004/02/skos/core#Concept' => [
+      'http://www.w3.org/2000/01/rdf-schema#label' => 'label',
+    ],
   ]; // dict. [{typeUri}=> [{propUri} => {$propName}]]
   
   // retourne le dictionnaire PROP_KEY_URI pour l'objet
@@ -650,7 +653,7 @@ class Dataset extends RdfResource {
     'http://purl.org/dc/terms/creator' => 'creator',
     'http://www.w3.org/ns/dcat#contactPoint' => 'contactPoint',
     'http://purl.org/dc/terms/identifier' => 'identifier',
-    //'http://www.w3.org/ns/dcat#theme' => 'theme',
+    'http://www.w3.org/ns/dcat#theme' => 'theme',
     'http://www.w3.org/ns/dcat#keyword' => 'keyword',
     'http://purl.org/dc/terms/language' => 'language',
     'http://purl.org/dc/terms/spatial' => 'spatial',

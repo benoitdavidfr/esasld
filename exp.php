@@ -18,12 +18,6 @@ doc: |
   A VOIR:
     - gestion des dataTime comme date
     - gestion des Location
-    - format:
-        '@type': MediaTypeOrExtent
-        label:
-          '@type': 'http://www.w3.org/1999/02/22-rdf-syntax-ns#langString'
-          '@value': 'ESRI Shapefile (SHP)'
-  
   
   Prolongations éventuelles:
    - générer un affichage simplifié qui soit un export DCAT valide en YAML-LD
@@ -43,6 +37,7 @@ journal: |
   - gestion d'un graphe compacté avec tri des propriétés
   - manque
     - puis une phase d'embellissement du Yaml
+  - la correction sur les thèmes génère un bug
  30/5/2023:
   - phase d'amélioration (improve) du contenu initial JSON-LD
       - définition de la langue française par défaut pour la plupart des propriétés littérales
