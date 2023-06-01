@@ -3,25 +3,38 @@ dcat: http://www.w3.org/ns/dcat#
 dct: http://purl.org/dc/terms/
 foaf: http://xmlns.com/foaf/0.1/
 vcard: http://www.w3.org/2006/vcard/ns#
+skos: http://www.w3.org/2004/02/skos/core#
+adms: http://www.w3.org/ns/adms#
 rdfs: http://www.w3.org/2000/01/rdf-schema#
 xsd: http://www.w3.org/2001/XMLSchema#
 # DCAT
 Dataset: dcat:Dataset
 Catalog: dcat:Catalog
 CatalogRecord: dcat:CatalogRecord
+DataService: dcat:DataService
+Distribution: dcat:Distribution
+inSeries: {'@id': dcat:inSeries, '@type': '@id'}
 inCatalog: dcat:inCatalog
+theme: dcat:theme
 keyword: dcat:keyword
 landingPage: {'@id': dcat:landingPage, '@type': '@id'}
-distribution: {'@id': dcat:distribution, '@type': '@id'}
+distribution: dcat:distribution
 contactPoint: dcat:contactPoint
 downloadURL: {'@id': dcat:downloadURL, '@type': '@id'}
+accessURL: {'@id': dcat:accessURL, '@type': '@id'}
+accessService: dcat:accessService
 # DCT
+Standard: dct:Standard
 RightsStatement: dct:RightsStatement
+LicenseDocument: dct:LicenseDocument
+MediaTypeOrExtent: dct:MediaTypeOrExtent
 title: dct:title
 description: dct:description
 conformsTo: dct:conformsTo
+format: dct:format
 issued: {'@id': dct:issued, '@type': xsd:date} # PB peut-ête dateTime
 modified: {'@id': dct:modified, '@type': xsd:date} # PB peut-ête dateTime
+modifiedT: {'@id': dct:modified, '@type': xsd:dateTime} # PB peut-ête dateTime
 created: {'@id': dct:created, '@type': xsd:date} # PB peut-ête dateTime
 publisher: dct:publisher
 language: dct:language
@@ -41,5 +54,10 @@ isPrimaryTopicOf: foaf:isPrimaryTopicOf
 Kind: vcard:Kind
 hasEmail: {'@id': vcard:hasEmail, '@type': '@id'}
 hasURL: {'@id': vcard:hasURL, '@type': '@id'}
+# SKOS
+Concept: skos:Concept
+# ADMS
+status: adms:status
 # RDFS
 label: rdfs:label
+labelLangString: {'@id': rdfs:label, '@type': 'http://www.w3.org/1999/02/22-rdf-syntax-ns#langString'}

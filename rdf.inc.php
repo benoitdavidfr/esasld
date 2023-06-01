@@ -221,6 +221,8 @@ class RdfResRef extends PropVal {
     'inCatalog' => 'Catalog',
     'contactPoint' => 'GenResource',
     'conformsTo' => 'GenResource',
+    'status'=> 'GenResource',
+    'theme'=> 'GenResource',
     'accessRights' => 'GenResource',
     'license' => 'GenResource',
     'provenance' => 'GenResource',
@@ -289,6 +291,7 @@ abstract class RdfResource {
     'http://www.w3.org/ns/dcat#DataService' => 'DataService',
     'http://www.w3.org/ns/dcat#Distribution' => 'Distribution',
     'http://www.w3.org/ns/dcat#CatalogRecord' => 'CatalogRecord',
+    'http://www.w3.org/2004/02/skos/core#Concept' => 'GenResource',
     'http://purl.org/dc/terms/Location' => 'Location',
     'http://purl.org/dc/terms/Standard' => 'GenResource',
     'http://purl.org/dc/terms/LicenseDocument' => 'GenResource',
@@ -530,6 +533,8 @@ abstract class RdfResource {
       if (!in_array($pUri, $propUris)) continue;
       $propShortName = $this->prop_key_uri()[$pUri];
       $rangeClass = RdfResRef::PROP_RANGE[$propShortName];
+      if (!$rangeClass)
+        throw new Exception("Erreur sur $pUri");
       foreach ($pvals as &$pval) {
         if ($pval->isA() == 'RdfResRef') {
           $pval = $graph->get($rangeClass, $pval->id);

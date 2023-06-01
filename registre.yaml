@@ -245,6 +245,216 @@ classes:
   skos:Concept:
     definition: A category or a theme used to describe datasets in the catalog.
     subClassOf: []
+    resources:
+      - $id: http://publications.europa.eu/resource/authority/dataset-status/COMPLETED
+        label:
+          fr: finalisé
+          #en: completed
+      - $id: http://registre.data.developpement-durable.gouv.fr/plume/ISO19139ProgressCode/onGoing
+        label:
+          fr: en cours
+          #en: on going
+      - $id: http://registre.data.developpement-durable.gouv.fr/plume/ISO19139ProgressCode/historicalArchive
+        label:
+          fr: archive historique
+          #en: historical archive
+      - $id: http://registre.data.developpement-durable.gouv.fr/plume/ISO19139ProgressCode/obsolete
+        label:
+          fr: obsolète
+          #en: obsolete
+      
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/climat # Thèmes Ecosphères 
+        label: { fr: Climat }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/changement-climatique
+        label: { fr: Changement climatique }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/meteorologie
+        label: { fr: Météorologie }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/amenagement-et-urbanisme
+        label: { fr: Aménagement et urbanisme }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/servitudes-d-utilite-publique
+        label: { fr: Servitudes d'utilité publique }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/politique-europeenne-d-amenagement
+        label: { fr: Politique européenne d'aménagement }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/zonages-d-amenagement
+        label: { fr: Zonages d'aménagement }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/planification
+        label: { fr: Planification }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/etudes
+        label: { fr: Études }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/etablissements-d-activites
+        label: { fr: Établissements d'activités }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/etablissements-d-enseignement
+        label: { fr: Etablissements d'enseignement }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/equipements-sportifs-ou-culturels
+        label: { fr: Équipements sportifs ou culturels }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/patrimoine-culturel
+        label: { fr: Patrimoine culturel }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/etablissements-de-sante-et-medico-sociaux
+        label: { fr: Établissements de santé et médico-sociaux }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/equipements-de-tourisme
+        label: { fr: Équipements de tourisme }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/autres-etablissements-recevant-du-public
+        label: { fr: Autres établissements recevant du public }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/eau
+        label: { fr: Eau }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/alimentation-en-eau-potable
+        label: { fr: Alimentation en eau potable }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/assainissement
+        label: { fr: Assainissement }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/masses-d-eau
+        label: { fr: Masses d'eau }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/ouvrages-hydrauliques
+        label: { fr: Ouvrages hydrauliques }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/peche-en-eaux-interieures
+        label: { fr: Pêche en eaux intérieures }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/surveillance-de-la-ressource-en-eau
+        label: { fr: Surveillance de la ressource en eau }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/interventions-sur-les-cours-d-eau
+        label: { fr: Interventions sur les cours d'eau }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/protection-de-l-eau
+        label: { fr: Protection de l'eau }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/foncier-et-occupation-du-sol
+        label: { fr: Foncier et occupation du sol }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/foncier-agricole
+        label: { fr: Foncier agricole }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/mutation-fonciere
+        label: { fr: Mutation foncière }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/occupation-du-sol
+        label: { fr: Occupation du sol }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/propriete-fonciere
+        label: { fr: Propriété foncière }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/habitat-et-politique-de-la-ville
+        label: { fr: Habitat et politique de la ville }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/accession-a-la-propriete
+        label: { fr: Accession à la propriété }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/besoins-en-logements
+        label: { fr: Besoins en logements }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/construction
+        label: { fr: Construction }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/habitat-indigne
+        label: { fr: Habitat indigne }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/occupation-des-logements
+        label: { fr: Occupation des logements }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/parc-locatif-social
+        label: { fr: Parc locatif social }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/parc-de-logements
+        label: { fr: Parc de logements }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/politique-de-la-ville
+        label: { fr: Politique de la ville }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/renovation-urbaine
+        label: { fr: Rénovation urbaine }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/mer-et-littoral
+        label: { fr: Mer et littoral }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/ecologie-du-littoral
+        label: { fr: Écologie du littoral }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/limite-administrative-speciale-en-mer
+        label: { fr: Limite administrative spéciale en mer et sur le littoral }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/lutte-anti-pollution-en-mer
+        label: { fr: Lutte anti-pollution en mer et sur le littoral }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/navigation-maritime
+        label: { fr: Navigation maritime }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/topographie-en-mer
+        label: { fr: Topographie en mer et sur le littoral }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/chasse-maritime
+        label: { fr: Chasse maritime }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/nature-paysages-et-biodiversite
+        label: { fr: "Nature, paysages et biodiversité" }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/inventaires-nature-et-biodiversite
+        label: { fr: Inventaires nature et biodiversité }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/inventaires-des-paysages
+        label: { fr: Inventaires des paysages }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/protection-et-gestion-de-la-nature
+        label: { fr: Protection et gestion de la nature }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/protection-et-gestion-des-paysages
+        label: { fr: Protection et gestion des paysages }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/chasse
+        label: { fr: Chasse }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/nuisances-dechets-et-pollution
+        label: { fr: "Nuisances, déchets et pollution" }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/bruit
+        label: { fr: Bruit }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/dechets
+        label: { fr: Déchets }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/perturbations-electromagnetiques
+        label: { fr: Perturbations électromagnétiques }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/pollution-des-sols
+        label: { fr: Pollution des sols }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/qualite-de-l-air
+        label: { fr: Qualité de l'air }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/reseaux-d-energie-et-de-communication
+        label: { fr: Réseaux d'énergie et de communication }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/amenagement-numerique-des-territoires
+        label: { fr: Aménagement numérique des territoires }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/reseau-electrique
+        label: { fr: Réseau électrique }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/reseau-hydrocarbures
+        label: { fr: Réseau de transport et de stockage des hydrocarbures }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/reseau-de-telecommunication
+        label: { fr: Réseau de télécommunication }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/risques
+        label: { fr: Risques }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/prevention-des-avalanches
+        label: { fr: Prévention des avalanches }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/prevention-des-eruptions-volcaniques
+        label: { fr: Prévention des éruptions volcaniques }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/prevention-des-inondations
+        label: { fr: Prévention des inondations }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/prevention-du-risque-mouvement-de-terrain
+        label: { fr: Prévention du risque mouvement de terrain }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/prevention-du-risque-radon
+        label: { fr: Prévention du risque radon }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/prevention-du-risque-minier
+        label: { fr: Prévention du risque minier }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/prevention-des-risques-technologiques
+        label: { fr: Prévention des risques technologiques }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/prevention-du-risque-sismique
+        label: { fr: Prévention du risque sismique }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/reglementation-de-prevention-des-risques-naturels
+        label: { fr: Réglementation de prévention des risques naturels }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/reglementation-de-prevention-des-risques-technologiques
+        label: { fr: Réglementation de prévention des risques technologiques }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/gestion-du-risque
+        label: { fr: Gestion du risque }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/industrie
+        label: { fr: "Industrie, production d'énergie et exploitation du sol" }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/mines
+        label: { fr: "Mines, carrières et extraction de granulats" }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/sites-industriels
+        label: { fr: Sites industriels }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/parcs-eoliens
+        label: { fr: Parcs éoliens }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/production-d-energie-hors-eolien
+        label: { fr: Production d'énergie hors éolien }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/transport-et-deplacements
+        label: { fr: Transport et déplacements }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/securite-routiere
+        label: { fr: Sécurité routière }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/trafic-routier
+        label: { fr: Trafic routier et exploitation de la route }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/transport-collectif
+        label: { fr: Transport collectif }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/transport-exceptionnel
+        label: { fr: Transport exceptionnel }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/transport-de-marchandises
+        label: { fr: Transport de marchandises }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/transport-de-matieres-dangereuses
+        label: { fr: Transport de matières dangereuses }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/infrastructures-de-transport
+        label: { fr: Infrastructures de transport }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/infrastructure-aeroportuaire
+        label: { fr: Infrastructure aéroportuaire }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/circulation-douce
+        label: { fr: Circulation douce }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/infrastructure-ferree
+        label: { fr: "Infrastructure ferrée, gares et ouvrages d'art" }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/reseau-navigable
+        label: { fr: Réseau navigable et ouvrages de navigation }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/infrastructure-portuaire
+        label: { fr: Infrastructure portuaire }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/plateformes-multi-modales
+        label: { fr: Plateformes multi-modales }
+      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/infrastructure-routiere
+        label: { fr: Infrastructure routière }
 
   foaf:Agent: # FOAF
     definition: An agent (eg. person, group, software or physical artifact). 

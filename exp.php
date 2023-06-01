@@ -16,7 +16,14 @@ doc: |
   'https://tools.ietf.org/html/rfc4287' correspond au format de syndication Atom,
   
   A VOIR:
-    - l'export d'un grahe JSON-LD devrait être stucturé avec 'graph' / ¨PAS s'il n'y a pas de contexte
+    - gestion des dataTime comme date
+    - gestion des Location
+    - format:
+        '@type': MediaTypeOrExtent
+        label:
+          '@type': 'http://www.w3.org/1999/02/22-rdf-syntax-ns#langString'
+          '@value': 'ESRI Shapefile (SHP)'
+  
   
   Prolongations éventuelles:
    - générer un affichage simplifié qui soit un export DCAT valide en YAML-LD
@@ -32,14 +39,17 @@ doc: |
    - définir des shapes SHACL pour valider le graphe DCAT en s'inspirant de ceux de DCAT-AP
 
 journal: |
-  29/5/2023:
+ 1/6/2023:
+  - gestion d'un graphe compacté avec tri des propriétés
+  - manque
+    - puis une phase d'embellissement du Yaml
+ 30/5/2023:
+  - phase d'amélioration (improve) du contenu initial JSON-LD
+      - définition de la langue française par défaut pour la plupart des propriétés littérales
+      - A FAIRE - réduction des dateTime à des dates
+ 29/5/2023:
   - test affichage Yaml-LD d'une version framed avec RdfGraph puis compactée avec JsonLD
     - nécessite une phase d'amélioration (improve) du contenu initial JSON-LD
-      - définition de la langue française par défaut pour la plupart des propriétés littérales
-      - réduction des dateTime à des dates
-    - manque aussi
-      - le tri des propriétés après framing+compactage
-      - puis une phase d'embellissement du Yaml
  28/5/2023:
   - ajout classe RdfGraph pour gérer les ressources par graphe
  21/5/2023:
@@ -287,17 +297,25 @@ else { // affichage interactif de la version corrigée page par page en Yaml, JS
           'http://purl.org/dc/terms/accessRights',
           'http://purl.org/dc/terms/language',
           'http://purl.org/dc/terms/spatial',
+          'http://www.w3.org/ns/dcat#theme',
           'http://www.w3.org/ns/dcat#distribution',
           'http://purl.org/dc/terms/rightsHolder',
           'http://xmlns.com/foaf/0.1/isPrimaryTopicOf',
+          'http://www.w3.org/ns/adms#status',
         ],
         'Distribution' => [
           'http://purl.org/dc/terms/license',
+          'http://purl.org/dc/terms/format',
+          'http://purl.org/dc/terms/conformsTo',
+          'http://www.w3.org/ns/dcat#accessService',
         ],
         'CatalogRecord' => [
           'http://purl.org/dc/terms/language',
           'http://www.w3.org/ns/dcat#contactPoint',
           'http://www.w3.org/ns/dcat#inCatalog',
+        ],
+        'DataService' => [
+          'http://purl.org/dc/terms/conformsTo',
         ],
       ]);
       //echo Yaml::dump($graph->exportClassAsJsonLd('Dataset'), 9, 2, Yaml::DUMP_MULTI_LINE_LITERAL_BLOCK);
@@ -306,20 +324,23 @@ else { // affichage interactif de la version corrigée page par page en Yaml, JS
         'title',
         'description',
         'publisher',
+        'status',
+        'inSeries',
         'issued',
         'modified',
         'created',
         'conformsTo',
         'accessRights',
         'rightsHolder',
+        'theme',
         'keyword',
         'landingPage',
         'page',
         'language',
         'identifier',
         'dct:spatial',
-        'foaf:isPrimaryTopicOf',
-        'distribution' => ['title'],
+        'isPrimaryTopicOf' => ['contactPoint','inCatalog','modified','modifiedT','language','identifier'],        
+        'distribution' => ['title','license','accessService','format','accessURL','downloadURL'],        
       ]; // ordre des propriétés dans la sortie 
       //print_r($comped);
       echo Yaml::dump($comped->jsonld($propIds), 9, 2, Yaml::DUMP_MULTI_LINE_LITERAL_BLOCK); // convertit en Yaml
