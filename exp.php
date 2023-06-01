@@ -115,7 +115,7 @@ class Constant { // Classe support de constantes
           'http://purl.org/dc/terms/accessRights',
           'http://purl.org/dc/terms/language',
           'http://purl.org/dc/terms/spatial',
-          //'http://www.w3.org/ns/dcat#theme',
+          'http://www.w3.org/ns/dcat#theme',
           'http://www.w3.org/ns/dcat#distribution',
           'http://purl.org/dc/terms/rightsHolder',
           'http://xmlns.com/foaf/0.1/isPrimaryTopicOf',
