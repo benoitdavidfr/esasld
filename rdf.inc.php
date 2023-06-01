@@ -473,9 +473,11 @@ abstract class RdfResource {
       { // certains themes sont mal définis 
         if ($pUri == 'http://www.w3.org/ns/dcat#theme') {
           foreach ($pvals as $i => $pval) {
-            if ($pval->id == 'Énergie')
+            if ($pval->id == 'Énergie') {
               $pvals[$i] = PropVal::create([
                 '@id'=> 'http://registre.data.developpement-durable.gouv.fr/themes-hors-ecospheres/energie']);
+               $rectifStats->increment("Theme Énergie remplacé par un URI");
+            }
           }
         }
       }
