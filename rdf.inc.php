@@ -32,6 +32,7 @@ journal: |
 */}
 use Symfony\Component\Yaml\Yaml;
 use Symfony\Component\Yaml\Exception\ParseException;
+use ML\JsonLD\JsonLD;
 
 {/* Classe des valeurs RDF d'une propriété RDF
 ** En JSON-LD une PropVal est structurée sous la forme [{key} => {val}]
@@ -228,7 +229,7 @@ class RdfResRef extends PropVal {
     'language' => 'GenResource',
     'accrualPeriodicity' => 'GenResource',
     'accessService' => 'DataService',
-    'distribution' => 'GenResource',
+    'distribution' => 'Distribution',
   ];
   
   public readonly ?string $id;
@@ -286,7 +287,7 @@ abstract class RdfResource {
     'http://www.w3.org/ns/dcat#Dataset, http://www.w3.org/ns/dcat#DatasetSeries' => 'Dataset',
     'http://www.w3.org/ns/dcat#DatasetSeries, http://www.w3.org/ns/dcat#Dataset' => 'Dataset',
     'http://www.w3.org/ns/dcat#DataService' => 'DataService',
-    'http://www.w3.org/ns/dcat#Distribution' => 'GenResource',
+    'http://www.w3.org/ns/dcat#Distribution' => 'Distribution',
     'http://www.w3.org/ns/dcat#CatalogRecord' => 'GenResource',
     'http://purl.org/dc/terms/Location' => 'Location',
     'http://purl.org/dc/terms/Standard' => 'GenResource',
@@ -306,7 +307,9 @@ abstract class RdfResource {
   protected string $id; // le champ '@id' de la repr. JSON-LD, cad l'URI de la ressource ou l'id blank node
   protected array $types; // le champ '@type' de la repr. JSON-LD, cad la liste des URI des classes RDF de la ressource
   protected array $props=[]; // dict. des propriétés de la ressource de la forme [{propUri} => [PropVal|RdfResource]]
-    
+  
+  function isA(): string { return 'RdfResource'; }
+  
   // retourne PROP_KEY_URI, redéfini sur GenResource pour retourner le PROP_KEY_URI en fonction du type de l'objet
   function prop_key_uri(): array { return (get_called_class())::PROP_KEY_URI; }
   
@@ -327,6 +330,18 @@ abstract class RdfResource {
   
   function __toString(): string { // génère une chaine pour afficher la ressource  
     return Yaml::dump([$this->asJsonLd()]);
+  }
+  
+  function label(): string {
+    foreach ([
+        'http://www.w3.org/2000/01/rdf-schema#label',
+        'http://purl.org/dc/terms/title',
+        'http://xmlns.com/foaf/0.1/name'] as $pUri) {
+      if (isset($this->props[$pUri]))
+        return $this->props[$pUri][0]->value;
+    }
+    return implode(',',$this->types);
+    //return $this->__toString();
   }
   
   // corrections d'erreurs ressource par ressource et pas celles qui nécessittent un accès à d'autres ressources
@@ -454,13 +469,30 @@ abstract class RdfResource {
     }
   }
   
+  function improve(Stats $rectifStats): void { // diverses améliorations ressource par ressource
+    foreach ($this->props as $pUri => &$pvals) {
+      // Pour plusieurs propriétés, les littéraux sont par défaut en français 
+      if (in_array($pUri, [
+          'http://purl.org/dc/terms/title',
+          'http://purl.org/dc/terms/description',
+          'http://xmlns.com/foaf/0.1/name'])) {
+        foreach ($pvals as &$pval) {
+          if ($pval->keys() == ['@value']) {
+            $pval = new RdfLiteral(['@language'=> 'fr', '@value'=> $pval->value]);
+            $rectifStats->increment("$pUri est par défaut en français");
+          }
+        }
+      }
+    }
+  }
+  
   static function get(string $id): ?self { return null; } // interprétation d'un URI spécifique à la classe
   
   function asJsonLd(): array { // retourne la ressource comme JSON-LD 
-    $jsonld = [
-      '@id' => $this->id,
-      '@type'=> $this->types,
-    ];
+    $jsonld = [];
+    if (substr($this->id, 0, 2) <> '_:')
+      $jsonld['@id'] = $this->id;
+    $jsonld['@type'] = $this->types;
     foreach ($this->props as $propUri => $objects) {
       $jsonld[$propUri] = [];
       foreach ($objects as $object) {
@@ -488,16 +520,20 @@ abstract class RdfResource {
     return $simple;
   }
     
-  // modifie l'objet en intégrant pour les propriétés définies (par la liste [{propUri}]), les références à une ressource
-  // par la ressource elle-même
-  function frame(RdfGraph $graph, array $propUris): void {
+  // modifie récursivement l'objet en intégrant les références à une ressource par la ressource elle-même
+  // pour les propriétés définies (par la liste $propUrisPerClassName: [{className}=> [{propUri}]],
+  function frame(RdfGraph $graph, array $propUrisPerClassName): void {
+    //echo "frame() sur ",$this->label(),"\n";
+    $propUris = $propUrisPerClassName[get_called_class()] ?? [];
+    //print_r(get_called_class()); echo " = "; print_r($propUris);
     foreach ($this->props as $pUri => &$pvals) {
       if (!in_array($pUri, $propUris)) continue;
       $propShortName = $this->prop_key_uri()[$pUri];
       $rangeClass = RdfResRef::PROP_RANGE[$propShortName];
-      foreach ($pvals as $i => $pval) {
+      foreach ($pvals as &$pval) {
         if ($pval->isA() == 'RdfResRef') {
-          $pvals[$i] = $graph->get($rangeClass, $pval->id);
+          $pval = $graph->get($rangeClass, $pval->id);
+          $pval->frame($graph, $propUrisPerClassName);
         }
       }
     }
@@ -552,20 +588,6 @@ class GenResource extends RdfResource {
       'http://www.w3.org/2006/vcard/ns#fn' => 'fn',
       'http://www.w3.org/2006/vcard/ns#hasEmail' => 'hasEmail',
       'http://www.w3.org/2006/vcard/ns#hasURL' => 'hasURL',
-    ],
-    'http://www.w3.org/ns/dcat#Distribution' => [
-      'http://purl.org/dc/terms/title' => 'title',
-      'http://purl.org/dc/terms/description' => 'description',
-      'http://purl.org/dc/terms/format' => 'format',
-      'http://www.w3.org/ns/dcat#mediaType' => 'mediaType',
-      'http://purl.org/dc/terms/rights' => 'rights',
-      'http://purl.org/dc/terms/license' => 'license',
-      'http://purl.org/dc/terms/issued' => 'issued',
-      'http://purl.org/dc/terms/created' => 'created',
-      'http://purl.org/dc/terms/modified' => 'modified',
-      'http://www.w3.org/ns/dcat#accessService' => 'accessService',
-      'http://www.w3.org/ns/dcat#accessURL' => 'accessURL',
-      'http://www.w3.org/ns/dcat#downloadURL' => 'downloadURL',
     ],
   ]; // dict. [{typeUri}=> [{propUri} => {$propName}]]
   
@@ -717,6 +739,23 @@ class Dataset extends RdfResource {
   }
 };
 
+class Distribution extends Dataset {
+  const PROP_KEY_URI = [
+    'http://purl.org/dc/terms/title' => 'title',
+    'http://purl.org/dc/terms/description' => 'description',
+    'http://purl.org/dc/terms/format' => 'format',
+    'http://www.w3.org/ns/dcat#mediaType' => 'mediaType',
+    'http://purl.org/dc/terms/rights' => 'rights',
+    'http://purl.org/dc/terms/license' => 'license',
+    'http://purl.org/dc/terms/issued' => 'issued',
+    'http://purl.org/dc/terms/created' => 'created',
+    'http://purl.org/dc/terms/modified' => 'modified',
+    'http://www.w3.org/ns/dcat#accessService' => 'accessService',
+    'http://www.w3.org/ns/dcat#accessURL' => 'accessURL',
+    'http://www.w3.org/ns/dcat#downloadURL' => 'downloadURL',
+  ];
+};
+
 class Catalog extends Dataset {
 };
 
@@ -800,11 +839,11 @@ class Stats {
   function contents(): array { return $this->contents; }
 };
 
-class RdfGraph { // graphe RDF
+class RdfGraph { // graphe RDF épandu, cad sans contexte 
   protected string $name; // nom du graphe
   protected Stats $stats; // statistiques générales
-  protected Stats $rectifStats; // statistiques de rectification 
-  protected array $resources; // [{className} => [{resid}=> {Resource}]]
+  protected Stats $rectifStats; // statistiques de rectification et d'amélioration 
+  protected array $resources=[]; // [{className} => [{resid}=> {Resource}]]
   
   function __construct(string $name) {
     $this->name = $name;
@@ -823,6 +862,7 @@ class RdfGraph { // graphe RDF
       $this->resources[$className][$resource['@id']]->concat($resource);
     }
     $this->resources[$className][$resource['@id']]->rectification($this->rectifStats);
+    $this->resources[$className][$resource['@id']]->improve($this->rectifStats);
     $this->stats->increment("nbre de ressources pour $className");
     return $this->resources[$className][$resource['@id']];
   }
@@ -942,10 +982,166 @@ class RdfGraph { // graphe RDF
     return $jsonld;
   }
 
-  // applique frame sur les ressources de la classe
-  function frame(string $className, array $propUris): void {
-    foreach ($this->resources[$className] ?? [] as $id => &$resource) {
-      $resource->frame($this, $propUris);
+  // applique frame (structuration) sur les ressources des classes mentionnées
+  function frame(array $propUrisPerClassName): void {
+    foreach ($propUrisPerClassName as $className => $propUris) {
+      foreach ($this->resources[$className] ?? [] as $id => &$resource) {
+        $resource->frame($this, $propUrisPerClassName);
+      }
     }
   }
 };
+
+
+class RdfContext { // Contexte JSON-LD 
+  protected array $content;
+  
+  function __construct(array $content) { $this->content = $content; }
+  
+  function content(): array { return $this->content; }
+};
+
+abstract class RdfCompactElt { // Une ressource, une référence ou un littéral dans le cas compact ou une liste 
+  static function create($resource): self {
+    if (is_array($resource) && array_is_list($resource)) {
+      return new RdfCompactList($resource);
+    }
+    elseif (is_array($resource) && isset($resource['@type']))
+      return new RdfCompactResource($resource);
+    elseif (is_array($resource) && isset($resource['@id']))
+      return new RdfCompactRefRes($resource);
+    else
+      return new RdfCompactLiteral($resource);
+  }
+  
+  // génère une structure Php structurée selon JSON-LD en triant les propriétés
+  // propIds: [string|[string: [string]]], 2e cas appel récursif
+  abstract function jsonld(array $propIds); 
+};
+
+
+class RdfCompactRefRes extends RdfCompactElt { // référence vers Ressource 
+  protected string $id; // la référence
+  
+  function __construct(array $val) { $this->id = $val['@id']; }
+  
+  function jsonld(array $propIds): array { return ['@id'=> $this->id]; }
+};
+
+class RdfCompactLiteral extends RdfCompactElt {
+  protected $value;
+  
+  function __construct($value) { $this->value = $value; }
+
+  function jsonld(array $propIds) { return $this->value; }
+};
+
+class RdfCompactList extends RdfCompactElt {
+  protected array $list=[];
+  
+  function __construct(array $list) {
+    foreach ($list as $elt) {
+      $this->list[] = self::create($elt);
+    }
+  }
+  
+  function jsonld(array $propIds): array {
+    $list = [];
+    foreach ($this->list as $elt)
+      $list[] = $elt->jsonld($propIds);
+    return $list;
+  }
+};
+
+class RdfCompactResource extends RdfCompactElt {
+  protected ?string $id=null; // le champ '@id' de la repr. JSON-LD, cad l'URI de la ressource, null si blank node
+  protected string|array $type; // le champ '@type' de la repr. JSON-LD
+  protected array $props=[]; // dict. des propriétés de la ressource de la forme [{propId} => RdfCompactElt]
+  
+  function __construct(array $resource) {
+    foreach ($resource as $propId => $value) {
+      switch ($propId) {
+        case '@id': { $this->id = $value; break; }
+        case '@type': { $this->type = $value; break; }
+        default: { $this->props[$propId] = self::create($value); }
+      }
+    }
+    //print_r($this);
+  }
+   
+  // génère une structure Php structurée selon JSON-LD en triant les propriétés
+  // propIds: [string|[string: [string]]], 2e cas appel récursif
+  function jsonld(array $propIds): array { 
+    $jsonld = [];
+    $pIds = []; // liste des propId comme liste de chaines
+    if ($this->id)
+      $jsonld['@id'] = $this->id;
+    $jsonld['@type'] = $this->type;
+    foreach ($propIds as $key => $propId) {
+      //echo 'propId='; print_r($propId); echo "\n";
+      if (is_string($propId)) { 
+        if (isset($this->props[$propId])) {
+          $jsonld[$propId] = $this->props[$propId]->jsonld([]);
+          $pIds[] = $propId;
+        }
+      }
+      else {
+        if (isset($this->props[$key])) {
+          $jsonld[$key] = $this->props[$key]->jsonld($propId);
+          $pIds[] = $key;
+        }
+      }
+    }
+    foreach ($this->props as $propId => $value) {
+      if (!in_array($propId, $pIds)) {
+        $jsonld[$propId] = $value->jsonld([]);
+      }
+    }
+    return $jsonld;
+  }
+};
+
+class RdfCompactGraph { // Graphe compacté, cad paramétré par un contexte
+  protected array $resources=[]; // [{resid}=> {Resource}]
+  protected RdfContext $context;
+
+  function __construct(RdfContext $context, array $jsonld) { // Compacte un extrait de graphe par rapport à un contexte 
+    $this->context = $context;
+    file_put_contents('tmp/context.jsonld', json_encode($context->content()));
+    file_put_contents('tmp/expanded.jsonld', json_encode($jsonld));
+    try {
+      $comped = JsonLD::compact('tmp/expanded.jsonld', 'tmp/context.jsonld');
+      //unset($comped->{'@context'});
+      $comped = json_decode(json_encode($comped, JSON_OPTIONS), true); // suppr. StdClass
+    } catch (ML\JsonLD\Exception\JsonLdException $e) {
+      throw new Exception($e->getMessage());
+    }
+    //print_r($comped);
+    foreach ($comped['@graph'] as $resource) {
+      $this->resources[$resource['@id']] = RdfCompactElt::create($resource);
+      //echo "1stResource="; print_r($this->resources); die("FIN");
+    }
+  }
+  
+  function jsonld(array $propIds): array { // génère une structure Php structurée selon JSON-LD en triant les propriétés 
+    $jsonld = [
+      '@context'=> $this->context->content(),
+      '@graph'=> [],
+    ];
+    foreach ($this->resources as $res) {
+      $e = $res->jsonld($propIds);
+      //echo '$res='; print_r($res);
+      //echo Yaml::dump($e);
+      $jsonld['@graph'][] = $e;
+     // die("FIN");
+    }
+    return $jsonld;
+  }
+};
+
+
+
+
+
+
+

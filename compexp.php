@@ -1,5 +1,6 @@
 <?php
-/* compexp.php - Compact or Expand
+/* compexp.php - Compact or Expand - Test de JsonLD
+** Comapct et expand marchent bien
 */
 require_once __DIR__.'/vendor/autoload.php';
 

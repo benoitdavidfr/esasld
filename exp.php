@@ -35,11 +35,11 @@ journal: |
   29/5/2023:
   - test affichage Yaml-LD d'une version framed avec RdfGraph puis compactée avec JsonLD
     - nécessite une phase d'amélioration (improve) du contenu initial JSON-LD
-      - définition de la langue française par défaut pour la pluspart des propriétés littérales
+      - définition de la langue française par défaut pour la plupart des propriétés littérales
       - réduction des dateTime à des dates
     - manque aussi
       - le tri des propriétés après framing+compactage
-    -  puis une phase d'embellissement du Yaml
+      - puis une phase d'embellissement du Yaml
  28/5/2023:
   - ajout classe RdfGraph pour gérer les ressources par graphe
  21/5/2023:
@@ -203,6 +203,7 @@ else { // affichage interactif de la version corrigée page par page en Yaml, JS
         <!-- <option",($outputFormat=='jsonldf') ? " selected='selected'": ''," value='jsonldf'>JSON-LD imbriqué</option> -->
         <option",($outputFormat=='turtle') ? " selected='selected'": ''," value='turtle'>Turtle</option>
         <option",($outputFormat=='yamlldfc') ? " selected='selected'": ''," value='yamlldfc'>Yaml-ld framed et compacté</option>
+        <option",($outputFormat=='yamlldfc2') ? " selected='selected'": ''," value='yamlldfc2'>Yaml-ld framed et compacté 2</option>
       </select>
       <input type='submit' value='Submit' /></form><pre>\n";
   }
@@ -223,14 +224,17 @@ else { // affichage interactif de la version corrigée page par page en Yaml, JS
       echo htmlspecialchars($output); // affichage Yaml
       break;
     }
+    
     case 'jsonld': { // affiche le JSON-LD rectifié généré par $graph 
       echo htmlspecialchars(json_encode($graph->exportAllAsJsonLd(), JSON_OPTIONS));
       break;
     }
+    
     case 'jsonLdContext': {
       echo htmlspecialchars(json_encode(Registre::jsonLdContext(), JSON_OPTIONS));
       break;
     }
+    
     case 'jsonldc': { // affiche le JSON-LD compacté avec JsonLD et le contexte déduit du registre
       if (!is_dir('tmp')) mkdir('tmp');
       file_put_contents('tmp/document.jsonld', json_encode($graph->exportAllAsJsonLd(), JSON_OPTIONS));
@@ -239,6 +243,7 @@ else { // affichage interactif de la version corrigée page par page en Yaml, JS
       echo htmlspecialchars(json_encode($compacted, JSON_OPTIONS));
       break;
     }
+    
     /*case 'jsonldf': { // affiche le JSON-LD structuré (framed) avec JsonLD
       if (!is_dir('tmp')) mkdir('tmp');
       file_put_contents('tmp/document.jsonld', json_encode($graph->exportAllAsJsonLd(), JSON_OPTIONS));
@@ -253,8 +258,9 @@ else { // affichage interactif de la version corrigée page par page en Yaml, JS
       echo htmlspecialchars($erGraph->serialise('turtle'));
       break;
     }
+    
     case 'yamlldfc': { // affiche Yaml-ld framed (RdfGraph::frame()) et le contexte context.yaml puis compacté avec JsonLD
-      $graph->frame('Dataset', ['http://purl.org/dc/terms/publisher']);
+      $graph->frame(['Dataset' => ['http://purl.org/dc/terms/publisher']]);
       //echo Yaml::dump($graph->exportClassAsJsonLd('Dataset'), 9, 2, Yaml::DUMP_MULTI_LINE_LITERAL_BLOCK);
       file_put_contents('tmp/context.jsonld', json_encode(Yaml::parseFile('context.yaml')));
       file_put_contents('tmp/expanded.jsonld', json_encode($graph->exportClassAsJsonLd('Dataset')));
@@ -262,12 +268,55 @@ else { // affichage interactif de la version corrigée page par page en Yaml, JS
         $comped = JsonLD::compact('tmp/expanded.jsonld', 'tmp/context.jsonld');
         //unset($comped->{'@context'});
         $comped = json_decode(json_encode($comped, JSON_OPTIONS), true); // suppr. StdClass
+        //print_r($comped);
         $comped = Yaml::dump($comped, 9, 2, Yaml::DUMP_MULTI_LINE_LITERAL_BLOCK); // convertit en Yaml
         echo $comped;
       } catch (ML\JsonLD\Exception\JsonLdException $e) {
         echo $e->getMessage();
         $comped = '';
       }
+      break;
+    }
+
+    case 'yamlldfc2': { // affiche Yaml-ld framed (RdfGraph::frame()) et le contexte context.yaml puis compacté avec JsonLD
+      //print_r($graph);
+      $graph->frame([
+        'Dataset' => [
+          'http://purl.org/dc/terms/publisher',
+          'http://purl.org/dc/terms/conformsTo',
+          'http://purl.org/dc/terms/accessRights',
+          'http://purl.org/dc/terms/language',
+          'http://purl.org/dc/terms/spatial',
+          'http://www.w3.org/ns/dcat#distribution',
+          'http://purl.org/dc/terms/rightsHolder',
+        ],
+        'Distribution' => [
+          'http://purl.org/dc/terms/license',
+        ],
+      ]);
+      //echo Yaml::dump($graph->exportClassAsJsonLd('Dataset'), 9, 2, Yaml::DUMP_MULTI_LINE_LITERAL_BLOCK);
+      $comped = new RdfCompactGraph(new RdfContext(Yaml::parseFile('context.yaml')), $graph->exportClassAsJsonLd('Dataset'));
+      $propIds = [
+        'title',
+        'description',
+        'publisher',
+        'issued',
+        'modified',
+        'created',
+        'conformsTo',
+        'accessRights',
+        'rightsHolder',
+        'keyword',
+        'landingPage',
+        'page',
+        'language',
+        'identifier',
+        'dct:spatial',
+        'foaf:isPrimaryTopicOf',
+        'distribution' => ['title'],
+      ]; // ordre des propriétés dans la sortie 
+      //print_r($comped);
+      echo Yaml::dump($comped->jsonld($propIds), 9, 2, Yaml::DUMP_MULTI_LINE_LITERAL_BLOCK); // convertit en Yaml
       break;
     }
     default: {

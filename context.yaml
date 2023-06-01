@@ -19,15 +19,21 @@ downloadURL: {'@id': dcat:downloadURL, '@type': '@id'}
 RightsStatement: dct:RightsStatement
 title: dct:title
 description: dct:description
+conformsTo: dct:conformsTo
 issued: {'@id': dct:issued, '@type': xsd:date} # PB peut-ête dateTime
+modified: {'@id': dct:modified, '@type': xsd:date} # PB peut-ête dateTime
+created: {'@id': dct:created, '@type': xsd:date} # PB peut-ête dateTime
 publisher: dct:publisher
-language: {'@id': dct:language, '@type': dct:LinguisticSystem}  # NE FONCTIONNE PAS
+language: dct:language
 identifier: {'@id': dct:identifier, '@language': null}
+license: dct:license
 accessRights: dct:accessRights
+rightsHolder: {'@id': dct:rightsHolder, '@type': '@id'}
 # FOAF
 Organization: foaf:Organization
 name: foaf:name
-isPrimaryTopicOf: foaf:isPrimaryTopicOf
+mbox: {'@id': foaf:mbox, '@type': '@id'}
+workplaceHomepage: {'@id': foaf:workplaceHomepage, '@type': '@id'}
 homepage: {'@id': foaf:homepage, '@type': '@id'}
 page: {'@id': foaf:page, '@type': '@id'}
 # VCARD

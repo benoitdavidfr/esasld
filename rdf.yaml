@@ -63,3 +63,10 @@ json-ld:
     Compaction uses a developer-supplied context to shorten IRIs to terms or compact IRIs and JSON-LD values expressed in expanded form to simple values such as strings or numbers.
   Flattening: |
     While expansion ensures that a document is in a uniform structure, flattening goes a step further to ensure that the shape of the data is deterministic. In expanded documents, the properties of a single node may be spread across a number of different node objects. By flattening a document, all properties of a node are collected in a single node object and all blank nodes are labeled with a blank node identifier. This may drastically simplify the code required to process JSON-LD data in certain applications.
+  Framing: |
+    C'est l'inverse de Flattening.
+traductions:
+  Expansion: l'ago d'expansion, un graphe épandu (qui a fait l'objet d'une expansion), supprime le contexte
+  Compaction: l'algo de compactage, un graphe compacté = qui a fait l'objet d'un compactage, applique un contexte
+  Flattening: l'algo d'Aplanissement, un graphe aplani (consiste à  remplacer les sous-ressources par des noeuds blancs)
+  Framing: l'algo de structuration, un graphe structuré (consiste à remplacer les réf. par les ressources elles-mêmes)
