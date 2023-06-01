@@ -222,7 +222,7 @@ class RdfResRef extends PropVal {
     'contactPoint' => 'GenResource',
     'conformsTo' => 'GenResource',
     'status'=> 'GenResource',
-    'theme'=> 'GenResource',
+    //'theme'=> 'GenResource',
     'accessRights' => 'GenResource',
     'license' => 'GenResource',
     'provenance' => 'GenResource',
@@ -469,11 +469,25 @@ abstract class RdfResource {
         else
           unset($this->props[$pUri]);
       }
+    
+      { // certains themes sont mal définis 
+        if ($pUri == 'http://www.w3.org/ns/dcat#theme') {
+          foreach ($pvals as &$pval) {
+            if ($pval->id == 'Énergie')
+              $pval = PropVal::create([
+                '@id'=> 'http://registre.data.developpement-durable.gouv.fr/themes-hors-ecospheres/energie']);
+          }
+        }
+      }
     }
   }
   
   function improve(Stats $rectifStats): void { // diverses améliorations ressource par ressource
     foreach ($this->props as $pUri => &$pvals) {
+      if (!in_array($pUri, ['http://purl.org/dc/terms/title','http://www.w3.org/ns/dcat#theme'])) {
+        unset($this->props[$pUri]);
+        continue;
+      }
       // Pour plusieurs propriétés, les littéraux sont par défaut en français 
       if (in_array($pUri, [
           'http://purl.org/dc/terms/title',
@@ -526,9 +540,9 @@ abstract class RdfResource {
   // modifie récursivement l'objet en intégrant les références à une ressource par la ressource elle-même
   // pour les propriétés définies (par la liste $propUrisPerClassName: [{className}=> [{propUri}]],
   function frame(RdfGraph $graph, array $propUrisPerClassName): void {
-    //echo "frame() sur ",$this->label(),"\n";
+    echo "frame() sur ",$this->id,' - ',$this->label(),"\n";
     $propUris = $propUrisPerClassName[get_called_class()] ?? [];
-    //print_r(get_called_class()); echo " = "; print_r($propUris);
+    print_r(get_called_class()); echo " = "; print_r($propUris);
     foreach ($this->props as $pUri => &$pvals) {
       if (!in_array($pUri, $propUris)) continue;
       $propShortName = $this->prop_key_uri()[$pUri];
@@ -636,7 +650,7 @@ class Dataset extends RdfResource {
     'http://purl.org/dc/terms/creator' => 'creator',
     'http://www.w3.org/ns/dcat#contactPoint' => 'contactPoint',
     'http://purl.org/dc/terms/identifier' => 'identifier',
-    'http://www.w3.org/ns/dcat#theme' => 'theme',
+    //'http://www.w3.org/ns/dcat#theme' => 'theme',
     'http://www.w3.org/ns/dcat#keyword' => 'keyword',
     'http://purl.org/dc/terms/language' => 'language',
     'http://purl.org/dc/terms/spatial' => 'spatial',

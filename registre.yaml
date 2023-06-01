@@ -455,6 +455,9 @@ classes:
         label: { fr: Plateformes multi-modales }
       - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/infrastructure-routiere
         label: { fr: Infrastructure routière }
+        
+      - $id: http://registre.data.developpement-durable.gouv.fr/themes-hors-ecospheres/energie
+        label: {fr: Énergie}
 
   foaf:Agent: # FOAF
     definition: An agent (eg. person, group, software or physical artifact). 

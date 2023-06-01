@@ -112,7 +112,59 @@ class StdErr { // afffichage de messages d'info, d'alerte ou d'erreur non fatale
   }
 };
 
-
+class Constant { // Classe support de constantes 
+  const FRAME_PARAM = [
+        'Dataset' => [
+          'http://purl.org/dc/terms/publisher',
+          'http://purl.org/dc/terms/conformsTo',
+          'http://purl.org/dc/terms/accessRights',
+          'http://purl.org/dc/terms/language',
+          'http://purl.org/dc/terms/spatial',
+          //'http://www.w3.org/ns/dcat#theme',
+          'http://www.w3.org/ns/dcat#distribution',
+          'http://purl.org/dc/terms/rightsHolder',
+          'http://xmlns.com/foaf/0.1/isPrimaryTopicOf',
+          'http://www.w3.org/ns/adms#status',
+        ],
+        'Distribution' => [
+          'http://purl.org/dc/terms/license',
+          'http://purl.org/dc/terms/format',
+          'http://purl.org/dc/terms/conformsTo',
+          'http://www.w3.org/ns/dcat#accessService',
+        ],
+        'CatalogRecord' => [
+          'http://purl.org/dc/terms/language',
+          'http://www.w3.org/ns/dcat#contactPoint',
+          'http://www.w3.org/ns/dcat#inCatalog',
+        ],
+        'DataService' => [
+          'http://purl.org/dc/terms/conformsTo',
+        ],
+      ]; // paramètres de la fonction frame()
+  const PROP_IDS = [
+        'title',
+        'description',
+        'publisher',
+        'status',
+        'inSeries',
+        'issued',
+        'modified',
+        'created',
+        'conformsTo',
+        'accessRights',
+        'rightsHolder',
+        'theme',
+        'keyword',
+        'landingPage',
+        'page',
+        'language',
+        'identifier',
+        'dct:spatial',
+        'isPrimaryTopicOf' => ['contactPoint','inCatalog','modified','modifiedT','language','identifier'],        
+        'distribution' => ['title','license','accessService','format','accessURL','downloadURL'],        
+      ]; // ordre des propriétés dans la sortie 
+};
+  
 define('JSON_OPTIONS',
         JSON_PRETTY_PRINT|JSON_UNESCAPED_LINE_TERMINATORS|JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR);
 $urlPrefix = 'https://preprod.data.developpement-durable.gouv.fr/dcat/catalog';
@@ -127,6 +179,7 @@ if (php_sapi_name()=='cli') { // traitement CLI en fonction de l'action demandé
     echo "  - errors - afffichage des erreurs rencontrées lors de la lecture du catalogue\n";
     echo "  - catalogs - lecture du catalogue puis affichage des catalogues\n";
     echo "  - datasets - lecture du catalogue puis affichage des jeux de données\n";
+    echo "  - yamlldfc2 - affiche Yaml-ld framed (RdfGraph::frame()) et le contexte context.yaml puis compacté avec JsonLD\n";
     foreach (array_unique(array_values(RdfResource::CLASS_URI_TO_PHP_NAME)) as $classUri => $className)
       echo "  - $className - affiche les objets de la classe $className y compris les blank nodes\n";
     die();
@@ -180,6 +233,18 @@ if (php_sapi_name()=='cli') { // traitement CLI en fonction de l'action demandé
       $graph->import($urlPrefix, true, $lastPage, $firstPage);
       $graph->frame('Dataset', ['http://purl.org/dc/terms/publisher']);
       echo json_encode($graph->exportClassAsJsonLd('Dataset'), JSON_OPTIONS);
+      break;
+    }
+    
+    case 'yamlldfc2': { // affiche Yaml-ld framed (RdfGraph::frame()) et le contexte context.yaml puis compacté avec JsonLD
+      $graph->import($urlPrefix, true, $lastPage, $firstPage);
+      //print_r($graph);
+      $graph->frame(Constant::FRAME_PARAM);
+      //echo Yaml::dump($graph->exportClassAsJsonLd('Dataset'), 9, 2, Yaml::DUMP_MULTI_LINE_LITERAL_BLOCK);
+      $comped = new RdfCompactGraph(new RdfContext(Yaml::parseFile('context.yaml')), $graph->exportClassAsJsonLd('Dataset'));
+      
+      //print_r($comped);
+      echo Yaml::dump($comped->jsonld(Constant::PROP_IDS), 9, 2, Yaml::DUMP_MULTI_LINE_LITERAL_BLOCK); // convertit en Yaml
       break;
     }
     
@@ -290,60 +355,12 @@ else { // affichage interactif de la version corrigée page par page en Yaml, JS
 
     case 'yamlldfc2': { // affiche Yaml-ld framed (RdfGraph::frame()) et le contexte context.yaml puis compacté avec JsonLD
       //print_r($graph);
-      $graph->frame([
-        'Dataset' => [
-          'http://purl.org/dc/terms/publisher',
-          'http://purl.org/dc/terms/conformsTo',
-          'http://purl.org/dc/terms/accessRights',
-          'http://purl.org/dc/terms/language',
-          'http://purl.org/dc/terms/spatial',
-          'http://www.w3.org/ns/dcat#theme',
-          'http://www.w3.org/ns/dcat#distribution',
-          'http://purl.org/dc/terms/rightsHolder',
-          'http://xmlns.com/foaf/0.1/isPrimaryTopicOf',
-          'http://www.w3.org/ns/adms#status',
-        ],
-        'Distribution' => [
-          'http://purl.org/dc/terms/license',
-          'http://purl.org/dc/terms/format',
-          'http://purl.org/dc/terms/conformsTo',
-          'http://www.w3.org/ns/dcat#accessService',
-        ],
-        'CatalogRecord' => [
-          'http://purl.org/dc/terms/language',
-          'http://www.w3.org/ns/dcat#contactPoint',
-          'http://www.w3.org/ns/dcat#inCatalog',
-        ],
-        'DataService' => [
-          'http://purl.org/dc/terms/conformsTo',
-        ],
-      ]);
+      $graph->frame(Constant::FRAME_PARAM);
       //echo Yaml::dump($graph->exportClassAsJsonLd('Dataset'), 9, 2, Yaml::DUMP_MULTI_LINE_LITERAL_BLOCK);
       $comped = new RdfCompactGraph(new RdfContext(Yaml::parseFile('context.yaml')), $graph->exportClassAsJsonLd('Dataset'));
-      $propIds = [
-        'title',
-        'description',
-        'publisher',
-        'status',
-        'inSeries',
-        'issued',
-        'modified',
-        'created',
-        'conformsTo',
-        'accessRights',
-        'rightsHolder',
-        'theme',
-        'keyword',
-        'landingPage',
-        'page',
-        'language',
-        'identifier',
-        'dct:spatial',
-        'isPrimaryTopicOf' => ['contactPoint','inCatalog','modified','modifiedT','language','identifier'],        
-        'distribution' => ['title','license','accessService','format','accessURL','downloadURL'],        
-      ]; // ordre des propriétés dans la sortie 
+      
       //print_r($comped);
-      echo Yaml::dump($comped->jsonld($propIds), 9, 2, Yaml::DUMP_MULTI_LINE_LITERAL_BLOCK); // convertit en Yaml
+      echo Yaml::dump($comped->jsonld(Constant::PROP_IDS), 9, 2, Yaml::DUMP_MULTI_LINE_LITERAL_BLOCK); // convertit en Yaml
       break;
     }
     default: {
