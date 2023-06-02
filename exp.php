@@ -2,18 +2,28 @@
 {/*PhpDoc:
 title: exp.php - lecture de l'export du catalogue Ecosphères - 1/6/2023
 doc: |
-  Le premier objectif de ce script est de lire l'export DCAT d'Ecosphères en JSON-LD afin d'y détecter d'éventuelles erreurs,
-  de corriger ces erreurs et d'afficher le contenu de l'export de manière plus compréhensive.
-  Le principal résultat correspond à un affichage Yaml-LD avec un contexte qui permet un affichage simplifié
-  des JdD du catalogue.
+  Le premier objectif de ce script est de lire l'export DCAT d'Ecosphères en JSON-LD afin d'y détecter d'éventuelles erreurs.
+  Le résultat est formalisé par la cmde rectifStats qui retourne la liste des erreurs rencontrées et corrigées.
   
-  Les classes RDF sont traduites par une classe Php avec un mapping défini dans RdfGraph::CLASS_URI_TO_PHP_NAME
-  Outre la détection et correction d'erreurs, le script affiche différents types d'objets de manière simplifiée
-  et plus lisible pour les néophytes.
+  Le second objectif est de corriger ces erreurs et d'afficher le catalogue de manière plus compréhensible.
+  Le résultat est un affichage simplifié des JdD du catalogue fondé sur le format Yaml-LD imbriqué (framed)
+  et compacté avec un contexte défini dans context.yaml.
+  
+  Un troisième objectif est de me familiariser avec le traitement du JSON-LD en testant notamment l'utilisation de:
+   - EasyRdf - https://www.easyrdf.org/ - A PHP library designed to make it easy to consume and produce RDF.
+   - JsonLD - https://github.com/lanthaler/JsonLD - A fully conforming JSON-LD (1.0) processor written in PHP. 
+  Sur easyRdf, j'ai identifié des bugs et la seule fonctionnalité intéressante est la conversion de JSON-LD en Turtle
+  utilisée dans la commande !cli 'turtle'
+  
+  Sur JsonLD:
+   - le JsonLD::compact() fonctionne bien, illustré par la cmde !cli JsonLD::compact
+   - le JsonLD::frame() ne fonctionne pas, illustré par la cmde !cli JsonLD::frame
+     c'est peut-être du au fait que j'ai utilisé JSON-LD 1.1 alors que JsonLD implémente JSON-LD 1.0
   
   Le script utilise un registre stocké dans le fichier registre.yaml qui associe des étiquettes à un certain
   nombre d'URIs utilisés mais non définis dans l'export DCAT ; par exemple dans la classe Standard l'URI
   'https://tools.ietf.org/html/rfc4287' correspond au format de syndication Atom,
+  
   
   A VOIR:
     - gestion des dateTime comme date
@@ -266,20 +276,21 @@ else { // affichage interactif de la version corrigée page par page en Yaml, JS
     echo "<html><head><title>exp $outputFormat</title></head><body>
       <form>
       <a href='?page=",$page-1,isset($_GET['outputFormat']) ? "&outputFormat=$_GET[outputFormat]" : '',"'>&lt;</a>
-      Page $page
+      Page 
+      <!-- input type='hidden' name='page' value='$page' / -->
+      <input type='text' name='page' size='3' value='$page' />
       <a href='?page=",$page+1,isset($_GET['outputFormat']) ? "&outputFormat=$_GET[outputFormat]" : '',"'>&gt;</a>
-      <input type='hidden' name='page' value='$page' />
       <select name='outputFormat' id='outputFormat'>\n",
       Html::selectOptions($outputFormat, [
         'yaml'=> "Yaml",
         'jsonld'=> "JSON-LD",
         'print_r'=> "print_r(graph)",
-        'jsonLdContext'=> "JSON-LD contexte",
-        'jsonldc'=> "JSON-LD compacté",
-        //'jsonldf'=> "JSON-LD imbriqué",
+        'jsonLdContext'=> "contexte JSON-LD généré par le Registre",
+        'JsonLD::compact'=> "JSON-LD compacté avec JsonLD::compact()",
+        'JsonLD::frame'=> "JSON-LD imbriqué avec JsonLD::frame(), ne fonctionne pas correctement",
         'turtle'=> "Turtle",
         'yamlldfc'=> "Yaml-ld framed et compacté",
-        'flatten'=> "flattent(expand(Yaml-ld framed et compacté))",
+        'flatten'=> "flatten(expand(Yaml-ld framed et compacté))",
         'boucle'=> "boucle",
       ]),
       "      </select>
@@ -294,8 +305,10 @@ else { // affichage interactif de la version corrigée page par page en Yaml, JS
   echo "---\n";
   switch ($outputFormat) {
     case 'yaml': { // affichage simplifié des datasets en Yaml 
-      if (0)
+      if (0) { // Test de update, ne fonctionne que sur une page particulière 
         $graph->update('Dataset', 'http://catalogue.geo-ide.developpement-durable.gouv.fr/catalogue/srv/fre/catalog.search#/metadata/fr-120066022-jdd-fd487b54-55e6-4a8c-a095-1748206dc329', 'http://purl.org/dc/terms/title', 0, "Titre modifié");
+        
+      }
       $output = $graph->showInYaml('Dataset', false);
       if (StdErr::$messages) {
         echo 'StdErr::$messages = '; print_r(StdErr::$messages);
@@ -320,7 +333,7 @@ else { // affichage interactif de la version corrigée page par page en Yaml, JS
       break;
     }
     
-    case 'jsonldc': { // affiche le JSON-LD compacté avec JsonLD et le contexte déduit du registre
+    case 'JsonLD::compact': { // affiche le JSON-LD compacté avec JsonLD et le contexte déduit du registre
       if (!is_dir('tmp')) mkdir('tmp');
       file_put_contents('tmp/document.jsonld', json_encode($graph->allAsJsonLd(), JSON_OPTIONS));
       file_put_contents('tmp/context.jsonld', json_encode(Registre::jsonLdContext(), JSON_OPTIONS));
@@ -329,14 +342,15 @@ else { // affichage interactif de la version corrigée page par page en Yaml, JS
       break;
     }
     
-    /*case 'jsonldf': { // affiche le JSON-LD structuré (framed) avec JsonLD
+    case 'JsonLD::frame': { // affiche le JSON-LD imbriqué (framed) avec JsonLD - ne fonctionne pas correctement
       if (!is_dir('tmp')) mkdir('tmp');
       file_put_contents('tmp/document.jsonld', json_encode($graph->allAsJsonLd(), JSON_OPTIONS));
       file_put_contents('tmp/frame.jsonld', json_encode(Registre::jsonLdFrame(), JSON_OPTIONS));
       $framed = JsonLD::frame('tmp/document.jsonld', 'tmp/frame.jsonld');
       echo htmlspecialchars(json_encode($framed, JSON_OPTIONS));
       break;
-    }*/
+    }
+    
     case 'turtle': { // traduction en Turtle avec EasyRdf
       $erGraph = new \EasyRdf\Graph('https://preprod.data.developpement-durable.gouv.fr/');
       $erGraph->parse(json_encode($graph->allAsJsonLd()), 'jsonld', 'https://preprod.data.developpement-durable.gouv.fr/');

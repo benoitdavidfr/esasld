@@ -1,7 +1,12 @@
 <?php
-{/*PhpDoc:
-title: rdf.inc.php - classes utilisées par exp.php pour gérer les données RDF - 29/5/2023
+{/ *PhpDoc:
+title: rdfexpand.inc.php - gestion d'un graphe RDF épandu, cad sans contexte - 2/6/2023
 doc: |
+  
+  Les classes RDF sont traduites par une classe Php avec un mapping défini dans RdfGraph::CLASS_URI_TO_PHP_NAME
+  Outre la détection et correction d'erreurs, le script affiche différents types d'objets de manière simplifiée
+  et plus lisible pour les néophytes.
+  
   La classe abstraite PropVal et ses sous-classes facilitent l'utilisation en Php de la représentation JSON-LD en définissant
   une structuration d'une valeur RDF d'une propriété RDF d'une ressource.
 

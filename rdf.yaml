@@ -69,4 +69,4 @@ traductions:
   Expansion: l'ago d'expansion, un graphe épandu (qui a fait l'objet d'une expansion), supprime le contexte
   Compaction: l'algo de compactage, un graphe compacté = qui a fait l'objet d'un compactage, applique un contexte
   Flattening: l'algo d'Aplanissement, un graphe aplani (consiste à  remplacer les sous-ressources par des noeuds blancs)
-  Framing: l'algo de structuration, un graphe structuré (consiste à remplacer les réf. par les ressources elles-mêmes)
+  Framing: l'algo d'imbrication, un graphe imbriqué (consiste à remplacer certaines réf. par les ressources référencées)
