@@ -1,5 +1,5 @@
 <?php
-{/ *PhpDoc:
+{/*PhpDoc:
 title: rdfexpand.inc.php - gestion d'un graphe RDF épandu, cad sans contexte - 2/6/2023
 doc: |
   La classe RdfExpGraph définit un graphe RDF épandu (expanded) qui peut être imbriqué (framed) ou aplani (flattened).
@@ -156,6 +156,7 @@ abstract class ExpPropVal {
   }
   
 };
+include 'rdfcomp.inc.php';
 
 // Classe des littéraux RDF
 class RdfExpLiteral extends ExpPropVal {
