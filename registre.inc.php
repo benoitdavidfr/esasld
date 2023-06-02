@@ -45,7 +45,7 @@ class Registre { // stockage du registre
     return self::$namespaces[$parts[0]].$parts[1];
   }
   
-  static function import(RdfGraph $graph): array { // importe le registre dans le graphe 
+  static function import(RdfExpGraph $graph): array { // importe le registre dans le graphe 
     try {
       $registre = Yaml::parseFile(__DIR__.'/registre.yaml');
     } catch (ParseException $exception) {
@@ -62,7 +62,7 @@ class Registre { // stockage du registre
       self::$classes[$classCiri] = $classe;
       if (isset($classe['resources'])) {
         $classUri = self::expandCiri($classCiri);
-        if (!($className = RdfGraph::CLASS_URI_TO_PHP_NAME[$classUri] ?? null))
+        if (!($className = RdfExpGraph::CLASS_URI_TO_PHP_NAME[$classUri] ?? null))
           throw new Exception("Erreur, classe $classUri inconnue");
         foreach ($classe['resources'] as $resource) {
           $r = [

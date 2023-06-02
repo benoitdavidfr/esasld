@@ -1,9 +1,11 @@
 <?php
-{/ *PhpDoc:
+{/*PhpDoc:
 title: rdfexpand.inc.php - gestion d'un graphe RDF épandu, cad sans contexte - 2/6/2023
 doc: |
+  Le graphe est géré comme un objet de la classe RdfExpGraph.
   
-  Les classes RDF sont traduites par une classe Php avec un mapping défini dans RdfGraph::CLASS_URI_TO_PHP_NAME
+  
+  Les classes RDF sont traduites par une classe Php avec un mapping défini dans RdfExpGraph::CLASS_URI_TO_PHP_NAME
   Outre la détection et correction d'erreurs, le script affiche différents types d'objets de manière simplifiée
   et plus lisible pour les néophytes.
   
@@ -27,7 +29,7 @@ journal: |
  29/5/2023:
   - modularisation de la gestion des stats par la classe Stats
  28/5/2023:
-  - ajout classe RdfGraph pour gérer les ressources par graphe
+  - ajout classe RdfExpGraph pour gérer les ressources par graphe
  27/5/2023:
   - scission de la clase PropVal en RdfLiteral et RdfResRef
  21/5/2023:
@@ -108,7 +110,7 @@ abstract class PropVal {
   abstract function isA(): string; // retourne 'RdfLiteral' ou 'RdfResRef'
   abstract function keys(): array; // liste les clés
   abstract function asJsonLd(): array; // regénère un JSON-LD pour la valeur
-  abstract function equal(PropVal $pval2, RdfGraph $graph1, RdfGraph $graph2, CallContext $callContext): bool; // teste si 2 propval sont égales
+  abstract function equal(PropVal $pval2, RdfExpGraph $graph1, RdfExpGraph $graph2, CallContext $callContext): bool; // teste si 2 propval sont égales
 
   // construit un PropVal à partir d'une structure Yaml en excluant les listes
   static function yamlToPropVal(array $yaml): PropVal {
@@ -223,7 +225,7 @@ class RdfLiteral extends PropVal {
   }
   
   // simplification d'une des valeurs d'une propriété, $pKey est le nom court de la prop.
-  function simplifPval(RdfGraph $graph, string $pKey): string|array {
+  function simplifPval(RdfExpGraph $graph, string $pKey): string|array {
     if ($this->type) {
       if (in_array($this->type, ['http://www.w3.org/2001/XMLSchema#dateTime','http://www.w3.org/2001/XMLSchema#date']))
         return $this->value;
@@ -238,7 +240,7 @@ class RdfLiteral extends PropVal {
     }
   }
   
-  function equal(PropVal $pval2, RdfGraph $graph1, RdfGraph $graph2, CallContext $callContext): bool { // 2 littéraux sont égaux ssi chaque prop. est égale
+  function equal(PropVal $pval2, RdfExpGraph $graph1, RdfExpGraph $graph2, CallContext $callContext): bool { // 2 littéraux sont égaux ssi chaque prop. est égale
     $result = true;
     if ($pval2->isA() <> $this->isA()) {
       echo "diff isA sur $callContext\n";
@@ -308,7 +310,7 @@ class RdfResRef extends PropVal {
   }
   
   // simplification d'une des valeurs d'une propriété, $pKey est le nom court de la prop.
-  function simplifPval(RdfGraph $graph, string $pKey): string|array {
+  function simplifPval(RdfExpGraph $graph, string $pKey): string|array {
     $id = $this->id;
     if (substr($id, 0, 2) <> '_:') {// si PAS blank node alors retourne l'URI + evt. déref.
       if (!($class = (self::PROP_RANGE[$pKey] ?? null)))
@@ -327,7 +329,7 @@ class RdfResRef extends PropVal {
     return $graph->get($class, $id)->simplify($graph);
   }
 
-  function equal(PropVal $pval2, RdfGraph $graph1, RdfGraph $graph2, CallContext $callContext): bool { // 2 littéraux sont égaux ssi chaque prop. est égale
+  function equal(PropVal $pval2, RdfExpGraph $graph1, RdfExpGraph $graph2, CallContext $callContext): bool { // 2 littéraux sont égaux ssi chaque prop. est égale
     $result = true;
     if ($pval2->isA() <> $this->isA()) {
       echo "diff isA sur $callContext\n";
@@ -575,7 +577,7 @@ abstract class RdfResource {
   }
     
   // simplification des valeurs des propriétés 
-  function simplify(RdfGraph $graph): string|array {
+  function simplify(RdfExpGraph $graph): string|array {
     $simple = [];
     $jsonld = $this->props;
     foreach ($this->prop_key_uri() as $uri => $key) {
@@ -594,7 +596,7 @@ abstract class RdfResource {
     
   // modifie récursivement l'objet en intégrant les références à une ressource par la ressource elle-même
   // pour les propriétés définies (par la liste $propUrisPerClassName: [{className}=> [{propUri}]],
-  function frame(RdfGraph $graph, array $propUrisPerClassName): void {
+  function frame(RdfExpGraph $graph, array $propUrisPerClassName): void {
     //echo "frame() sur ",$this->id,' - ',$this->label(),"\n";
     $propUris = $propUrisPerClassName[get_called_class()] ?? [];
     //print_r(get_called_class()); echo " = "; print_r($propUris);
@@ -614,7 +616,7 @@ abstract class RdfResource {
   }
 
   // retourne true ssi les ressources sont logiquement égales
-  function equal(RdfResource $res2, RdfGraph $graph1, RdfGraph $graph2, CallContext $callContext): bool {
+  function equal(RdfResource $res2, RdfExpGraph $graph1, RdfExpGraph $graph2, CallContext $callContext): bool {
     $result = true;
     if ((substr($this->id, 0, 2)<>'_:') && ($this->id <> $res2->id)) {
       echo "id différent sur $this->id\n";
@@ -771,7 +773,7 @@ class Dataset extends RdfResource {
     }
   }
 
-  static function rectifAllStatements(array $datasets, RdfGraph $graph): void { // rectifie les propriétés accessRights et provenance
+  static function rectifAllStatements(array $datasets, RdfExpGraph $graph): void { // rectifie les propriétés accessRights et provenance
     foreach ($datasets as $id => $dataset) {
       foreach ($dataset->props as $pUri => &$pvals) {
         switch ($pUri) {
@@ -789,7 +791,7 @@ class Dataset extends RdfResource {
   }
   
   // corrige si nécessaire une liste de valeurs correspondant à une propriété accessRights ou provenance
-  static function rectifOneStatement(array $pvals, string $statementClass, RdfGraph $graph): array {
+  static function rectifOneStatement(array $pvals, string $statementClass, RdfExpGraph $graph): array {
     $arrayOfMLStrings = []; // [{md5} => ['mlStr'=> MLString, 'bn'=>{bn}]] - liste de chaines correspondant au $pvals
     
     foreach ($pvals as $pval) {
@@ -897,7 +899,7 @@ class Location extends RdfResource {
       return null;
   }
   
-  function simplify(RdfGraph $graph): string|array {
+  function simplify(RdfExpGraph $graph): string|array {
     if (isset($this->props['http://www.w3.org/ns/locn#geometry'])) {
       foreach ($this->props['http://www.w3.org/ns/locn#geometry'] as $geom) {
         if ($geom->type == 'http://www.opengis.net/ont/geosparql#wktLiteral')
@@ -950,7 +952,7 @@ class Stats { // classe utilisée pour mémoriser des stats sous la forme [{labe
 /* graphe RDF épandu, cad sans contexte 
 ** ainsi que la constantes CLASS_URI_TO_PHP_NAME définissant le mapping URI du type ou liste des URI -> nom de la classe Php
 */
-class RdfGraph {
+class RdfExpGraph {
   // Dict. [{URI de classe RDF ou liste d'URI} => {Nom de classe Php}]
   const CLASS_URI_TO_PHP_NAME = [
     'http://www.w3.org/ns/dcat#Catalog' => 'Catalog',
@@ -1073,7 +1075,7 @@ class RdfGraph {
     elseif ($res = $className::get($id))
       return $res;
     else {
-      echo "RdfGraph::get($className, $id) sur le graphe $this->name\n";
+      echo "RdfExpGraph::get($className, $id) sur le graphe $this->name\n";
       throw new Exception("DEREF_ERROR on $id");
     }
   }
@@ -1138,7 +1140,7 @@ class RdfGraph {
   }
   
   // teste si chaque ressource nommée de $this est inclue dans le graphe $graph2 et si ces 2 ressources sont identiques
-  function includedIn(RdfGraph $graph2): bool {
+  function includedIn(RdfExpGraph $graph2): bool {
     $result = true;
     foreach ($this->resources as $className => $resOfClass) {
       foreach ($resOfClass as $resId => $resource) {

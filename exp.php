@@ -48,10 +48,10 @@ journal: |
       - définition de la langue française par défaut pour la plupart des propriétés littérales
       - A FAIRE - réduction des dateTime à des dates
  29/5/2023:
-  - test affichage Yaml-LD d'une version framed avec RdfGraph puis compactée avec JsonLD
+  - test affichage Yaml-LD d'une version framed avec RdfExpGraph puis compactée avec JsonLD
     - nécessite une phase d'amélioration (improve) du contenu initial JSON-LD
  28/5/2023:
-  - ajout classe RdfGraph pour gérer les ressources par graphe
+  - ajout classe RdfExpGraph pour gérer les ressources par graphe
  21/5/2023:
   - regroupement dans la classe GenResource de classes simples n'ayant aucun traitement spécifique
  19/5/2023:
@@ -191,8 +191,8 @@ if (php_sapi_name()=='cli') { // traitement CLI en fonction de l'action demandé
     echo "  - errors - afffichage des erreurs rencontrées lors de la lecture du catalogue\n";
     echo "  - catalogs - lecture du catalogue puis affichage des catalogues\n";
     echo "  - datasets - lecture du catalogue puis affichage des jeux de données\n";
-    echo "  - yamlldfc - affiche Yaml-ld framed (RdfGraph::frame()) et le contexte context.yaml puis compacté avec JsonLD\n";
-    foreach (array_unique(array_values(RdfGraph::CLASS_URI_TO_PHP_NAME)) as $className)
+    echo "  - yamlldfc - affiche Yaml-ld framed (RdfExpGraph::frame()) et le contexte context.yaml puis compacté avec JsonLD\n";
+    foreach (array_unique(array_values(RdfExpGraph::CLASS_URI_TO_PHP_NAME)) as $className)
       echo "  - $className - affiche les objets de la classe $className y compris les blank nodes\n";
     die();
   }
@@ -201,7 +201,7 @@ if (php_sapi_name()=='cli') { // traitement CLI en fonction de l'action demandé
   $firstPage = $argv[2] ?? 1; // Par défaut démarrage à la première page
   $lastPage = $argv[3] ?? 0;  // Par défaut fin à la dernière page définie dans l'import
 
-  $graph = new RdfGraph('default');
+  $graph = new RdfExpGraph('default');
   Registre::import($graph);
 
   switch ($argv[1]) {
@@ -247,7 +247,7 @@ if (php_sapi_name()=='cli') { // traitement CLI en fonction de l'action demandé
       break;
     }
     
-    case 'yamlldfc': { // affiche Yaml-ld framed (RdfGraph::frame()) et le contexte context.yaml puis compacté avec JsonLD
+    case 'yamlldfc': { // affiche Yaml-ld framed (RdfExpGraph::frame()) et le contexte context.yaml puis compacté avec JsonLD
       $graph->import($urlPrefix, true, $lastPage, $firstPage);
       //print_r($graph);
       $graph->frame(Constant::FRAME_PARAM);
@@ -259,7 +259,7 @@ if (php_sapi_name()=='cli') { // traitement CLI en fonction de l'action demandé
     
     default: {
       $graph->import($urlPrefix, true, $lastPage, $firstPage);
-      if (in_array($argv[1], RdfGraph::CLASS_URI_TO_PHP_NAME)) {
+      if (in_array($argv[1], RdfExpGraph::CLASS_URI_TO_PHP_NAME)) {
         $graph->showInYaml($argv[1], true, true);
       }
       else {
@@ -297,7 +297,7 @@ else { // affichage interactif de la version corrigée page par page en Yaml, JS
       <input type='submit' value='Submit' /></form><pre>\n";
   }
   
-  $graph = new RdfGraph('default');
+  $graph = new RdfExpGraph('default');
   Registre::import($graph);
   if ($errors = $graph->import($urlPrefix, true, $page, $page)) {
     echo 'errors = '; print_r($errors);
@@ -358,7 +358,7 @@ else { // affichage interactif de la version corrigée page par page en Yaml, JS
       break;
     }
     
-    case 'yamlldfc': { // affiche Yaml-ld framed (RdfGraph::frame()) et le contexte context.yaml puis compacté avec JsonLD
+    case 'yamlldfc': { // affiche Yaml-ld framed (RdfExpGraph::frame()) et le contexte context.yaml puis compacté avec JsonLD
       //print_r($graph);
       $graph->frame(Constant::FRAME_PARAM);
       $comped = new RdfCompactGraph(new RdfContext(Yaml::parseFile('context.yaml')), $graph->classAsJsonLd('Dataset'));
@@ -379,7 +379,7 @@ else { // affichage interactif de la version corrigée page par page en Yaml, JS
       file_put_contents('tmp/expanded.jsonld', json_encode($expanded));
       $flattened = JsonLD::flatten('tmp/expanded.jsonld');
       $flattened = json_decode(json_encode($flattened), true);
-      $flattened = new RdfGraph('flattened', $flattened);
+      $flattened = new RdfExpGraph('flattened', $flattened);
       echo htmlspecialchars(json_encode($flattened->allAsJsonLd(), JSON_OPTIONS));
       break;
     }
@@ -396,9 +396,9 @@ else { // affichage interactif de la version corrigée page par page en Yaml, JS
       file_put_contents('tmp/expanded.jsonld', json_encode($expanded));
       $flattened = JsonLD::flatten('tmp/expanded.jsonld');
       $flattened = json_decode(json_encode($flattened), true);
-      $flattened = new RdfGraph('flattened', $flattened);
+      $flattened = new RdfExpGraph('flattened', $flattened);
       // réimport du graphe initial qui a été modifié
-      $graph = new RdfGraph('default');
+      $graph = new RdfExpGraph('default');
       Registre::import($graph);
       $graph->import($urlPrefix, true, $page, $page);
       if (0)
