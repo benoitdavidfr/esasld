@@ -69,8 +69,8 @@ journal: |
   - réécriture de Statement::rectifStatements()
   - réécriture de Dataset::concat()
  16/5/2023:
-  - définition de la classe PropVal
-  - définition des mathodes cleanYml() et yamlToPropVal()
+  - définition de la classe ExpPropVal
+  - définition des mathodes cleanYml() et yamlToExpPropVal()
   - ajout de qqs prop. / disparition des json-ld
  15/5/2023:
   - amélioration des rectifications sur les textes encodées en Yaml
@@ -84,7 +84,8 @@ journal: |
   - refonte de l'architecture
 */}
 require_once __DIR__.'/vendor/autoload.php';
-require_once __DIR__.'/rdf.inc.php';
+require_once __DIR__.'/lib.inc.php';
+require_once __DIR__.'/rdfexpand.inc.php';
 require_once __DIR__.'/rdfcomp.inc.php';
 require_once __DIR__.'/statem.inc.php';
 require_once __DIR__.'/registre.inc.php';
@@ -230,7 +231,7 @@ if (php_sapi_name()=='cli') { // traitement CLI en fonction de l'action demandé
     }
     case 'catalogs': {
       $graph->import($urlPrefix, true, $lastPage, $firstPage);
-      //print_r(RdfResource::$pkeys);
+      //print_r(RdfExpResource::$pkeys);
       $graph->showInYaml('Catalog');
       break;
     }

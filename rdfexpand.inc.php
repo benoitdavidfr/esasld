@@ -1,37 +1,34 @@
 <?php
-{/*PhpDoc:
+{/ *PhpDoc:
 title: rdfexpand.inc.php - gestion d'un graphe RDF épandu, cad sans contexte - 2/6/2023
 doc: |
-  Le graphe est géré comme un objet de la classe RdfExpGraph.
-  
-  
-  Les classes RDF sont traduites par une classe Php avec un mapping défini dans RdfExpGraph::CLASS_URI_TO_PHP_NAME
-  Outre la détection et correction d'erreurs, le script affiche différents types d'objets de manière simplifiée
-  et plus lisible pour les néophytes.
-  
-  La classe abstraite PropVal et ses sous-classes facilitent l'utilisation en Php de la représentation JSON-LD en définissant
-  une structuration d'une valeur RDF d'une propriété RDF d'une ressource.
-
-  La classe abstraite RdfResource porte une grande partie du code et est la classe mère de toutes les classes Php
-  traduisant les classes RDF.
-  
-  Chaque classe RDF est soit traduite en une classe Php, soit, si elle ne porte pas de traitement spécifique,
-  fusionnée dans la classe GenResource.
-  Les classes non fusionnées définissent la constante de classe PROP_KEY_URI qui liste les propriétés RDF en définissant
-  leur raccourci,
+  La classe RdfExpGraph définit un graphe RDF épandu (expanded) qui peut être imbriqué (framed) ou aplani (flattened).
+  La classe abstraite RdfExpResource définit une ressource RDF.
+  Différentes sous-classes Php implémentent différents types de ressources.
+  Un mapping classe RDF -> classe Php est défini dans RdfExpGraph::CLASS_URI_TO_PHP_NAME.
+  La classe GenResource est utilisée pour les classes RDF sans correspondance spécifique en Php.
+  Les classes Php correspondant à une classe RDF définissent la constante de classe PROP_KEY_URI listant les propriétés RDF
+  et définissant leur raccourci.
   La classe GenResource définit la méthode prop_key_uri() qui retourne la même liste en fonction du type de l'objet.
   
-  A voir:
-    - 
+  La classe abstraite ExpPropVal définit les valeurs élémentaires d'une propriété d'une ressource RDF ;
+  les sous-classes concrètes sont RdfExpLiteral pour les littéraux et RdfExpResRef pour les références à des ressources.
+  Lorsque les ressources sont imbriquées (framed), une valeur peut aussi être un objet de RdfExpResource.
+  
+  La constante RdfExpResRef::PROP_RANGE indique le range de certaines propriétés afin de permettre leur déréférencement
+  Elle est définie comme un dictionnaire [{nom_court} => {nom_classe_Php}]
+  
 journal: |
  2/6/2023:
   - scission de rdf.inc.php pour créer rdfcomp.inc.php
+  - renommage rdf.inc.php en rdfexpand.inc.php
+  - modif des noms de la plupart des classes pour integrer Exp faisant référence aux graphes épandus
  29/5/2023:
   - modularisation de la gestion des stats par la classe Stats
  28/5/2023:
   - ajout classe RdfExpGraph pour gérer les ressources par graphe
  27/5/2023:
-  - scission de la clase PropVal en RdfLiteral et RdfResRef
+  - scission de la clase ExpPropVal en RdfExpLiteral et RdfExpResRef
  21/5/2023:
   - regroupement dans la classe GenResource de classes simples n'ayant aucun traitement spécifique
   - première version de l'opération frame sur les objets d'une classe
@@ -42,33 +39,8 @@ journal: |
 use Symfony\Component\Yaml\Yaml;
 use Symfony\Component\Yaml\Exception\ParseException;
 
-class CallContext { // conserve le contexte d'appel
-  public readonly array $p1; // contexte du premier paramètre sous la forme [{var} => {val}]
-  public readonly array $p2; // contexte du second  paramètre sous la forme [{var} => {val}]
-  public readonly array $common; // contexte commun sous la forme [{var} => {val}]
-  public readonly ?CallContext $previous; // contexte précédent
-  
-  function __construct(array $p1, array $p2, array $common=[], ?CallContext $previous=null) {
-    $this->p1=$p1;
-    $this->p2=$p2;
-    $this->common = $common;
-    $this->previous = $previous;
-  }
-  
-  function asArray(): array {
-    return [
-      'p1'=> $this->p1,
-      'p2'=> $this->p2,
-      'common'=> $this->common,
-      'previous'=> $this->previous ? $this->previous->asArray() : [],
-    ];
-  }
-  
-  function __toString(): string { return json_encode($this->asArray(), JSON_OPTIONS); }
-};
-
 {/* Classe des valeurs RDF d'une propriété RDF
-** En JSON-LD une PropVal est structurée sous la forme [{key} => {val}]
+** En JSON-LD une ExpPropVal est structurée sous la forme [{key} => {val}]
 **  - {key} contient une des valeurs
 **    - '@id' indique que {val} correspond à un URI ou un id de blank node
 **    - '@type' définit que {val} correspond au type de @value
@@ -97,57 +69,57 @@ class CallContext { // conserve le contexte d'appel
     "http://purl.org/dc/terms/modified": [
       { "@type": "http://www.w3.org/2001/XMLSchema#dateTime", "@value": "2022-09-21T13:31:46.000249" }
     ],
-** Les URI sont des RdfResRef et les autres des RdfLiteral
+** Les URI sont des RdfExpResRef et les autres des RdfExpLiteral
 */}
-abstract class PropVal {
+abstract class ExpPropVal {
   static function create(array $pval) {
     if (array_keys($pval) == ['@id'])
-      return new RdfResRef($pval);
+      return new RdfExpResRef($pval);
     else
-      return new RdfLiteral($pval);
+      return new RdfExpLiteral($pval);
   }
   
-  abstract function isA(): string; // retourne 'RdfLiteral' ou 'RdfResRef'
+  abstract function isA(): string; // retourne 'RdfExpLiteral' ou 'RdfExpResRef'
   abstract function keys(): array; // liste les clés
   abstract function asJsonLd(): array; // regénère un JSON-LD pour la valeur
-  abstract function equal(PropVal $pval2, RdfExpGraph $graph1, RdfExpGraph $graph2, CallContext $callContext): bool; // teste si 2 propval sont égales
+  abstract function equal(ExpPropVal $pval2, RdfExpGraph $graph1, RdfExpGraph $graph2, CallContext $callContext): bool; // teste si 2 propval sont égales
 
-  // construit un PropVal à partir d'une structure Yaml en excluant les listes
-  static function yamlToPropVal(array $yaml): PropVal {
+  // construit un ExpPropVal à partir d'une structure Yaml en excluant les listes
+  static function yamlToExpPropVal(array $yaml): ExpPropVal {
     // Le Yaml est un label avec uniquement la langue française de fournie
     if ((array_keys($yaml) == ['label']) && is_array($yaml['label'])
       && (array_keys($yaml['label']) == ['fr','en']) && $yaml['label']['fr'] && !$yaml['label']['en'])
-        return new RdfLiteral(['@language'=> 'fr', '@value'=> $yaml['label']['fr']]);
+        return new RdfExpLiteral(['@language'=> 'fr', '@value'=> $yaml['label']['fr']]);
     
     // Le Yaml est un label avec uniquement la langue française de fournie + un type vide
     if ((array_keys($yaml) == ['label','type']) && !$yaml['type'] && is_array($yaml['label'])
       && (array_keys($yaml['label']) == ['fr','en']) && $yaml['label']['fr'] && !$yaml['label']['en'])
-        return new RdfLiteral(['@language'=> 'fr', '@value'=> $yaml['label']['fr']]);
+        return new RdfExpLiteral(['@language'=> 'fr', '@value'=> $yaml['label']['fr']]);
     
     // Le Yaml est un label sans le champ label avec uniquement la langue française de fournie
     if ((array_keys($yaml) == ['fr','en']) && $yaml['fr'] && !$yaml['en'] && is_string($yaml['fr'])) {
-        //echo "Dans yamlToPropVal2: "; print_r($yaml);
-        return new RdfLiteral(['@language'=> 'fr', '@value'=> $yaml['fr']]);
+        //echo "Dans yamlToExpPropVal2: "; print_r($yaml);
+        return new RdfExpLiteral(['@language'=> 'fr', '@value'=> $yaml['fr']]);
     }
     
     // Le Yaml est un label sans le champ label avec uniquement la langue française de fournie et $yaml['fr] est un array
     if ((array_keys($yaml) == ['fr','en']) && $yaml['fr'] && !$yaml['en']
       && is_array($yaml['fr']) && array_is_list($yaml['fr']) && (count($yaml['fr']) == 1)) {
-        //echo "Dans yamlToPropVal2: "; print_r($yaml);
-        return new RdfLiteral(['@language'=> 'fr', '@value'=> $yaml['fr'][0]]);
+        //echo "Dans yamlToExpPropVal2: "; print_r($yaml);
+        return new RdfExpLiteral(['@language'=> 'fr', '@value'=> $yaml['fr'][0]]);
     }
     
     // Le Yaml définit un URI
     // https://preprod.data.developpement-durable.gouv.fr/dataset/606123c6-d537-485d-ba99-182b0b54d971:
     //  license: '[{''label'': {''fr'': '''', ''en'': ''''}, ''type'': [], ''uri'': ''https://spdx.org/licenses/etalab-2.0''}]'
     if (isset($yaml['uri']) && $yaml['uri'])
-      return new RdfResRef(['@id'=> $yaml['uri']]);
+      return new RdfExpResRef(['@id'=> $yaml['uri']]);
     
-    echo "Dans yamlToPropVal: "; print_r($yaml);
-    throw new Exception("Cas non traité dans yamlToPropVal()");
+    echo "Dans yamlToExpPropVal: "; print_r($yaml);
+    throw new Exception("Cas non traité dans yamlToExpPropVal()");
   }
   
-  // nettoie une valeur codée en Yaml, renvoie une [PropVal] ou []
+  // nettoie une valeur codée en Yaml, renvoie une [ExpPropVal] ou []
   // Certaines chaines sont mal encodées en Yaml
   static function cleanYaml(string $value): array {
     // certaines propriétés contiennent des chaines encodées en Yaml et sans information
@@ -159,34 +131,34 @@ abstract class PropVal {
       $yaml = Yaml::parse($value);
       //echo "value=$value\n";
     } catch (ParseException $e) {
-      //fwrite(STDERR, "Erreur de Yaml::parse() dans RdfResource::rectification() sur $value\n");
+      //fwrite(STDERR, "Erreur de Yaml::parse() dans RdfExpResource::rectification() sur $value\n");
       $value2 = str_replace("\\'", "''", $value);
       //fwrite(STDERR, "value=$value\n\n");
       try {
         $yaml = Yaml::parse($value2);
         //echo "value=$value\n";
       } catch (ParseException $e) {
-        StdErr::write("Erreur2 de Yaml::parse() dans RdfResource::rectification() sur $value\n");
-        return [PropVal::create(['@value'=> "Erreur de yaml::parse() sur $value"])];
+        StdErr::write("Erreur2 de Yaml::parse() dans RdfExpResource::rectification() sur $value\n");
+        return [ExpPropVal::create(['@value'=> "Erreur de yaml::parse() sur $value"])];
       }
     }
       
     if (array_is_list($yaml)) {
       $list = [];
       foreach ($yaml as $elt) {
-        $list[] = self::yamlToPropVal($elt);
+        $list[] = self::yamlToExpPropVal($elt);
       }
       return $list;
     }
     else {
-      return [self::yamlToPropVal($yaml)];
+      return [self::yamlToExpPropVal($yaml)];
     }
   }
   
 };
 
 // Classe des littéraux RDF
-class RdfLiteral extends PropVal {
+class RdfExpLiteral extends ExpPropVal {
   public readonly string $value;
   public readonly ?string $language;
   public readonly ?string $type;
@@ -204,12 +176,12 @@ class RdfLiteral extends PropVal {
       }
       default: {
         print_r(array_keys($pval));
-        throw new Exception("Dans RdfLiteral::__construct() keys='".implode(',',$this->keys)."' inconnu");
+        throw new Exception("Dans RdfExpLiteral::__construct() keys='".implode(',',$this->keys)."' inconnu");
       }
     }
   }
   
-  function isA(): string { return 'RdfLiteral'; }
+  function isA(): string { return 'RdfExpLiteral'; }
   
   function keys(): array {
     return $this->language ? ['@language','@value'] : ($this->type ? ['@type','@value'] : ['@value']);
@@ -240,7 +212,7 @@ class RdfLiteral extends PropVal {
     }
   }
   
-  function equal(PropVal $pval2, RdfExpGraph $graph1, RdfExpGraph $graph2, CallContext $callContext): bool { // 2 littéraux sont égaux ssi chaque prop. est égale
+  function equal(ExpPropVal $pval2, RdfExpGraph $graph1, RdfExpGraph $graph2, CallContext $callContext): bool { // 2 littéraux sont égaux ssi chaque prop. est égale
     $result = true;
     if ($pval2->isA() <> $this->isA()) {
       echo "diff isA sur $callContext\n";
@@ -264,7 +236,7 @@ class RdfLiteral extends PropVal {
 
 // Classe des références vers une ressource
 // PROP_RANGE indique le range de certaines propriétés afin de permettre leur déréférencement
-class RdfResRef extends PropVal {
+class RdfExpResRef extends ExpPropVal {
   // indique par propriété sa classe d'arrivée (range), nécessaire pour le déréférencement pour la simplification
   const PROP_RANGE = [
     'publisher' => 'GenResource',
@@ -297,11 +269,11 @@ class RdfResRef extends PropVal {
     }
     else {
       print_r(array_keys($pval));
-      throw new Exception("Dans PropVal::__construct() keys='".implode(',',$this->keys)."' inconnu");
+      throw new Exception("Dans ExpPropVal::__construct() keys='".implode(',',$this->keys)."' inconnu");
     }
   }
   
-  function isA(): string { return 'RdfResRef'; }
+  function isA(): string { return 'RdfExpResRef'; }
   
   function keys(): array { return ['@id']; }
   
@@ -325,11 +297,11 @@ class RdfResRef extends PropVal {
     }
     // si le pointeur pointe sur un blank node alors déréférencement du pointeur
     if (!($class = (self::PROP_RANGE[$pKey] ?? null)))
-      throw new Exception("Erreur $pKey absent de RdfResRef::PROP_RANGE");
+      throw new Exception("Erreur $pKey absent de RdfExpResRef::PROP_RANGE");
     return $graph->get($class, $id)->simplify($graph);
   }
 
-  function equal(PropVal $pval2, RdfExpGraph $graph1, RdfExpGraph $graph2, CallContext $callContext): bool { // 2 littéraux sont égaux ssi chaque prop. est égale
+  function equal(ExpPropVal $pval2, RdfExpGraph $graph1, RdfExpGraph $graph2, CallContext $callContext): bool { // 2 littéraux sont égaux ssi chaque prop. est égale
     $result = true;
     if ($pval2->isA() <> $this->isA()) {
       echo "diff isA sur $callContext\n";
@@ -362,15 +334,15 @@ class RdfResRef extends PropVal {
 
 
 {/* Classe abstraite portant les méthodes communes à toutes les ressources RDF
-** La propriété $props est le dict. des propriétés de la ressource de la forme [{propUri} => [PropVal|RdfResource]]
-** Lorsque la représentation est applatie (flatten) la forme est [{propUri} => [PropVal]]
+** La propriété $props est le dict. des propriétés de la ressource de la forme [{propUri} => [ExpPropVal|RdfExpResource]]
+** Lorsque la représentation est applatie (flatten) la forme est [{propUri} => [ExpPropVal]]
 */}
-abstract class RdfResource {
+abstract class RdfExpResource {
   protected string $id; // le champ '@id' de la repr. JSON-LD, cad l'URI de la ressource ou l'id blank node
   protected array $types; // le champ '@type' de la repr. JSON-LD, cad la liste des URI des classes RDF de la ressource
-  protected array $props=[]; // dict. des propriétés de la ressource de la forme [{propUri} => [PropVal|RdfResource]]
+  protected array $props=[]; // dict. des propriétés de la ressource de la forme [{propUri} => [ExpPropVal|RdfExpResource]]
   
-  function isA(): string { return 'RdfResource'; }
+  function isA(): string { return 'RdfExpResource'; }
   
   // retourne PROP_KEY_URI, redéfini sur GenResource pour retourner le PROP_KEY_URI en fonction du type de l'objet
   function prop_key_uri(): array { return (get_called_class())::PROP_KEY_URI; }
@@ -383,7 +355,7 @@ abstract class RdfResource {
         case '@type': { $this->types = $resource['@type']; break; }
         default: {
           foreach ($pvals as $pval) {
-            $this->props[$pUri][] = PropVal::create($pval);
+            $this->props[$pUri][] = ExpPropVal::create($pval);
           }
         }
       }
@@ -438,14 +410,14 @@ abstract class RdfResource {
         elseif ((count($pvals)==1) && ($pvals[0]->keys() == ['@value'])) { // si chaine encodée en Yaml avec URI alors URI
           if ($pvals[0]->value == "{'uri': 'http://publications.europa.eu/resource/authority/language/FRA'}") {
             //echo 'language avant rectif = '; print_r($pvals);
-            $pvals = [PropVal::create(['@id'=> 'http://publications.europa.eu/resource/authority/language/FRA'])];
+            $pvals = [ExpPropVal::create(['@id'=> 'http://publications.europa.eu/resource/authority/language/FRA'])];
             //echo 'language rectifié = '; print_r($pvals);
             $rectifStats->increment("rectification langue");
           }
         }
         if ((count($pvals)==1) && ($pvals[0]->keys() == ['@id'])) { // si URI 'fr'
           if ($pvals[0]->id == 'fr') {
-            $pvals = [PropVal::create(['@id'=> 'http://publications.europa.eu/resource/authority/language/FRA'])];
+            $pvals = [ExpPropVal::create(['@id'=> 'http://publications.europa.eu/resource/authority/language/FRA'])];
             //echo 'language rectifié = '; print_r($pvals);
             $rectifStats->increment("rectification langue");
           }
@@ -461,18 +433,18 @@ abstract class RdfResource {
         }
         //print_r($pvals);
         if ($pvals[0]->keys() == ['@value']) {
-          $pvals = [PropVal::create(['@id'=> 'mailto:'.$pvals[0]->value])];
+          $pvals = [ExpPropVal::create(['@id'=> 'mailto:'.$pvals[0]->value])];
           $rectifStats->increment("rectification mbox");
         }
         elseif (($pvals[0]->keys() == ['@id']) && (substr($pvals[0]->id, 7, 0)<>'mailto:')) {
-          $pvals = [PropVal::create(['@id'=> 'mailto:'.$pvals[0]->id])];
+          $pvals = [ExpPropVal::create(['@id'=> 'mailto:'.$pvals[0]->id])];
           $rectifStats->increment("rectification mbox");
         }
         continue;
       }
       
       { // les chaines de caractères comme celles du titre sont dupliquées avec un élément avec langue et l'autre sans
-        if ((count($pvals)==2) && ($pvals[0]->isA()=='RdfLiteral') && ($pvals[1]->isA()=='RdfLiteral')
+        if ((count($pvals)==2) && ($pvals[0]->isA()=='RdfExpLiteral') && ($pvals[1]->isA()=='RdfExpLiteral')
          && ($pvals[0]->value == $pvals[1]->value)) {
           if ($pvals[0]->language && !$pvals[1]->language) {
             $pvals = [$pvals[0]];
@@ -488,7 +460,7 @@ abstract class RdfResource {
       }
       
       { // certaines dates sont dupliquées avec un élément dateTime et l'autre date
-        if ((count($pvals)==2) && ($pvals[0]->isA()=='RdfLiteral') && ($pvals[1]->isA()=='RdfLiteral')) {
+        if ((count($pvals)==2) && ($pvals[0]->isA()=='RdfExpLiteral') && ($pvals[1]->isA()=='RdfExpLiteral')) {
           if (($pvals[0]->type == 'http://www.w3.org/2001/XMLSchema#date')
            && ($pvals[1]->type == 'http://www.w3.org/2001/XMLSchema#dateTime')) {
             //echo "pUri=$pUri\n";
@@ -511,10 +483,10 @@ abstract class RdfResource {
       }
       
       { // certaines propriétés contiennent des chaines encodées en Yaml
-        $rectifiedPvals = []; // [ PropVal ]
+        $rectifiedPvals = []; // [ ExpPropVal ]
         foreach ($pvals as $pval) {
           if (($pval->keys() == ['@value']) && ((substr($pval->value, 0, 1) == '{') || (substr($pval->value, 0, 2) == '[{'))) {
-            if ($yaml = PropVal::cleanYaml($pval->value)) {
+            if ($yaml = ExpPropVal::cleanYaml($pval->value)) {
               $rectifiedPvals = array_merge($rectifiedPvals, $yaml);
             }
             $rectifStats->increment("propriété contenant une chaine encodée en Yaml");
@@ -533,7 +505,7 @@ abstract class RdfResource {
         if ($pUri == 'http://www.w3.org/ns/dcat#theme') {
           foreach ($pvals as $i => $pval) {
             if ($pval->id == 'Énergie') {
-              $pvals[$i] = PropVal::create([
+              $pvals[$i] = ExpPropVal::create([
                 '@id'=> 'http://registre.data.developpement-durable.gouv.fr/themes-hors-ecospheres/energie']);
                $rectifStats->increment("Theme Énergie remplacé par un URI");
             }
@@ -552,7 +524,7 @@ abstract class RdfResource {
           'http://xmlns.com/foaf/0.1/name'])) {
         foreach ($pvals as &$pval) {
           if ($pval->keys() == ['@value']) {
-            $pval = new RdfLiteral(['@language'=> 'fr', '@value'=> $pval->value]);
+            $pval = new RdfExpLiteral(['@language'=> 'fr', '@value'=> $pval->value]);
             $rectifStats->increment("$pUri est par défaut en français");
           }
         }
@@ -603,11 +575,11 @@ abstract class RdfResource {
     foreach ($this->props as $pUri => &$pvals) {
       if (!in_array($pUri, $propUris)) continue;
       $propShortName = $this->prop_key_uri()[$pUri];
-      $rangeClass = RdfResRef::PROP_RANGE[$propShortName];
+      $rangeClass = RdfExpResRef::PROP_RANGE[$propShortName];
       if (!$rangeClass)
         throw new Exception("Erreur sur $pUri");
       foreach ($pvals as &$pval) {
-        if ($pval->isA() == 'RdfResRef') {
+        if ($pval->isA() == 'RdfExpResRef') {
           $pval = $graph->get($rangeClass, $pval->id);
           $pval->frame($graph, $propUrisPerClassName);
         }
@@ -616,7 +588,7 @@ abstract class RdfResource {
   }
 
   // retourne true ssi les ressources sont logiquement égales
-  function equal(RdfResource $res2, RdfExpGraph $graph1, RdfExpGraph $graph2, CallContext $callContext): bool {
+  function equal(RdfExpResource $res2, RdfExpGraph $graph1, RdfExpGraph $graph2, CallContext $callContext): bool {
     $result = true;
     if ((substr($this->id, 0, 2)<>'_:') && ($this->id <> $res2->id)) {
       echo "id différent sur $this->id\n";
@@ -639,13 +611,13 @@ abstract class RdfResource {
   }
   
   function update($pUri, $noval, $newval): self {
-    $this->props[$pUri][0] = new RdfLiteral(['@value'=> $newval]);
+    $this->props[$pUri][0] = new RdfExpLiteral(['@value'=> $newval]);
     return $this;
   }
 };
 
-// Classe générique regroupant les ressources RDF n'ayant pas de traitement spécifique 
-class GenResource extends RdfResource {
+// Classe générique regroupant les ressources RDF n'ayant aucun traitement spécifique 
+class GenResource extends RdfExpResource {
   const PROP_KEY_URI_PER_TYPE = [
     'http://xmlns.com/foaf/0.1/Organization' => [
       'http://xmlns.com/foaf/0.1/name' => 'name',
@@ -703,7 +675,7 @@ class GenResource extends RdfResource {
     }
   }
   
-  // retourne la liste [PropVal] correspondant pour l'objet à la propriété définie par son nom court
+  // retourne la liste [ExpPropVal] correspondant pour l'objet à la propriété définie par son nom court
   function __get(string $name): ?array {
     //echo "__get($name) sur "; print($this);
     $uri = null;
@@ -726,7 +698,7 @@ class GenResource extends RdfResource {
   function concat(array $resource): void {}
 };
 
-class Dataset extends RdfResource {
+class Dataset extends RdfExpResource { // 'http://www.w3.org/ns/dcat#Dataset'||'http://www.w3.org/ns/dcat#DatasetSeries'
   const PROP_KEY_URI = [
     'http://purl.org/dc/terms/title' => 'title',
     'http://purl.org/dc/terms/description' => 'description',
@@ -768,7 +740,7 @@ class Dataset extends RdfResource {
               'http://www.w3.org/ns/dcat#dataset',
               'http://www.w3.org/ns/dcat#service'] as $pUri) {
       foreach ($resource[$pUri] ?? [] as $pval) {
-        $this->props[$pUri][] = PropVal::create($pval);
+        $this->props[$pUri][] = ExpPropVal::create($pval);
       }
     }
   }
@@ -823,7 +795,7 @@ class Dataset extends RdfResource {
     $pvals = [];
     foreach ($arrayOfMLStrings as $md5 => $mlStrAndBn) {
       if (isset($mlStrAndBn['bn']))
-        $pvals[] = PropVal::create(['@id'=> $mlStrAndBn['bn']]);
+        $pvals[] = ExpPropVal::create(['@id'=> $mlStrAndBn['bn']]);
       else {
         $id = '_:md5-'.$md5; // définition d'un id de BN à partir du MD5
         $resource = [
@@ -832,14 +804,14 @@ class Dataset extends RdfResource {
           'http://www.w3.org/2000/01/rdf-schema#label'=> $mlStrAndBn['mlStr']->toStatementLabel(),
         ];
         $graph->addResource($resource, 'GenResource');
-        $pvals[] = PropVal::create(['@id'=> $id]);
+        $pvals[] = ExpPropVal::create(['@id'=> $id]);
       }
     }
     return $pvals;
   }
 };
 
-class Distribution extends Dataset {
+class Distribution extends Dataset { // http://www.w3.org/ns/dcat#Distribution 
   const PROP_KEY_URI = [
     'http://purl.org/dc/terms/title' => 'title',
     'http://purl.org/dc/terms/description' => 'description',
@@ -856,7 +828,7 @@ class Distribution extends Dataset {
   ];
 };
 
-class CatalogRecord extends RdfResource {
+class CatalogRecord extends RdfExpResource { // http://www.w3.org/ns/dcat#CatalogRecord 
   const PROP_KEY_URI = [
     'http://purl.org/dc/terms/identifier' => 'identifier',
     'http://purl.org/dc/terms/language' => 'language',
@@ -875,7 +847,7 @@ class DataService extends Dataset {
   ];
 };
 
-class Location extends RdfResource {
+class Location extends RdfExpResource {
   const TYPES_INSEE = [
     'region' => "Région",
     'departement' => "Département",
@@ -916,7 +888,7 @@ class Location extends RdfResource {
   }
 };
 
-class PagedCollection extends RdfResource {
+class PagedCollection extends RdfExpResource {
   const PROP_KEY_URI = [
     'http://www.w3.org/ns/hydra/core#firstPage' => 'firstPage',
     'http://www.w3.org/ns/hydra/core#lastPage' => 'lastPage',
@@ -937,17 +909,6 @@ class PagedCollection extends RdfResource {
 
 // extrait le code HTTP de retour de l'en-tête HTTP
 function httpResponseCode(array $header) { return substr($header[0], 9, 3); }
-
-class Stats { // classe utilisée pour mémoriser des stats sous la forme [{label} => {nbre d'occurences}]
-  protected array $contents=[]; // [{label}=> {nbre}]
-  function __construct(array $contents=[]) { $this->contents = $contents; }
-  
-  function increment(string $label): void { // incrémente une des sous-variables
-    $this->contents[$label] = 1 + ($this->contents[$label] ?? 0);
-  }
-  
-  function contents(): array { return $this->contents; }
-};
 
 /* graphe RDF épandu, cad sans contexte 
 ** ainsi que la constantes CLASS_URI_TO_PHP_NAME définissant le mapping URI du type ou liste des URI -> nom de la classe Php
@@ -1000,7 +961,7 @@ class RdfExpGraph {
   function stats(): Stats { return $this->stats; }
   function rectifStats(): Stats { return $this->rectifStats; }
   
-  function addResource(array $resource, string $className): RdfResource { // ajoute la ressource à la classe $className
+  function addResource(array $resource, string $className): RdfExpResource { // ajoute la ressource à la classe $className
     if (!isset($this->resources[$className][$resource['@id']])) {
       $this->resources[$className][$resource['@id']] = new $className($resource);
     }
@@ -1069,7 +1030,7 @@ class RdfExpGraph {
     return $errors;
   }
 
-  function get(string $className, string $id): RdfResource { // retourne la ressource de la classe $className ayant cet $id 
+  function get(string $className, string $id): RdfExpResource { // retourne la ressource de la classe $className ayant cet $id 
     if (isset($this->resources[$className][$id]))
       return $this->resources[$className][$id];
     elseif ($res = $className::get($id))
@@ -1130,7 +1091,7 @@ class RdfExpGraph {
     return $jsonld;
   }
   
-  // applique frame (structuration) sur les ressources des classes mentionnées
+  // applique frame (imbication) sur les ressources des classes mentionnées
   function frame(array $propUrisPerClassName): void {
     foreach ($propUrisPerClassName as $className => $propUris) {
       foreach ($this->resources[$className] ?? [] as $id => &$resource) {
@@ -1140,6 +1101,7 @@ class RdfExpGraph {
   }
   
   // teste si chaque ressource nommée de $this est inclue dans le graphe $graph2 et si ces 2 ressources sont identiques
+  // implém. limitée faisant l'hypothèse que les listes de valeurs pour une propriété sont dans le même ordre dans les 2 cas
   function includedIn(RdfExpGraph $graph2): bool {
     $result = true;
     foreach ($this->resources as $className => $resOfClass) {
