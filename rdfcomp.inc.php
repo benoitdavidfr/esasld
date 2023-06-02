@@ -1,16 +1,18 @@
 <?php
 {/*PhpDoc:
-title: rdfcomp.inc.php - classes utilisées par exp.php pour gérer les données RDF - 2/6/2023
+title: rdfcomp.inc.php - gestion d'un graphe compacté, cad défini par rapport à un contexte - 2/6/2023
 doc: |
-  Gestion d'un grahe compacté, cad défini par rapport à un contexte.
   Cette forme est plus compliquée à gérer que les graphes épandus dont la structure est plus régulière
   Le code de ce fichier permet principalement:
-   1) de créer le graphe compacté en utilisant JsonLD::compact() en stockant les ressources résultantes
+   1) de créer le graphe compacté à partir du graphe épandu en utilisant JsonLD::compact() puis en stockant le résultat
    2) de gérer le tri des propriétés pour l'affichage.
   
-  Le graphe est un objet de RdfCompactGraph, le contexte est défini par RdfContext
-  Les ressources sont gérées au moyen de la classe RdfCompactResource et des sous-classes de RdfCompactElt
-  (RdfCompactRefRes, RdfCompactLiteral et RdfCompactList)
+  Les graphes compactés sont gérés par la classe RdfCompactGraph, le contexte est défini par RdfContext
+  Les ressources sont gérées au moyen de la classe RdfCompactResource ;
+  Les valeurs de propriété sont gérées par la classe abstraite RdfCompactElt dont les sous classes concrètes sont:
+   - RdfCompactRefRes pour les références à des ressources,
+   - RdfCompactLiteral pour les littéraux et
+   - RdfCompactList pour les listes de valeurs.
 journal: |
  2/6/2023:
   - scission de rdf.inc.php
