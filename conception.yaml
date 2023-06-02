@@ -15,18 +15,31 @@ gestionDesParamètres:
           est absente de cet export. (appelées ressources bien connues)
     usedFor:
       - charger les resssources bin connues pour afficher leur définition et pas uniquement leur URI
-      - tester la génération d'un contexte
+      - tester la génération d'un contexte utilisé par
+        <option value='jsonldc'>JSON-LD compacté</option>
   contexte.yaml:
     def: |
       Définit le contexte JSON-LD utilisé pour le Yaml-LD
+    usedFor:
+      - compactage avec JsonLD::compact()
   RdfResource::CLASS_URI_TO_PHP_NAME:
     def: |
       Dict. [{URI de classe RDF ou liste d'URI} => {Nom de classe Php}]
     usedFor:
+      - dans RdfGraph::import() répartition des ressources dans différentes classes Php et stockage dans différents dictionnaires
   RdfResource::PROP_KEY_URI:
+    def: |
+      liste par classe Php correspondant aux ressources les propriétés RDF en définissant leur URI et leur raccourci,
+    usedFor:
+      - simplification Yaml, une forme de compactage adhoc
+      - RdfResource::frame() -> !!! (l 521) pour connaitre la rangeClass d'une propriété et savoir ou récupérer la ressource
+      - GenResource::__get() (l 598)
   RdfResRef::PROP_RANGE:
     def: |
       indique par propriété sa classe d'arrivée (range), nécessaire pour le déréférencement pour la simplification
+    usedFor:
+      - simplification Yaml (l. 262, 273, 274)
+      - RdfResource::frame() -> !!! (l 522) pour connaitre la rangeClass d'une propriété et savoir ou récupérer la ressource
   FRAME_PARAM:
     def: |
       définition du frame structuré comme dictionnaire donnant par nom de classe Php la liste des URIs des propriétés

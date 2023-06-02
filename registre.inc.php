@@ -62,7 +62,7 @@ class Registre { // stockage du registre
       self::$classes[$classCiri] = $classe;
       if (isset($classe['resources'])) {
         $classUri = self::expandCiri($classCiri);
-        if (!($className = RdfResource::CLASS_URI_TO_PHP_NAME[$classUri] ?? null))
+        if (!($className = RdfGraph::CLASS_URI_TO_PHP_NAME[$classUri] ?? null))
           throw new Exception("Erreur, classe $classUri inconnue");
         foreach ($classe['resources'] as $resource) {
           $r = [

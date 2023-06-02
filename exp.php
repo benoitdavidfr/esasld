@@ -2,25 +2,32 @@
 {/*PhpDoc:
 title: exp.php - lecture de l'export du catalogue Ecosphères - 1/6/2023
 doc: |
-  L'objectif principal de ce script est de lire l'export DCAT d'Ecosphères en JSON-LD afin d'y détecter d'éventuelles erreurs.
-  Les classes RDF sont traduites par une classe Php avec un mapping défini dans RdfResource::CLASS_URI_TO_PHP_NAME
-  Outre la détection et correction d'erreurs, le script affiche différents types d'objets de manière simplifiée
-  et plus lisible pour les néophytes.
+  Le premier objectif de ce script est de lire l'export DCAT d'Ecosphères en JSON-LD afin d'y détecter d'éventuelles erreurs,
+  de corriger ces erreurs et d'afficher le contenu de l'export de manière plus compréhensive.
   Le principal résultat correspond à un affichage Yaml-LD avec un contexte qui permet un affichage simplifié
   des JdD du catalogue.
+  
+  Les classes RDF sont traduites par une classe Php avec un mapping défini dans RdfGraph::CLASS_URI_TO_PHP_NAME
+  Outre la détection et correction d'erreurs, le script affiche différents types d'objets de manière simplifiée
+  et plus lisible pour les néophytes.
   
   Le script utilise un registre stocké dans le fichier registre.yaml qui associe des étiquettes à un certain
   nombre d'URIs utilisés mais non définis dans l'export DCAT ; par exemple dans la classe Standard l'URI
   'https://tools.ietf.org/html/rfc4287' correspond au format de syndication Atom,
   
   A VOIR:
-    - gestion des dataTime comme date
+    - gestion des dateTime comme date
     - gestion des Location
+    - boucler la boucle en faisant sur la sortie Yaml-LD un Yaml::parse(), expand et flattening
+      et comparer le résultat avec le JSON-LD initial
+    - mieux gérer les constantes et si possible les déduire de la déf. des ontologies
   
   Prolongations éventuelles:
    - définir des shapes SHACL pour valider le graphe DCAT en s'inspirant de ceux de DCAT-AP
 
 journal: |
+ 2/6/2023:
+  - la boucle ne fonctionne pas car l'opération flatten() génère des réf à des blank node sans les définir
  1/6/2023:
   - gestion d'un graphe compacté avec tri des propriétés
   - manque
@@ -151,7 +158,18 @@ class Constant { // Classe support de constantes
   
 define('JSON_OPTIONS',
         JSON_PRETTY_PRINT|JSON_UNESCAPED_LINE_TERMINATORS|JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR);
+
 $urlPrefix = 'https://preprod.data.developpement-durable.gouv.fr/dcat/catalog';
+
+class Html {
+  static function selectOptions(string $outputFormat, array $options): string {
+    $html = '';
+    foreach ($options as $key => $label) {
+      $html .= "        <option".(($outputFormat==$key) ? " selected='selected'": '')." value='$key'>$label</option>\n";
+    }
+    return $html;
+  }
+};
 
 if (php_sapi_name()=='cli') { // traitement CLI en fonction de l'action demandée 
   if ($argc == 1) {
@@ -164,7 +182,7 @@ if (php_sapi_name()=='cli') { // traitement CLI en fonction de l'action demandé
     echo "  - catalogs - lecture du catalogue puis affichage des catalogues\n";
     echo "  - datasets - lecture du catalogue puis affichage des jeux de données\n";
     echo "  - yamlldfc - affiche Yaml-ld framed (RdfGraph::frame()) et le contexte context.yaml puis compacté avec JsonLD\n";
-    foreach (array_unique(array_values(RdfResource::CLASS_URI_TO_PHP_NAME)) as $classUri => $className)
+    foreach (array_unique(array_values(RdfGraph::CLASS_URI_TO_PHP_NAME)) as $className)
       echo "  - $className - affiche les objets de la classe $className y compris les blank nodes\n";
     die();
   }
@@ -186,8 +204,7 @@ if (php_sapi_name()=='cli') { // traitement CLI en fonction de l'action demandé
     case 'registre': { // effectue uniquement l'import du registre et affiche ce qui a été importé 
       Registre::show();
       echo "\nRessources prédéfinies:\n";
-      foreach (RdfResource::CLASS_URI_TO_PHP_NAME as $classUri => $className)
-        $graph->showInYaml($className);
+      $graph->showInYaml();
       break;
     }
     case 'import': { // effectue uniquement l'import de l'export
@@ -232,7 +249,7 @@ if (php_sapi_name()=='cli') { // traitement CLI en fonction de l'action demandé
     
     default: {
       $graph->import($urlPrefix, true, $lastPage, $firstPage);
-      if (in_array($argv[1], RdfResource::CLASS_URI_TO_PHP_NAME)) {
+      if (in_array($argv[1], RdfGraph::CLASS_URI_TO_PHP_NAME)) {
         $graph->showInYaml($argv[1], true, true);
       }
       else {
@@ -252,15 +269,20 @@ else { // affichage interactif de la version corrigée page par page en Yaml, JS
       Page $page
       <a href='?page=",$page+1,isset($_GET['outputFormat']) ? "&outputFormat=$_GET[outputFormat]" : '',"'>&gt;</a>
       <input type='hidden' name='page' value='$page' />
-      <select name='outputFormat' id='outputFormat'>
-        <option",($outputFormat=='yaml') ? " selected='selected'": ''," value='yaml'>Yaml</option>
-        <option",($outputFormat=='jsonld') ? " selected='selected'": ''," value='jsonld'>JSON-LD</option>
-        <option",($outputFormat=='jsonLdContext') ? " selected='selected'": ''," value='jsonLdContext'>JSON-LD contexte</option>
-        <option",($outputFormat=='jsonldc') ? " selected='selected'": ''," value='jsonldc'>JSON-LD compacté</option>
-        <!-- <option",($outputFormat=='jsonldf') ? " selected='selected'": ''," value='jsonldf'>JSON-LD imbriqué</option> -->
-        <option",($outputFormat=='turtle') ? " selected='selected'": ''," value='turtle'>Turtle</option>
-        <option",($outputFormat=='yamlldfc') ? " selected='selected'": ''," value='yamlldfc'>Yaml-ld framed et compacté</option>
-      </select>
+      <select name='outputFormat' id='outputFormat'>\n",
+      Html::selectOptions($outputFormat, [
+        'yaml'=> "Yaml",
+        'jsonld'=> "JSON-LD",
+        'print_r'=> "print_r(graph)",
+        'jsonLdContext'=> "JSON-LD contexte",
+        'jsonldc'=> "JSON-LD compacté",
+        //'jsonldf'=> "JSON-LD imbriqué",
+        'turtle'=> "Turtle",
+        'yamlldfc'=> "Yaml-ld framed et compacté",
+        'flatten'=> "flattent(expand(Yaml-ld framed et compacté))",
+        'boucle'=> "boucle",
+      ]),
+      "      </select>
       <input type='submit' value='Submit' /></form><pre>\n";
   }
   
@@ -272,6 +294,8 @@ else { // affichage interactif de la version corrigée page par page en Yaml, JS
   echo "---\n";
   switch ($outputFormat) {
     case 'yaml': { // affichage simplifié des datasets en Yaml 
+      if (0)
+        $graph->update('Dataset', 'http://catalogue.geo-ide.developpement-durable.gouv.fr/catalogue/srv/fre/catalog.search#/metadata/fr-120066022-jdd-fd487b54-55e6-4a8c-a095-1748206dc329', 'http://purl.org/dc/terms/title', 0, "Titre modifié");
       $output = $graph->showInYaml('Dataset', false);
       if (StdErr::$messages) {
         echo 'StdErr::$messages = '; print_r(StdErr::$messages);
@@ -283,6 +307,11 @@ else { // affichage interactif de la version corrigée page par page en Yaml, JS
     
     case 'jsonld': { // affiche le JSON-LD rectifié généré par $graph 
       echo htmlspecialchars(json_encode($graph->allAsJsonLd(), JSON_OPTIONS));
+      break;
+    }
+    
+    case 'print_r': { // affichage du graphe avec print_r()
+      print_r($graph);
       break;
     }
     
@@ -319,11 +348,53 @@ else { // affichage interactif de la version corrigée page par page en Yaml, JS
       //print_r($graph);
       $graph->frame(Constant::FRAME_PARAM);
       $comped = new RdfCompactGraph(new RdfContext(Yaml::parseFile('context.yaml')), $graph->classAsJsonLd('Dataset'));
-      
       //print_r($comped);
       echo Yaml::dump($comped->jsonld(Constant::PROP_IDS), 9, 2, Yaml::DUMP_MULTI_LINE_LITERAL_BLOCK); // convertit en Yaml
       break;
     }
+    
+    case 'flatten': { // 
+      //print_r($graph);
+      $graph->frame(Constant::FRAME_PARAM);
+      $comped = new RdfCompactGraph(new RdfContext(Yaml::parseFile('context.yaml')), $graph->classAsJsonLd('Dataset'));
+      //print_r($comped);
+      $yaml = Yaml::dump($comped->jsonld(Constant::PROP_IDS), 9, 2, Yaml::DUMP_MULTI_LINE_LITERAL_BLOCK); // convertit en Yaml
+      $comped = Yaml::parse($yaml);
+      file_put_contents('tmp/compacted.jsonld', json_encode($comped));
+      $expanded = JsonLD::expand('tmp/compacted.jsonld');
+      file_put_contents('tmp/expanded.jsonld', json_encode($expanded));
+      $flattened = JsonLD::flatten('tmp/expanded.jsonld');
+      $flattened = json_decode(json_encode($flattened), true);
+      $flattened = new RdfGraph('flattened', $flattened);
+      echo htmlspecialchars(json_encode($flattened->allAsJsonLd(), JSON_OPTIONS));
+      break;
+    }
+    
+    case 'boucle': { // 
+      //print_r($graph);
+      $graph->frame(Constant::FRAME_PARAM);
+      $comped = new RdfCompactGraph(new RdfContext(Yaml::parseFile('context.yaml')), $graph->classAsJsonLd('Dataset'));
+      //print_r($comped);
+      $yaml = Yaml::dump($comped->jsonld(Constant::PROP_IDS), 9, 2, Yaml::DUMP_MULTI_LINE_LITERAL_BLOCK); // convertit en Yaml
+      $comped = Yaml::parse($yaml);
+      file_put_contents('tmp/compacted.jsonld', json_encode($comped));
+      $expanded = JsonLD::expand('tmp/compacted.jsonld');
+      file_put_contents('tmp/expanded.jsonld', json_encode($expanded));
+      $flattened = JsonLD::flatten('tmp/expanded.jsonld');
+      $flattened = json_decode(json_encode($flattened), true);
+      $flattened = new RdfGraph('flattened', $flattened);
+      // réimport du graphe initial qui a été modifié
+      $graph = new RdfGraph('default');
+      Registre::import($graph);
+      $graph->import($urlPrefix, true, $page, $page);
+      if (0)
+        $graph->update(
+          'Dataset', 'https://preprod.data.developpement-durable.gouv.fr/dataset/only',
+          'http://purl.org/dc/terms/title', 0, "Titre modifié");
+      $flattened->includedIn($graph);
+      break;
+    }
+    
     default: {
       throw new Exception("Format $outputFormat inconnu");
     }

@@ -141,10 +141,16 @@ class RdfCompactGraph { // Graphe compacté, cad paramétré par un contexte
     } catch (ML\JsonLD\Exception\JsonLdException $e) {
       throw new Exception($e->getMessage());
     }
-    //print_r($comped);
-    foreach ($comped['@graph'] as $resource) {
-      $this->resources[$resource['@id']] = RdfCompactElt::create($resource);
-      //echo "1stResource="; print_r($this->resources); die("FIN");
+    //echo '$comped='; print_r($comped);
+    if (!isset($comped['@graph'])) { // une seule ressources 
+      unset($comped['@context']);
+      $this->resources[$comped['@id']] = RdfCompactElt::create($comped);
+    }
+    else { // plusieurs ressources 
+      foreach ($comped['@graph'] as $resource) {
+        $this->resources[$resource['@id']] = RdfCompactElt::create($resource);
+        //echo "1stResource="; print_r($this->resources); die("FIN");
+      }
     }
   }
   

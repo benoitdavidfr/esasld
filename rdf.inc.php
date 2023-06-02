@@ -35,6 +35,31 @@ journal: |
 use Symfony\Component\Yaml\Yaml;
 use Symfony\Component\Yaml\Exception\ParseException;
 
+class CallContext { // conserve le contexte d'appel
+  public readonly array $p1; // contexte du premier paramètre sous la forme [{var} => {val}]
+  public readonly array $p2; // contexte du second  paramètre sous la forme [{var} => {val}]
+  public readonly array $common; // contexte commun sous la forme [{var} => {val}]
+  public readonly ?CallContext $previous; // contexte précédent
+  
+  function __construct(array $p1, array $p2, array $common=[], ?CallContext $previous=null) {
+    $this->p1=$p1;
+    $this->p2=$p2;
+    $this->common = $common;
+    $this->previous = $previous;
+  }
+  
+  function asArray(): array {
+    return [
+      'p1'=> $this->p1,
+      'p2'=> $this->p2,
+      'common'=> $this->common,
+      'previous'=> $this->previous ? $this->previous->asArray() : [],
+    ];
+  }
+  
+  function __toString(): string { return json_encode($this->asArray(), JSON_OPTIONS); }
+};
+
 {/* Classe des valeurs RDF d'une propriété RDF
 ** En JSON-LD une PropVal est structurée sous la forme [{key} => {val}]
 **  - {key} contient une des valeurs
@@ -78,6 +103,7 @@ abstract class PropVal {
   abstract function isA(): string; // retourne 'RdfLiteral' ou 'RdfResRef'
   abstract function keys(): array; // liste les clés
   abstract function asJsonLd(): array; // regénère un JSON-LD pour la valeur
+  abstract function equal(PropVal $pval2, RdfGraph $graph1, RdfGraph $graph2, CallContext $callContext): bool; // teste si 2 propval sont égales
 
   // construit un PropVal à partir d'une structure Yaml en excluant les listes
   static function yamlToPropVal(array $yaml): PropVal {
@@ -206,6 +232,27 @@ class RdfLiteral extends PropVal {
       return $this->value;
     }
   }
+  
+  function equal(PropVal $pval2, RdfGraph $graph1, RdfGraph $graph2, CallContext $callContext): bool { // 2 littéraux sont égaux ssi chaque prop. est égale
+    $result = true;
+    if ($pval2->isA() <> $this->isA()) {
+      echo "diff isA sur $callContext\n";
+      $result = false;
+    }
+    if ($pval2->value <> $this->value) {
+      echo "diff value sur $callContext\n";
+      $result = false;
+    }
+    if ($pval2->language <> $this->language) {
+      echo "diff language sur $callContext\n";
+      $result = false;
+    }
+    if ($pval2->type <> $this->type) {
+      echo "diff type sur $callContext\n";
+      $result = false;
+    }
+    return $result;
+  }
 };
 
 // Classe des références vers une ressource
@@ -274,40 +321,44 @@ class RdfResRef extends PropVal {
       throw new Exception("Erreur $pKey absent de RdfResRef::PROP_RANGE");
     return $graph->get($class, $id)->simplify($graph);
   }
+
+  function equal(PropVal $pval2, RdfGraph $graph1, RdfGraph $graph2, CallContext $callContext): bool { // 2 littéraux sont égaux ssi chaque prop. est égale
+    $result = true;
+    if ($pval2->isA() <> $this->isA()) {
+      echo "diff isA sur $callContext\n";
+      $result = false;
+    }
+    if (substr($this->id, 0, 2) <> '_:') { // <> blank node
+      if ($pval2->id <> $this->id) {
+        echo "diff id sur $callContext\n";
+        return false;
+      }
+      return $result;
+    }
+    else { // blank node 
+      //print_r($callContext);
+      // je recherche la classe Php dans laquelle rechercher les id de blank node
+      $startClassName = $callContext->previous->common['className']; // classe de la ressource de départ
+      $srcResId = $callContext->previous->common['resId']; // Id de la ressource de départ
+      $srcRes = $graph1->get($startClassName, $srcResId); // ressource de départ
+      $pUri = $callContext->common['pUri']; // URI de la propriété suivie 
+      $pName = $srcRes->prop_key_uri()[$pUri]; // nom court de la propriété suivie 
+      $rangeClass = self::PROP_RANGE[$pName];
+      //echo "rangeClass=$rangeClass\n";
+      $res1 = $graph1->get($rangeClass, $this->id);
+      $res2 = $graph2->get($rangeClass, $pval2->id);
+      echo "appel récursif sur ressources $rangeClass $this->id $pval2->id @ $callContext\n";
+      return $res1->equal($res2, $graph1, $graph2, new CallContext(['@id'=>$this->id],['@id'=>$pval2->id],[], $callContext));
+    }
+  }
 };
 
 
 {/* Classe abstraite portant les méthodes communes à toutes les ressources RDF
-** ainsi que la constantes CLASS_URI_TO_PHP_NAME définissant le mapping URI du type ou liste des URI -> nom de la classe Php
 ** La propriété $props est le dict. des propriétés de la ressource de la forme [{propUri} => [PropVal|RdfResource]]
 ** Lorsque la représentation est applatie (flatten) la forme est [{propUri} => [PropVal]]
 */}
 abstract class RdfResource {
-  // Dict. [{URI de classe RDF ou liste d'URI} => {Nom de classe Php}]
-  const CLASS_URI_TO_PHP_NAME = [
-    'http://www.w3.org/ns/dcat#Catalog' => 'Catalog',
-    'http://www.w3.org/ns/dcat#Dataset' => 'Dataset',
-    'http://www.w3.org/ns/dcat#Dataset, http://www.w3.org/ns/dcat#DatasetSeries' => 'Dataset',
-    'http://www.w3.org/ns/dcat#DatasetSeries, http://www.w3.org/ns/dcat#Dataset' => 'Dataset',
-    'http://www.w3.org/ns/dcat#DataService' => 'DataService',
-    'http://www.w3.org/ns/dcat#Distribution' => 'Distribution',
-    'http://www.w3.org/ns/dcat#CatalogRecord' => 'CatalogRecord',
-    'http://www.w3.org/2004/02/skos/core#Concept' => 'GenResource',
-    'http://purl.org/dc/terms/Location' => 'Location',
-    'http://purl.org/dc/terms/Standard' => 'GenResource',
-    'http://purl.org/dc/terms/LicenseDocument' => 'GenResource',
-    'http://purl.org/dc/terms/RightsStatement' => 'GenResource',
-    'http://purl.org/dc/terms/ProvenanceStatement' => 'GenResource',
-    'http://purl.org/dc/terms/MediaTypeOrExtent' => 'GenResource',
-    'http://purl.org/dc/terms/MediaType' => 'GenResource',
-    'http://purl.org/dc/terms/PeriodOfTime' => 'GenResource',
-    'http://purl.org/dc/terms/Frequency' => 'GenResource',
-    'http://purl.org/dc/terms/LinguisticSystem' => 'GenResource',
-    'http://xmlns.com/foaf/0.1/Organization' => 'GenResource',
-    'http://www.w3.org/2006/vcard/ns#Kind' => 'GenResource',
-    'http://www.w3.org/ns/hydra/core#PagedCollection' => 'PagedCollection',
-  ];
-    
   protected string $id; // le champ '@id' de la repr. JSON-LD, cad l'URI de la ressource ou l'id blank node
   protected array $types; // le champ '@type' de la repr. JSON-LD, cad la liste des URI des classes RDF de la ressource
   protected array $props=[]; // dict. des propriétés de la ressource de la forme [{propUri} => [PropVal|RdfResource]]
@@ -555,6 +606,34 @@ abstract class RdfResource {
         }
       }
     }
+  }
+
+  // retourne true ssi les ressources sont logiquement égales
+  function equal(RdfResource $res2, RdfGraph $graph1, RdfGraph $graph2, CallContext $callContext): bool {
+    $result = true;
+    if ((substr($this->id, 0, 2)<>'_:') && ($this->id <> $res2->id)) {
+      echo "id différent sur $this->id\n";
+      $result = false;
+    }
+    if ($this->types <> $res2->types) {
+      echo "types différent sur $this->id\n";
+      $result = false;
+    }
+    foreach ($this->props as $pUri => $pvals) {
+      foreach ($pvals as $i => $pval) {
+        $equal = $pval->equal(
+          $res2->props[$pUri][$i], $graph1, $graph2,
+          new CallContext([], [], ['pUri'=>$pUri, 'noVal'=> $i], $callContext)
+        );
+        $result = $result && $equal;
+      }
+    }
+    return $result;
+  }
+  
+  function update($pUri, $noval, $newval): self {
+    $this->props[$pUri][0] = new RdfLiteral(['@value'=> $newval]);
+    return $this;
   }
 };
 
@@ -863,18 +942,54 @@ class Stats { // classe utilisée pour mémoriser des stats sous la forme [{labe
   function contents(): array { return $this->contents; }
 };
 
-class RdfGraph { // graphe RDF épandu, cad sans contexte 
+/* graphe RDF épandu, cad sans contexte 
+** ainsi que la constantes CLASS_URI_TO_PHP_NAME définissant le mapping URI du type ou liste des URI -> nom de la classe Php
+*/
+class RdfGraph {
+  // Dict. [{URI de classe RDF ou liste d'URI} => {Nom de classe Php}]
+  const CLASS_URI_TO_PHP_NAME = [
+    'http://www.w3.org/ns/dcat#Catalog' => 'Catalog',
+    'http://www.w3.org/ns/dcat#Dataset' => 'Dataset',
+    'http://www.w3.org/ns/dcat#Dataset, http://www.w3.org/ns/dcat#DatasetSeries' => 'Dataset',
+    'http://www.w3.org/ns/dcat#DatasetSeries, http://www.w3.org/ns/dcat#Dataset' => 'Dataset',
+    'http://www.w3.org/ns/dcat#DataService' => 'DataService',
+    'http://www.w3.org/ns/dcat#Distribution' => 'Distribution',
+    'http://www.w3.org/ns/dcat#CatalogRecord' => 'CatalogRecord',
+    'http://www.w3.org/2004/02/skos/core#Concept' => 'GenResource',
+    'http://purl.org/dc/terms/Location' => 'Location',
+    'http://purl.org/dc/terms/Standard' => 'GenResource',
+    'http://purl.org/dc/terms/LicenseDocument' => 'GenResource',
+    'http://purl.org/dc/terms/RightsStatement' => 'GenResource',
+    'http://purl.org/dc/terms/ProvenanceStatement' => 'GenResource',
+    'http://purl.org/dc/terms/MediaTypeOrExtent' => 'GenResource',
+    'http://purl.org/dc/terms/MediaType' => 'GenResource',
+    'http://purl.org/dc/terms/PeriodOfTime' => 'GenResource',
+    'http://purl.org/dc/terms/Frequency' => 'GenResource',
+    'http://purl.org/dc/terms/LinguisticSystem' => 'GenResource',
+    'http://xmlns.com/foaf/0.1/Organization' => 'GenResource',
+    'http://www.w3.org/2006/vcard/ns#Kind' => 'GenResource',
+    'http://www.w3.org/ns/hydra/core#PagedCollection' => 'PagedCollection',
+  ];
+    
   protected string $name; // nom du graphe
   protected Stats $stats; // statistiques générales
   protected Stats $rectifStats; // statistiques de rectification et d'amélioration 
   protected array $resources=[]; // [{className} => [{resid}=> {Resource}]]
   
-  function __construct(string $name) {
+  function __construct(string $name, $resources=[]) {
     $this->name = $name;
     $this->stats = new Stats(["nbre de ressources lues"=> 0]);
     $this->rectifStats = new Stats;
+    foreach ($resources as $resource) {
+      $this->stats->increment("nbre de ressources lues");
+      $types = implode(', ', $resource['@type']);
+      if (!($className = (self::CLASS_URI_TO_PHP_NAME[$types] ?? null))) {
+        throw new Exception("Types $types non traité");
+      }
+      $resource = $this->addResource($resource, $className);
+    }
   }
-    
+  
   function stats(): Stats { return $this->stats; }
   function rectifStats(): Stats { return $this->rectifStats; }
   
@@ -931,7 +1046,7 @@ class RdfGraph { // graphe RDF épandu, cad sans contexte
       foreach ($content as $no => $resource) {
         $this->stats->increment("nbre de ressources lues");
         $types = implode(', ', $resource['@type']); 
-        if (!($className = (RdfResource::CLASS_URI_TO_PHP_NAME[$types] ?? null))) {
+        if (!($className = (self::CLASS_URI_TO_PHP_NAME[$types] ?? null))) {
           throw new Exception("Types $types non traité");
         }
         $resource = $this->addResource($resource, $className);
@@ -941,7 +1056,8 @@ class RdfGraph { // graphe RDF épandu, cad sans contexte
         }
       }
     }
-     // rectification des propriétés accessRights et provenance qui nécessitent que tous les objets soient chargés avant la rectification
+    //print_r($this->resources);
+    // rectification des propriétés accessRights et provenance qui nécessitent que tous les objets soient chargés avant la rectification
     Dataset::rectifAllStatements($this->resources['Dataset'], $this);
     return $errors;
   }
@@ -972,14 +1088,21 @@ class RdfGraph { // graphe RDF épandu, cad sans contexte
   }
   
   // affiche en Yaml les ressources de la classe hors blank nodes ou avec
-  function showInYaml(string $className, bool $echo=true, bool $includingBlankNodes=false): string {
+  function showInYaml(?string $className=null, bool $echo=true, bool $includingBlankNodes=false): string {
     $result = '';
-    foreach ($this->resources[$className] ?? [] as $id => $resource) {
-      if ($includingBlankNodes || substr($id, 0, 2) <> '_:') {
-        if ($echo)
-          echo Yaml::dump([$id => $resource->simplify($this)], 7, 2, Yaml::DUMP_MULTI_LINE_LITERAL_BLOCK);
-        else
-          $result .= Yaml::dump([$id => $resource->simplify($this)], 7, 2, Yaml::DUMP_MULTI_LINE_LITERAL_BLOCK);
+    if (!$className) {
+      foreach (array_keys($this->resources) as $className) {
+        $result .= $this->showInYaml($className, $echo, $includingBlankNodes);
+      }
+    }
+    else {
+      foreach ($this->resources[$className] ?? [] as $id => $resource) {
+        if ($includingBlankNodes || substr($id, 0, 2) <> '_:') {
+          if ($echo)
+            echo Yaml::dump([$id => $resource->simplify($this)], 7, 2, Yaml::DUMP_MULTI_LINE_LITERAL_BLOCK);
+          else
+            $result .= Yaml::dump([$id => $resource->simplify($this)], 7, 2, Yaml::DUMP_MULTI_LINE_LITERAL_BLOCK);
+        }
       }
     }
     return $result;
@@ -994,7 +1117,7 @@ class RdfGraph { // graphe RDF épandu, cad sans contexte
 
   function allAsJsonLd(): array { // contenu de ttes les classes en JSON-LD comme array Php
     $jsonld = [];
-    foreach (RdfResource::CLASS_URI_TO_PHP_NAME as $className) {
+    foreach (array_keys($this->resources) as $className) {
       $jsonld = array_merge($jsonld, $this->classAsJsonLd($className));
     }
     return $jsonld;
@@ -1008,4 +1131,30 @@ class RdfGraph { // graphe RDF épandu, cad sans contexte
       }
     }
   }
+  
+  // teste si chaque ressource nommée de $this est inclue dans le graphe $graph2 et si ces 2 ressources sont identiques
+  function includedIn(RdfGraph $graph2): bool {
+    $result = true;
+    foreach ($this->resources as $className => $resOfClass) {
+      foreach ($resOfClass as $resId => $resource) {
+        if (substr($resId, 0, 2) == '_:') continue;
+        echo "diff @ $className - $resId -> \n";
+        $res2 = $graph2->get($className, $resId);
+        $equal = $resource->equal(
+          $res2, $this, $graph2,
+          new CallContext(
+            ['graph'=>$this->name],
+            ['graph'=>$graph2->name],
+            ['className'=>$className, 'resId'=>$resId])
+        );
+        echo "-- ", $equal ? 'ok' : 'KO', "\n";
+        $result = $result && $equal;
+      }
+    }
+    return $result;
+  }
+  
+  function update($className, $id, $pUri, $noval, $newval): void {
+    $this->resources[$className][$id] = $this->resources[$className][$id]->update($pUri, $noval, $newval);
+  }  
 };
