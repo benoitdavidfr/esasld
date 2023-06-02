@@ -1,4 +1,48 @@
 title: Conception
+pourquoi:
+  - aspect de contrôle qualité, voir à quoi ressemble le contenu DCAT
+  - aspect pédagogique
+    - expliquer DCAT aux autres
+    - comprendre JSON-LD pour moi
+attentionCycles:
+  dcat:inSeries: dcat:seriesMember
+gestionDesParamètres:
+  registre.yaml:
+    def: |
+      Définit:
+       1) les ontologies utilisées
+       2) des ressources identifiées par des URI présents dans l'export Ecosphères et mais dont la définition
+          est absente de cet export. (appelées ressources bien connues)
+    usedFor:
+      - charger les resssources bin connues pour afficher leur définition et pas uniquement leur URI
+      - tester la génération d'un contexte
+  contexte.yaml:
+    def: |
+      Définit le contexte JSON-LD utilisé pour le Yaml-LD
+  RdfResource::CLASS_URI_TO_PHP_NAME:
+    def: |
+      Dict. [{URI de classe RDF ou liste d'URI} => {Nom de classe Php}]
+    usedFor:
+  RdfResource::PROP_KEY_URI:
+  RdfResRef::PROP_RANGE:
+    def: |
+      indique par propriété sa classe d'arrivée (range), nécessaire pour le déréférencement pour la simplification
+  FRAME_PARAM:
+    def: |
+      définition du frame structuré comme dictionnaire donnant par nom de classe Php la liste des URIs des propriétés
+      à suivre pour structurer chaque Dataset
+  PROP_IDS:
+    def: |
+      ordre des propriétés dans la sortie Yaml-LD des Dataset structuré comme
+      [ {propId} | [{propId}=> [{ss-propId}]]]
+      où:
+        - {propId} est le nom court de la propriété de Dataset défini par le contexte
+        - {ss-propId} est le nom court des propriétés de sous-objet de Dataset (Distribution et CatalogRecord)
+  
+point@2/6T4:40:
+  - Yaml-LD amélioré, nécessité de rétro-ingéniéré et de simplifier le code
+point@1/6:
+  - résultat assez satisfaisant de sortie Yaml-LD, à affiner
 point@25/5:
   - mise en oeuvre compexp.php pour concevoir le contexte
   - JsonLD n'est pas compatible JSON-LD 1.1

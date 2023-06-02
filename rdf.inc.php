@@ -17,6 +17,8 @@ doc: |
   A voir:
     - 
 journal: |
+ 2/6/2023:
+  - scission de rdf.inc.php pour créer rdfcomp.inc.php
  29/5/2023:
   - modularisation de la gestion des stats par la classe Stats
  28/5/2023:
@@ -32,7 +34,6 @@ journal: |
 */}
 use Symfony\Component\Yaml\Yaml;
 use Symfony\Component\Yaml\Exception\ParseException;
-use ML\JsonLD\JsonLD;
 
 {/* Classe des valeurs RDF d'une propriété RDF
 ** En JSON-LD une PropVal est structurée sous la forme [{key} => {val}]
@@ -470,7 +471,7 @@ abstract class RdfResource {
           unset($this->props[$pUri]);
       }
     
-      { // certains themes sont mal définis 
+      { // certains themes sont mal définis, comme un thème ayant comme URI 'Énergie' 
         if ($pUri == 'http://www.w3.org/ns/dcat#theme') {
           foreach ($pvals as $i => $pval) {
             if ($pval->id == 'Énergie') {
@@ -503,15 +504,15 @@ abstract class RdfResource {
   
   static function get(string $id): ?self { return null; } // interprétation d'un URI spécifique à la classe
   
-  function asJsonLd(): array { // retourne la ressource comme JSON-LD 
+  function asJsonLd(int $level=0): array { // retourne la ressource comme JSON-LD 
     $jsonld = [];
-    if (substr($this->id, 0, 2) <> '_:')
+    if (($level == 0) || (substr($this->id, 0, 2) <> '_:'))
       $jsonld['@id'] = $this->id;
     $jsonld['@type'] = $this->types;
     foreach ($this->props as $propUri => $objects) {
       $jsonld[$propUri] = [];
       foreach ($objects as $object) {
-        $jsonld[$propUri][] = $object->asJsonLd();
+        $jsonld[$propUri][] = $object->asJsonLd($level+1);
       }
     }
     return $jsonld;
@@ -851,7 +852,7 @@ class PagedCollection extends RdfResource {
 // extrait le code HTTP de retour de l'en-tête HTTP
 function httpResponseCode(array $header) { return substr($header[0], 9, 3); }
 
-class Stats {
+class Stats { // classe utilisée pour mémoriser des stats sous la forme [{label} => {nbre d'occurences}]
   protected array $contents=[]; // [{label}=> {nbre}]
   function __construct(array $contents=[]) { $this->contents = $contents; }
   
@@ -970,10 +971,11 @@ class RdfGraph { // graphe RDF épandu, cad sans contexte
     return $list;
   }
   
-  function show(string $className, bool $echo=true): string { // affiche en Yaml les ressources de la classe hors blank nodes 
+  // affiche en Yaml les ressources de la classe hors blank nodes ou avec
+  function showInYaml(string $className, bool $echo=true, bool $includingBlankNodes=false): string {
     $result = '';
     foreach ($this->resources[$className] ?? [] as $id => $resource) {
-      if (substr($id, 0, 2) <> '_:') {
+      if ($includingBlankNodes || substr($id, 0, 2) <> '_:') {
         if ($echo)
           echo Yaml::dump([$id => $resource->simplify($this)], 7, 2, Yaml::DUMP_MULTI_LINE_LITERAL_BLOCK);
         else
@@ -983,28 +985,21 @@ class RdfGraph { // graphe RDF épandu, cad sans contexte
     return $result;
   }
   
-  function showIncludingBlankNodes(string $className): void { // affiche en Yaml toutes les ressources de la classe y compris les blank nodes 
-    foreach ($this->resources[$className] as $id => $elt) {
-      echo Yaml::dump([$id => $elt->simplify($this)], 7, 2, Yaml::DUMP_MULTI_LINE_LITERAL_BLOCK);
-    }
-  }
-
-  function exportAllAsJsonLd(): array { // extraction du contenu en JSON-LD comme array Php
-    $jsonld = [];
-    foreach (RdfResource::CLASS_URI_TO_PHP_NAME as $className) {
-      foreach ($this->resources[$className] ?? [] as $id => $resource)
-        $jsonld[] = $resource->asJsonLd();
-    }
-    return $jsonld;
-  }
-  
-  function exportClassAsJsonLd(string $className): array { // extraction du contenu de la classe en JSON-LD comme array Php
+  function classAsJsonLd(string $className): array { // contenu de la classe en JSON-LD comme array Php
     $jsonld = [];
     foreach ($this->resources[$className] as $id => $resource)
       $jsonld[] = $resource->asJsonLd();
     return $jsonld;
   }
 
+  function allAsJsonLd(): array { // contenu de ttes les classes en JSON-LD comme array Php
+    $jsonld = [];
+    foreach (RdfResource::CLASS_URI_TO_PHP_NAME as $className) {
+      $jsonld = array_merge($jsonld, $this->classAsJsonLd($className));
+    }
+    return $jsonld;
+  }
+  
   // applique frame (structuration) sur les ressources des classes mentionnées
   function frame(array $propUrisPerClassName): void {
     foreach ($propUrisPerClassName as $className => $propUris) {
@@ -1014,157 +1009,3 @@ class RdfGraph { // graphe RDF épandu, cad sans contexte
     }
   }
 };
-
-
-class RdfContext { // Contexte JSON-LD 
-  protected array $content;
-  
-  function __construct(array $content) { $this->content = $content; }
-  
-  function content(): array { return $this->content; }
-};
-
-abstract class RdfCompactElt { // Une ressource, une référence ou un littéral dans le cas compact ou une liste 
-  static function create($resource): self {
-    if (is_array($resource) && array_is_list($resource)) {
-      return new RdfCompactList($resource);
-    }
-    elseif (is_array($resource) && isset($resource['@type']))
-      return new RdfCompactResource($resource);
-    elseif (is_array($resource) && isset($resource['@id']))
-      return new RdfCompactRefRes($resource);
-    else
-      return new RdfCompactLiteral($resource);
-  }
-  
-  // génère une structure Php structurée selon JSON-LD en triant les propriétés
-  // propIds: [string|[string: [string]]], 2e cas appel récursif
-  abstract function jsonld(array $propIds); 
-};
-
-
-class RdfCompactRefRes extends RdfCompactElt { // référence vers Ressource 
-  protected string $id; // la référence
-  
-  function __construct(array $val) { $this->id = $val['@id']; }
-  
-  function jsonld(array $propIds): array { return ['@id'=> $this->id]; }
-};
-
-class RdfCompactLiteral extends RdfCompactElt {
-  protected $value;
-  
-  function __construct($value) { $this->value = $value; }
-
-  function jsonld(array $propIds) { return $this->value; }
-};
-
-class RdfCompactList extends RdfCompactElt {
-  protected array $list=[];
-  
-  function __construct(array $list) {
-    foreach ($list as $elt) {
-      $this->list[] = self::create($elt);
-    }
-  }
-  
-  function jsonld(array $propIds): array {
-    $list = [];
-    foreach ($this->list as $elt)
-      $list[] = $elt->jsonld($propIds);
-    return $list;
-  }
-};
-
-class RdfCompactResource extends RdfCompactElt {
-  protected ?string $id=null; // le champ '@id' de la repr. JSON-LD, cad l'URI de la ressource, null si blank node
-  protected string|array $type; // le champ '@type' de la repr. JSON-LD
-  protected array $props=[]; // dict. des propriétés de la ressource de la forme [{propId} => RdfCompactElt]
-  
-  function __construct(array $resource) {
-    foreach ($resource as $propId => $value) {
-      switch ($propId) {
-        case '@id': { $this->id = $value; break; }
-        case '@type': { $this->type = $value; break; }
-        default: { $this->props[$propId] = self::create($value); }
-      }
-    }
-    //print_r($this);
-  }
-   
-  // génère une structure Php structurée selon JSON-LD en triant les propriétés
-  // propIds: [string|[string: [string]]], 2e cas appel récursif
-  function jsonld(array $propIds): array { 
-    $jsonld = [];
-    $pIds = []; // liste des propId comme liste de chaines
-    if ($this->id)
-      $jsonld['@id'] = $this->id;
-    $jsonld['@type'] = $this->type;
-    foreach ($propIds as $key => $propId) {
-      //echo 'propId='; print_r($propId); echo "\n";
-      if (is_string($propId)) { 
-        if (isset($this->props[$propId])) {
-          $jsonld[$propId] = $this->props[$propId]->jsonld([]);
-          $pIds[] = $propId;
-        }
-      }
-      else {
-        if (isset($this->props[$key])) {
-          $jsonld[$key] = $this->props[$key]->jsonld($propId);
-          $pIds[] = $key;
-        }
-      }
-    }
-    foreach ($this->props as $propId => $value) {
-      if (!in_array($propId, $pIds)) {
-        $jsonld[$propId] = $value->jsonld([]);
-      }
-    }
-    return $jsonld;
-  }
-};
-
-class RdfCompactGraph { // Graphe compacté, cad paramétré par un contexte
-  protected array $resources=[]; // [{resid}=> {Resource}]
-  protected RdfContext $context;
-
-  function __construct(RdfContext $context, array $jsonld) { // Compacte un extrait de graphe par rapport à un contexte 
-    $this->context = $context;
-    file_put_contents('tmp/context.jsonld', json_encode($context->content()));
-    file_put_contents('tmp/expanded.jsonld', json_encode($jsonld));
-    try {
-      $comped = JsonLD::compact('tmp/expanded.jsonld', 'tmp/context.jsonld');
-      //unset($comped->{'@context'});
-      $comped = json_decode(json_encode($comped, JSON_OPTIONS), true); // suppr. StdClass
-    } catch (ML\JsonLD\Exception\JsonLdException $e) {
-      throw new Exception($e->getMessage());
-    }
-    //print_r($comped);
-    foreach ($comped['@graph'] as $resource) {
-      $this->resources[$resource['@id']] = RdfCompactElt::create($resource);
-      //echo "1stResource="; print_r($this->resources); die("FIN");
-    }
-  }
-  
-  function jsonld(array $propIds): array { // génère une structure Php structurée selon JSON-LD en triant les propriétés 
-    $jsonld = [
-      '@context'=> $this->context->content(),
-      '@graph'=> [],
-    ];
-    foreach ($this->resources as $res) {
-      $e = $res->jsonld($propIds);
-      //echo '$res='; print_r($res);
-      //echo Yaml::dump($e);
-      $jsonld['@graph'][] = $e;
-     // die("FIN");
-    }
-    return $jsonld;
-  }
-};
-
-
-
-
-
-
-

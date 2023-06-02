@@ -68,6 +68,7 @@ journal: |
 */}
 require_once __DIR__.'/vendor/autoload.php';
 require_once __DIR__.'/rdf.inc.php';
+require_once __DIR__.'/rdfcomp.inc.php';
 require_once __DIR__.'/statem.inc.php';
 require_once __DIR__.'/registre.inc.php';
 
@@ -162,7 +163,7 @@ if (php_sapi_name()=='cli') { // traitement CLI en fonction de l'action demandé
     echo "  - errors - afffichage des erreurs rencontrées lors de la lecture du catalogue\n";
     echo "  - catalogs - lecture du catalogue puis affichage des catalogues\n";
     echo "  - datasets - lecture du catalogue puis affichage des jeux de données\n";
-    echo "  - yamlldfc2 - affiche Yaml-ld framed (RdfGraph::frame()) et le contexte context.yaml puis compacté avec JsonLD\n";
+    echo "  - yamlldfc - affiche Yaml-ld framed (RdfGraph::frame()) et le contexte context.yaml puis compacté avec JsonLD\n";
     foreach (array_unique(array_values(RdfResource::CLASS_URI_TO_PHP_NAME)) as $classUri => $className)
       echo "  - $className - affiche les objets de la classe $className y compris les blank nodes\n";
     die();
@@ -186,7 +187,7 @@ if (php_sapi_name()=='cli') { // traitement CLI en fonction de l'action demandé
       Registre::show();
       echo "\nRessources prédéfinies:\n";
       foreach (RdfResource::CLASS_URI_TO_PHP_NAME as $classUri => $className)
-        $graph->show($className);
+        $graph->showInYaml($className);
       break;
     }
     case 'import': { // effectue uniquement l'import de l'export
@@ -203,29 +204,27 @@ if (php_sapi_name()=='cli') { // traitement CLI en fonction de l'action demandé
     case 'catalogs': {
       $graph->import($urlPrefix, true, $lastPage, $firstPage);
       //print_r(RdfResource::$pkeys);
-      $graph->show('Catalog');
+      $graph->showInYaml('Catalog');
       break;
     }
     case 'datasets': { // import du registre et de l'export puis affichage des datasets
       $graph->import($urlPrefix, true, $lastPage, $firstPage);
-      $graph->show('Dataset');
+      $graph->showInYaml('Dataset');
       break;
     }
     
     case 'frameDatasets': {
       $graph->import($urlPrefix, true, $lastPage, $firstPage);
       $graph->frame('Dataset', ['http://purl.org/dc/terms/publisher']);
-      echo json_encode($graph->exportClassAsJsonLd('Dataset'), JSON_OPTIONS);
+      echo json_encode($graph->classAsJsonLd('Dataset'), JSON_OPTIONS);
       break;
     }
     
-    case 'yamlldfc2': { // affiche Yaml-ld framed (RdfGraph::frame()) et le contexte context.yaml puis compacté avec JsonLD
+    case 'yamlldfc': { // affiche Yaml-ld framed (RdfGraph::frame()) et le contexte context.yaml puis compacté avec JsonLD
       $graph->import($urlPrefix, true, $lastPage, $firstPage);
       //print_r($graph);
       $graph->frame(Constant::FRAME_PARAM);
-      //echo Yaml::dump($graph->exportClassAsJsonLd('Dataset'), 9, 2, Yaml::DUMP_MULTI_LINE_LITERAL_BLOCK);
-      $comped = new RdfCompactGraph(new RdfContext(Yaml::parseFile('context.yaml')), $graph->exportClassAsJsonLd('Dataset'));
-      
+      $comped = new RdfCompactGraph(new RdfContext(Yaml::parseFile('context.yaml')), $graph->classAsJsonLd('Dataset'));
       //print_r($comped);
       echo Yaml::dump($comped->jsonld(Constant::PROP_IDS), 9, 2, Yaml::DUMP_MULTI_LINE_LITERAL_BLOCK); // convertit en Yaml
       break;
@@ -234,7 +233,7 @@ if (php_sapi_name()=='cli') { // traitement CLI en fonction de l'action demandé
     default: {
       $graph->import($urlPrefix, true, $lastPage, $firstPage);
       if (in_array($argv[1], RdfResource::CLASS_URI_TO_PHP_NAME)) {
-        $graph->showIncludingBlankNodes($argv[1]);
+        $graph->showInYaml($argv[1], true, true);
       }
       else {
         die("Ereur, $argv[1] ne correspond à aucune action\n");        
@@ -261,7 +260,6 @@ else { // affichage interactif de la version corrigée page par page en Yaml, JS
         <!-- <option",($outputFormat=='jsonldf') ? " selected='selected'": ''," value='jsonldf'>JSON-LD imbriqué</option> -->
         <option",($outputFormat=='turtle') ? " selected='selected'": ''," value='turtle'>Turtle</option>
         <option",($outputFormat=='yamlldfc') ? " selected='selected'": ''," value='yamlldfc'>Yaml-ld framed et compacté</option>
-        <option",($outputFormat=='yamlldfc2') ? " selected='selected'": ''," value='yamlldfc2'>Yaml-ld framed et compacté 2</option>
       </select>
       <input type='submit' value='Submit' /></form><pre>\n";
   }
@@ -274,7 +272,7 @@ else { // affichage interactif de la version corrigée page par page en Yaml, JS
   echo "---\n";
   switch ($outputFormat) {
     case 'yaml': { // affichage simplifié des datasets en Yaml 
-      $output = $graph->show('Dataset', false);
+      $output = $graph->showInYaml('Dataset', false);
       if (StdErr::$messages) {
         echo 'StdErr::$messages = '; print_r(StdErr::$messages);
         echo "---\n";
@@ -284,18 +282,18 @@ else { // affichage interactif de la version corrigée page par page en Yaml, JS
     }
     
     case 'jsonld': { // affiche le JSON-LD rectifié généré par $graph 
-      echo htmlspecialchars(json_encode($graph->exportAllAsJsonLd(), JSON_OPTIONS));
+      echo htmlspecialchars(json_encode($graph->allAsJsonLd(), JSON_OPTIONS));
       break;
     }
     
-    case 'jsonLdContext': {
+    case 'jsonLdContext': { // affiche le JSON-LD contexte généré par le registre 
       echo htmlspecialchars(json_encode(Registre::jsonLdContext(), JSON_OPTIONS));
       break;
     }
     
     case 'jsonldc': { // affiche le JSON-LD compacté avec JsonLD et le contexte déduit du registre
       if (!is_dir('tmp')) mkdir('tmp');
-      file_put_contents('tmp/document.jsonld', json_encode($graph->exportAllAsJsonLd(), JSON_OPTIONS));
+      file_put_contents('tmp/document.jsonld', json_encode($graph->allAsJsonLd(), JSON_OPTIONS));
       file_put_contents('tmp/context.jsonld', json_encode(Registre::jsonLdContext(), JSON_OPTIONS));
       $compacted = JsonLD::compact('tmp/document.jsonld', 'tmp/context.jsonld');
       echo htmlspecialchars(json_encode($compacted, JSON_OPTIONS));
@@ -304,7 +302,7 @@ else { // affichage interactif de la version corrigée page par page en Yaml, JS
     
     /*case 'jsonldf': { // affiche le JSON-LD structuré (framed) avec JsonLD
       if (!is_dir('tmp')) mkdir('tmp');
-      file_put_contents('tmp/document.jsonld', json_encode($graph->exportAllAsJsonLd(), JSON_OPTIONS));
+      file_put_contents('tmp/document.jsonld', json_encode($graph->allAsJsonLd(), JSON_OPTIONS));
       file_put_contents('tmp/frame.jsonld', json_encode(Registre::jsonLdFrame(), JSON_OPTIONS));
       $framed = JsonLD::frame('tmp/document.jsonld', 'tmp/frame.jsonld');
       echo htmlspecialchars(json_encode($framed, JSON_OPTIONS));
@@ -312,35 +310,15 @@ else { // affichage interactif de la version corrigée page par page en Yaml, JS
     }*/
     case 'turtle': { // traduction en Turtle avec EasyRdf
       $erGraph = new \EasyRdf\Graph('https://preprod.data.developpement-durable.gouv.fr/');
-      $erGraph->parse(json_encode($graph->exportAllAsJsonLd()), 'jsonld', 'https://preprod.data.developpement-durable.gouv.fr/');
+      $erGraph->parse(json_encode($graph->allAsJsonLd()), 'jsonld', 'https://preprod.data.developpement-durable.gouv.fr/');
       echo htmlspecialchars($erGraph->serialise('turtle'));
       break;
     }
     
     case 'yamlldfc': { // affiche Yaml-ld framed (RdfGraph::frame()) et le contexte context.yaml puis compacté avec JsonLD
-      $graph->frame(['Dataset' => ['http://purl.org/dc/terms/publisher']]);
-      //echo Yaml::dump($graph->exportClassAsJsonLd('Dataset'), 9, 2, Yaml::DUMP_MULTI_LINE_LITERAL_BLOCK);
-      file_put_contents('tmp/context.jsonld', json_encode(Yaml::parseFile('context.yaml')));
-      file_put_contents('tmp/expanded.jsonld', json_encode($graph->exportClassAsJsonLd('Dataset')));
-      try {
-        $comped = JsonLD::compact('tmp/expanded.jsonld', 'tmp/context.jsonld');
-        //unset($comped->{'@context'});
-        $comped = json_decode(json_encode($comped, JSON_OPTIONS), true); // suppr. StdClass
-        //print_r($comped);
-        $comped = Yaml::dump($comped, 9, 2, Yaml::DUMP_MULTI_LINE_LITERAL_BLOCK); // convertit en Yaml
-        echo $comped;
-      } catch (ML\JsonLD\Exception\JsonLdException $e) {
-        echo $e->getMessage();
-        $comped = '';
-      }
-      break;
-    }
-
-    case 'yamlldfc2': { // affiche Yaml-ld framed (RdfGraph::frame()) et le contexte context.yaml puis compacté avec JsonLD
       //print_r($graph);
       $graph->frame(Constant::FRAME_PARAM);
-      //echo Yaml::dump($graph->exportClassAsJsonLd('Dataset'), 9, 2, Yaml::DUMP_MULTI_LINE_LITERAL_BLOCK);
-      $comped = new RdfCompactGraph(new RdfContext(Yaml::parseFile('context.yaml')), $graph->exportClassAsJsonLd('Dataset'));
+      $comped = new RdfCompactGraph(new RdfContext(Yaml::parseFile('context.yaml')), $graph->classAsJsonLd('Dataset'));
       
       //print_r($comped);
       echo Yaml::dump($comped->jsonld(Constant::PROP_IDS), 9, 2, Yaml::DUMP_MULTI_LINE_LITERAL_BLOCK); // convertit en Yaml
