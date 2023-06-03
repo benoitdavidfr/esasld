@@ -9,16 +9,22 @@ doc: |
   Le résultat est un affichage simplifié des JdD du catalogue fondé sur le format Yaml-LD imbriqué (framed)
   et compacté avec un contexte défini dans context.yaml.
   
-  Un troisième objectif est de me familiariser avec le traitement du JSON-LD en testant notamment l'utilisation de:
+  Le troisième objectif est de me familiariser avec le traitement du JSON-LD en testant notamment l'utilisation de:
    - EasyRdf - https://www.easyrdf.org/ - A PHP library designed to make it easy to consume and produce RDF.
    - JsonLD - https://github.com/lanthaler/JsonLD - A fully conforming JSON-LD (1.0) processor written in PHP. 
   Sur easyRdf, j'ai identifié des bugs et la seule fonctionnalité intéressante est la conversion de JSON-LD en Turtle
   utilisée dans la commande !cli 'turtle'
   
   Sur JsonLD:
-   - le JsonLD::compact() fonctionne bien, illustré par la cmde !cli JsonLD::compact
-   - le JsonLD::frame() ne fonctionne pas, illustré par la cmde !cli JsonLD::frame
+   - JsonLD::compact() fonctionne bien, illustré par la cmde !cli JsonLD::compact
+   - JsonLD::frame() ne fonctionne pas, illustré par la cmde !cli JsonLD::frame
      c'est peut-être du au fait que j'ai utilisé JSON-LD 1.1 alors que JsonLD implémente JSON-LD 1.0
+   - JsonLD::flatten() ne semble pas fonctionner, il utilise des blank nodes qu'il ne définit pas
+   - JsonLD::expand() semble fonctionner correctement, il pourrait être utilisé pour fabriquer un RdfExpGraph à partir
+     d'un RdfCompactGraph (suppression du context)
+  
+  Le quatrième objectif est de charger le contenu du catalogue Ecosphères dans Jena pour l'interroger en SparQl.
+  Cela est réalisé le 3/6.
   
   Le script utilise un registre stocké dans le fichier registre.yaml qui associe des étiquettes à un certain
   nombre d'URIs utilisés mais non définis dans l'export DCAT ; par exemple dans la classe Standard l'URI
@@ -36,12 +42,14 @@ doc: |
    - définir des shapes SHACL pour valider le graphe DCAT en s'inspirant de ceux de DCAT-AP
 
 journal: |
+ 3/6/2023:
+  - chargement des pages restantes
+  - chargement de l'export dans Jena
  2/6/2023:
   - la boucle ne fonctionne pas car l'opération flatten() génère des réf à des blank node sans les définir
  1/6/2023:
   - gestion d'un graphe compacté avec tri des propriétés
-  - manque
-    - puis une phase d'embellissement du Yaml
+  - manque une phase d'embellissement du Yaml
   - la correction sur les thèmes génère un bug
  30/5/2023:
   - phase d'amélioration (improve) du contenu initial JSON-LD
@@ -87,8 +95,8 @@ require_once __DIR__.'/vendor/autoload.php';
 require_once __DIR__.'/lib.inc.php';
 require_once __DIR__.'/rdfexpand.inc.php';
 require_once __DIR__.'/rdfcomp.inc.php';
-require_once __DIR__.'/statem.inc.php';
 require_once __DIR__.'/registre.inc.php';
+require_once __DIR__.'/fuseki.inc.php';
 
 use Symfony\Component\Yaml\Yaml;
 use Symfony\Component\Yaml\Exception\ParseException;
@@ -188,7 +196,9 @@ if (php_sapi_name()=='cli') { // traitement CLI en fonction de l'action demandé
     echo " où {action} vaut:\n";
     echo "  - rectifStats - affiche des stats des rectifications effectuées\n";
     echo "  - registre - effectue uniquement l'import du registre et affiche ce qui a été importé \n";
-    echo "  - import - lecture du catalogue depuis Ecosphères en JSON-LD et copie dans des fichiers locaux\n";
+    echo "  - import - lecture du catalogue depuis Ecosphères en JSON-LD ou des fichiers locaux\n";
+    echo "  - importSsSkip - lecture sans skip du catalogue depuis Ecosphères en JSON-LD et copie dans des fichiers locaux\n";
+    echo "  - fuseki - import des fichiers locaux dans Fuseki\n";
     echo "  - errors - afffichage des erreurs rencontrées lors de la lecture du catalogue\n";
     echo "  - catalogs - lecture du catalogue puis affichage des catalogues\n";
     echo "  - datasets - lecture du catalogue puis affichage des jeux de données\n";
@@ -222,6 +232,38 @@ if (php_sapi_name()=='cli') { // traitement CLI en fonction de l'action demandé
       $graph->import($urlPrefix, true, $lastPage, $firstPage);
       break;
     }
+    case 'importSsSkip': { // effectue uniquement l'import de l'export sans skip
+      $graph->import($urlPrefix, false, $lastPage, $firstPage);
+      break;
+    }
+    case 'fuseki': { // import de chargement dans Fuseki
+      $stats = new Stats;
+      for ($page = $firstPage; ($lastPage == 0) || ($page <= $lastPage); $page++) {
+        if (is_file("json/export$page.json")) { // le fichier existe
+          $graph = new RdfExpGraph('default');
+          Registre::import($graph);
+          $content = file_get_contents("json/export$page.json");
+          $content = json_decode($content, true, 512, JSON_THROW_ON_ERROR);
+          foreach ($content as $no => $resource) {
+            $stats->increment("nbre de ressources lues");
+            $types = implode(', ', $resource['@type']); 
+            if (!($className = (RdfExpGraph::CLASS_URI_TO_PHP_NAME[$types] ?? null))) {
+              throw new Exception("Types $types non traité");
+            }
+            $resource = $graph->addResource($resource, $className);
+            if (($className == 'PagedCollection') && ($lastPage == 0)) {
+              $lastPage = $resource->lastPage();
+              StdErr::write("Info: lastPage=$lastPage\n");
+            }
+          }
+          $graph->rectifAllStatements();
+          $result = Fuseki::load(json_encode($graph->allAsJsonLd()));
+          echo 'headers='; print_r($result['headers']);
+          echo 'body=',$result['body'];
+        }
+      }
+      break;
+    }
     case 'errors': {
       $errors = $graph->import($urlPrefix, true, $lastPage, $firstPage);
       echo "Pages en erreur:\n";
@@ -240,14 +282,12 @@ if (php_sapi_name()=='cli') { // traitement CLI en fonction de l'action demandé
       $graph->showInYaml('Dataset');
       break;
     }
-    
     case 'frameDatasets': {
       $graph->import($urlPrefix, true, $lastPage, $firstPage);
       $graph->frame('Dataset', ['http://purl.org/dc/terms/publisher']);
       echo json_encode($graph->classAsJsonLd('Dataset'), JSON_OPTIONS);
       break;
     }
-    
     case 'yamlldfc': { // affiche Yaml-ld framed (RdfExpGraph::frame()) et le contexte context.yaml puis compacté avec JsonLD
       $graph->import($urlPrefix, true, $lastPage, $firstPage);
       //print_r($graph);
@@ -402,10 +442,11 @@ else { // affichage interactif de la version corrigée page par page en Yaml, JS
       $graph = new RdfExpGraph('default');
       Registre::import($graph);
       $graph->import($urlPrefix, true, $page, $page);
-      if (0)
+      if (0) {
         $graph->update(
           'Dataset', 'https://preprod.data.developpement-durable.gouv.fr/dataset/only',
           'http://purl.org/dc/terms/title', 0, "Titre modifié");
+      }
       $flattened->includedIn($graph);
       break;
     }

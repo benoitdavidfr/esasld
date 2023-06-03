@@ -746,23 +746,21 @@ class Dataset extends RdfExpResource { // 'http://www.w3.org/ns/dcat#Dataset'||'
     }
   }
 
-  static function rectifAllStatements(array $datasets, RdfExpGraph $graph): void { // rectifie les propriétés accessRights et provenance
-    foreach ($datasets as $id => $dataset) {
-      foreach ($dataset->props as $pUri => &$pvals) {
-        switch ($pUri) {
-          case 'http://purl.org/dc/terms/accessRights': {
-            $pvals = self::rectifOneStatement($pvals, 'RightsStatement', $graph);
-            break;
-          }
-          case 'http://purl.org/dc/terms/provenance': {
-            $pvals = self::rectifOneStatement($pvals, 'ProvenanceStatement', $graph);
-            break;
-          }
+  function rectifAllStatements(RdfExpGraph $graph): void { // rectifie les propriétés accessRights et provenance
+    foreach ($this->props as $pUri => &$pvals) {
+      switch ($pUri) {
+        case 'http://purl.org/dc/terms/accessRights': {
+          $pvals = self::rectifOneStatement($pvals, 'RightsStatement', $graph);
+          break;
+        }
+        case 'http://purl.org/dc/terms/provenance': {
+          $pvals = self::rectifOneStatement($pvals, 'ProvenanceStatement', $graph);
+          break;
         }
       }
     }
   }
-  
+
   // corrige si nécessaire une liste de valeurs correspondant à une propriété accessRights ou provenance
   static function rectifOneStatement(array $pvals, string $statementClass, RdfExpGraph $graph): array {
     $arrayOfMLStrings = []; // [{md5} => ['mlStr'=> MLString, 'bn'=>{bn}]] - liste de chaines correspondant au $pvals
@@ -1027,10 +1025,16 @@ class RdfExpGraph {
     }
     //print_r($this->resources);
     // rectification des propriétés accessRights et provenance qui nécessitent que tous les objets soient chargés avant la rectification
-    Dataset::rectifAllStatements($this->resources['Dataset'], $this);
+    $this->rectifAllStatements();
     return $errors;
   }
 
+  function rectifAllStatements(): void { // rectifie les propriétés accessRights et provenance
+    foreach ($this->resources['Dataset'] as $dataset) {
+      $dataset->rectifAllStatements($this);
+    }
+  }
+  
   function get(string $className, string $id): RdfExpResource { // retourne la ressource de la classe $className ayant cet $id 
     if (isset($this->resources[$className][$id]))
       return $this->resources[$className][$id];
