@@ -202,7 +202,7 @@ class RdfClass { // description d'une classe
         throw new Exception("Erreur, classe $classUri inconnue dans RdfExpGraph::CLASS_URI_TO_PHP_NAME");
       $graph->addResource($className::registre2JsonLd($classUri, $resource), $className);
     }
-    unset($array['resources']);
+    unset($this->array['resources']);
   }
   
   function asArray(): array { return $this->array; }
@@ -417,14 +417,16 @@ class Registre { // stockage du registre
   }
 };
 
-if ($_SERVER['REQUEST_URI'] == $_SERVER['SCRIPT_NAME']) {
-  echo "<html><head><title>registre</title></head><body><pre>\n";
-  $registre = new Registre;
-  $graph = new RdfExpGraph('default');
-  $registre->import($graph);
-  $registre->show();
-  //echo '$graph = '; print_r($graph);
-  echo "<h2>Le graphe</h2>\n";
-  $graph->showInYaml();
-  $registre->checkIntegrity();
-}
+
+// Exécution de test en !CLI
+if ((php_sapi_name()=='cli') || ($_SERVER['REQUEST_URI'] <> $_SERVER['SCRIPT_NAME'])) return;
+
+echo "<html><head><title>registre</title></head><body><pre>\n";
+$registre = new Registre;
+$graph = new RdfExpGraph('default');
+$registre->import($graph);
+$registre->show();
+//echo '$graph = '; print_r($graph);
+echo "<h2>Le graphe</h2>\n";
+$graph->showInYaml();
+$registre->checkIntegrity();

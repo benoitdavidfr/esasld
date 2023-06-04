@@ -215,7 +215,8 @@ if (php_sapi_name()=='cli') { // traitement CLI en fonction de l'action demandé
   $lastPage = $argv[3] ?? 0;  // Par défaut fin à la dernière page définie dans l'import
 
   $graph = new RdfExpGraph('default');
-  Registre::import($graph);
+  $registre = new Registre;
+  $registre->import($graph);
 
   switch ($argv[1]) {
     case 'rectifStats': {
@@ -225,7 +226,7 @@ if (php_sapi_name()=='cli') { // traitement CLI en fonction de l'action demandé
       break;
     }
     case 'registre': { // effectue uniquement l'import du registre et affiche ce qui a été importé 
-      Registre::show();
+      $registre->show();
       echo "\nRessources prédéfinies:\n";
       $graph->showInYaml();
       break;
@@ -406,7 +407,7 @@ else { // affichage interactif de la version corrigée page par page en Yaml, JS
       $graph->frame(Constant::FRAME_PARAM);
       $comped = new RdfCompactGraph(new RdfContext(Yaml::parseFile('context.yaml')), $graph->classAsJsonLd('Dataset'));
       //print_r($comped);
-      echo Yaml::dump($comped->jsonld(Constant::PROP_IDS), 9, 2, Yaml::DUMP_MULTI_LINE_LITERAL_BLOCK); // convertit en Yaml
+      echo htmlspecialchars(Yaml::dump($comped->jsonld(Constant::PROP_IDS), 9, 2, Yaml::DUMP_MULTI_LINE_LITERAL_BLOCK)); // convertit en Yaml
       break;
     }
     
