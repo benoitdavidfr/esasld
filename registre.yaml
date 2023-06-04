@@ -12,6 +12,8 @@ lineage:
       transformation de la structure du registre:
         - intégration des classes et des propriétés dans leur ontologie
         - différents schémas possibles pour les ressources bien connues
+      Question: faut-il définir une seule ontologie pour RDF + RDFS ?
+      Mettre les datatypes comme instance de la classe Datatype !
 $schema: registre
 
 namespaces:
@@ -32,6 +34,9 @@ namespaces:
   time: http://www.w3.org/2006/time#
   vcard: http://www.w3.org/2006/vcard/ns#
   xsd: http://www.w3.org/2001/XMLSchema#
+  ecospheres: http://registre.data.developpement-durable.gouv.fr/ecospheres/
+  themesEcospheres: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/
+  plume: http://registre.data.developpement-durable.gouv.fr/plume/
   
 datatypes:
   rdf:HTML: HTML content as a possible literal value
@@ -360,12 +365,12 @@ ontologies:
               fr: Liste d'autorité nommée sur l'état d'un jeu de données
               en: Dataset status Named Authority List
             publisher: https://op.europa.eu/
-          - $id: http://registre.data.developpement-durable.gouv.fr/plume/ISO19139ProgressCode
+          - $id: plume:ISO19139ProgressCode
             title:
               fr: État du jeu de données (ISO 19139)
               en: Status of the dataset (ISO 19139)
             publisher: https://www.iso.org/
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres
+          - $id: ecospheres:themes-ecospheres
             title: {fr: "Thèmes Ecosphères"}
             publisher: https://www.ecologie.gouv.fr/
       skos:Concept:
@@ -379,310 +384,310 @@ ontologies:
               fr: finalisé
               en: completed
             inScheme: [http://publications.europa.eu/resource/authority/dataset-status]
-          - $id: http://registre.data.developpement-durable.gouv.fr/plume/ISO19139ProgressCode/onGoing
+          - $id: plume:ISO19139ProgressCode/onGoing
             prefLabel:
               fr: en cours
               en: on going
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/plume/ISO19139ProgressCode]
-          - $id: http://registre.data.developpement-durable.gouv.fr/plume/ISO19139ProgressCode/historicalArchive
+            inScheme: [plume:ISO19139ProgressCode]
+          - $id: plume:ISO19139ProgressCode/historicalArchive
             prefLabel:
               fr: archive historique
               en: historical archive
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/plume/ISO19139ProgressCode]
-          - $id: http://registre.data.developpement-durable.gouv.fr/plume/ISO19139ProgressCode/obsolete
+            inScheme: [plume:ISO19139ProgressCode]
+          - $id: plume:ISO19139ProgressCode/obsolete
             prefLabel:
               fr: obsolète
               en: obsolete
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/plume/ISO19139ProgressCode]
+            inScheme: [plume:ISO19139ProgressCode]
             
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/climat # Thèmes Ecosphères 
+          - $id: themesEcospheres:climat # Thèmes Ecosphères 
             prefLabel: { fr: Climat }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/changement-climatique
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:changement-climatique
             prefLabel: { fr: Changement climatique }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/meteorologie
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:meteorologie
             prefLabel: { fr: Météorologie }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/amenagement-et-urbanisme
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:amenagement-et-urbanisme
             prefLabel: { fr: Aménagement et urbanisme }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/servitudes-d-utilite-publique
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:servitudes-d-utilite-publique
             prefLabel: { fr: Servitudes d'utilité publique }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/politique-europeenne-d-amenagement
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:politique-europeenne-d-amenagement
             prefLabel: { fr: Politique européenne d'aménagement }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/zonages-d-amenagement
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:zonages-d-amenagement
             prefLabel: { fr: Zonages d'aménagement }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/planification
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:planification
             prefLabel: { fr: Planification }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/etudes
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:etudes
             prefLabel: { fr: Études }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/etablissements-d-activites
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:etablissements-d-activites
             prefLabel: { fr: Établissements d'activités }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/etablissements-d-enseignement
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:etablissements-d-enseignement
             prefLabel: { fr: Etablissements d'enseignement }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/equipements-sportifs-ou-culturels
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:equipements-sportifs-ou-culturels
             prefLabel: { fr: Équipements sportifs ou culturels }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/patrimoine-culturel
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:patrimoine-culturel
             prefLabel: { fr: Patrimoine culturel }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/etablissements-de-sante-et-medico-sociaux
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:etablissements-de-sante-et-medico-sociaux
             prefLabel: { fr: Établissements de santé et médico-sociaux }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/equipements-de-tourisme
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:equipements-de-tourisme
             prefLabel: { fr: Équipements de tourisme }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/autres-etablissements-recevant-du-public
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:autres-etablissements-recevant-du-public
             prefLabel: { fr: Autres établissements recevant du public }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/eau
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:eau
             prefLabel: { fr: Eau }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/alimentation-en-eau-potable
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:alimentation-en-eau-potable
             prefLabel: { fr: Alimentation en eau potable }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/assainissement
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:assainissement
             prefLabel: { fr: Assainissement }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/masses-d-eau
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:masses-d-eau
             prefLabel: { fr: Masses d'eau }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/ouvrages-hydrauliques
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:ouvrages-hydrauliques
             prefLabel: { fr: Ouvrages hydrauliques }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/peche-en-eaux-interieures
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:peche-en-eaux-interieures
             prefLabel: { fr: Pêche en eaux intérieures }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/surveillance-de-la-ressource-en-eau
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:surveillance-de-la-ressource-en-eau
             prefLabel: { fr: Surveillance de la ressource en eau }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/interventions-sur-les-cours-d-eau
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:interventions-sur-les-cours-d-eau
             prefLabel: { fr: Interventions sur les cours d'eau }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/protection-de-l-eau
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:protection-de-l-eau
             prefLabel: { fr: Protection de l'eau }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/foncier-et-occupation-du-sol
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:foncier-et-occupation-du-sol
             prefLabel: { fr: Foncier et occupation du sol }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/foncier-agricole
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:foncier-agricole
             prefLabel: { fr: Foncier agricole }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/mutation-fonciere
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:mutation-fonciere
             prefLabel: { fr: Mutation foncière }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/occupation-du-sol
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:occupation-du-sol
             prefLabel: { fr: Occupation du sol }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/propriete-fonciere
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:propriete-fonciere
             prefLabel: { fr: Propriété foncière }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/habitat-et-politique-de-la-ville
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:habitat-et-politique-de-la-ville
             prefLabel: { fr: Habitat et politique de la ville }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/accession-a-la-propriete
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:accession-a-la-propriete
             prefLabel: { fr: Accession à la propriété }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/besoins-en-logements
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:besoins-en-logements
             prefLabel: { fr: Besoins en logements }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/construction
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:construction
             prefLabel: { fr: Construction }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/habitat-indigne
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:habitat-indigne
             prefLabel: { fr: Habitat indigne }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/occupation-des-logements
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:occupation-des-logements
             prefLabel: { fr: Occupation des logements }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/parc-locatif-social
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:parc-locatif-social
             prefLabel: { fr: Parc locatif social }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/parc-de-logements
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:parc-de-logements
             prefLabel: { fr: Parc de logements }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/politique-de-la-ville
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:politique-de-la-ville
             prefLabel: { fr: Politique de la ville }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/renovation-urbaine
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:renovation-urbaine
             prefLabel: { fr: Rénovation urbaine }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/mer-et-littoral
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:mer-et-littoral
             prefLabel: { fr: Mer et littoral }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/ecologie-du-littoral
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:ecologie-du-littoral
             prefLabel: { fr: Écologie du littoral }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/limite-administrative-speciale-en-mer
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:limite-administrative-speciale-en-mer
             prefLabel: { fr: Limite administrative spéciale en mer et sur le littoral }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/lutte-anti-pollution-en-mer
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:lutte-anti-pollution-en-mer
             prefLabel: { fr: Lutte anti-pollution en mer et sur le littoral }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/navigation-maritime
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:navigation-maritime
             prefLabel: { fr: Navigation maritime }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/topographie-en-mer
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:topographie-en-mer
             prefLabel: { fr: Topographie en mer et sur le littoral }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/chasse-maritime
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:chasse-maritime
             prefLabel: { fr: Chasse maritime }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/nature-paysages-et-biodiversite
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:nature-paysages-et-biodiversite
             prefLabel: { fr: "Nature, paysages et biodiversité" }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/inventaires-nature-et-biodiversite
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:inventaires-nature-et-biodiversite
             prefLabel: { fr: Inventaires nature et biodiversité }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/inventaires-des-paysages
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:inventaires-des-paysages
             prefLabel: { fr: Inventaires des paysages }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/protection-et-gestion-de-la-nature
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:protection-et-gestion-de-la-nature
             prefLabel: { fr: Protection et gestion de la nature }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/protection-et-gestion-des-paysages
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:protection-et-gestion-des-paysages
             prefLabel: { fr: Protection et gestion des paysages }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/chasse
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:chasse
             prefLabel: { fr: Chasse }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/nuisances-dechets-et-pollution
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:nuisances-dechets-et-pollution
             prefLabel: { fr: "Nuisances, déchets et pollution" }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/bruit
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:bruit
             prefLabel: { fr: Bruit }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/dechets
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:dechets
             prefLabel: { fr: Déchets }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/perturbations-electromagnetiques
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:perturbations-electromagnetiques
             prefLabel: { fr: Perturbations électromagnétiques }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/pollution-des-sols
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:pollution-des-sols
             prefLabel: { fr: Pollution des sols }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/qualite-de-l-air
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:qualite-de-l-air
             prefLabel: { fr: Qualité de l'air }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/reseaux-d-energie-et-de-communication
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:reseaux-d-energie-et-de-communication
             prefLabel: { fr: Réseaux d'énergie et de communication }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/amenagement-numerique-des-territoires
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:amenagement-numerique-des-territoires
             prefLabel: { fr: Aménagement numérique des territoires }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/reseau-electrique
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:reseau-electrique
             prefLabel: { fr: Réseau électrique }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/reseau-hydrocarbures
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:reseau-hydrocarbures
             prefLabel: { fr: Réseau de transport et de stockage des hydrocarbures }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/reseau-de-telecommunication
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:reseau-de-telecommunication
             prefLabel: { fr: Réseau de télécommunication }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/risques
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:risques
             prefLabel: { fr: Risques }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/prevention-des-avalanches
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:prevention-des-avalanches
             prefLabel: { fr: Prévention des avalanches }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/prevention-des-eruptions-volcaniques
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:prevention-des-eruptions-volcaniques
             prefLabel: { fr: Prévention des éruptions volcaniques }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/prevention-des-inondations
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:prevention-des-inondations
             prefLabel: { fr: Prévention des inondations }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/prevention-du-risque-mouvement-de-terrain
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:prevention-du-risque-mouvement-de-terrain
             prefLabel: { fr: Prévention du risque mouvement de terrain }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/prevention-du-risque-radon
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:prevention-du-risque-radon
             prefLabel: { fr: Prévention du risque radon }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/prevention-du-risque-minier
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:prevention-du-risque-minier
             prefLabel: { fr: Prévention du risque minier }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/prevention-des-risques-technologiques
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:prevention-des-risques-technologiques
             prefLabel: { fr: Prévention des risques technologiques }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/prevention-du-risque-sismique
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:prevention-du-risque-sismique
             prefLabel: { fr: Prévention du risque sismique }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/reglementation-de-prevention-des-risques-naturels
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:reglementation-de-prevention-des-risques-naturels
             prefLabel: { fr: Réglementation de prévention des risques naturels }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/reglementation-de-prevention-des-risques-technologiques
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:reglementation-de-prevention-des-risques-technologiques
             prefLabel: { fr: Réglementation de prévention des risques technologiques }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/gestion-du-risque
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:gestion-du-risque
             prefLabel: { fr: Gestion du risque }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/industrie
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:industrie
             prefLabel: { fr: "Industrie, production d'énergie et exploitation du sol" }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/mines
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:mines
             prefLabel: { fr: "Mines, carrières et extraction de granulats" }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/sites-industriels
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:sites-industriels
             prefLabel: { fr: Sites industriels }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/parcs-eoliens
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:parcs-eoliens
             prefLabel: { fr: Parcs éoliens }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/production-d-energie-hors-eolien
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:production-d-energie-hors-eolien
             prefLabel: { fr: Production d'énergie hors éolien }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/transport-et-deplacements
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:transport-et-deplacements
             prefLabel: { fr: Transport et déplacements }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/securite-routiere
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:securite-routiere
             prefLabel: { fr: Sécurité routière }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/trafic-routier
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:trafic-routier
             prefLabel: { fr: Trafic routier et exploitation de la route }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/transport-collectif
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:transport-collectif
             prefLabel: { fr: Transport collectif }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/transport-exceptionnel
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:transport-exceptionnel
             prefLabel: { fr: Transport exceptionnel }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/transport-de-marchandises
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:transport-de-marchandises
             prefLabel: { fr: Transport de marchandises }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/transport-de-matieres-dangereuses
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:transport-de-matieres-dangereuses
             prefLabel: { fr: Transport de matières dangereuses }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/infrastructures-de-transport
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:infrastructures-de-transport
             prefLabel: { fr: Infrastructures de transport }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/infrastructure-aeroportuaire
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:infrastructure-aeroportuaire
             prefLabel: { fr: Infrastructure aéroportuaire }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/circulation-douce
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:circulation-douce
             prefLabel: { fr: Circulation douce }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/infrastructure-ferree
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:infrastructure-ferree
             prefLabel: { fr: "Infrastructure ferrée, gares et ouvrages d'art" }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/reseau-navigable
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:reseau-navigable
             prefLabel: { fr: Réseau navigable et ouvrages de navigation }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/infrastructure-portuaire
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:infrastructure-portuaire
             prefLabel: { fr: Infrastructure portuaire }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/plateformes-multi-modales
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:plateformes-multi-modales
             prefLabel: { fr: Plateformes multi-modales }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
-          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/infrastructure-routiere
+            inScheme: [ecospheres:themes-ecospheres]
+          - $id: themesEcospheres:infrastructure-routiere
             prefLabel: { fr: Infrastructure routière }
-            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+            inScheme: [ecospheres:themes-ecospheres]
         
           - $id: http://registre.data.developpement-durable.gouv.fr/themes-hors-ecospheres/energie
             prefLabel: {fr: Énergie}

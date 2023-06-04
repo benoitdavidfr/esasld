@@ -353,7 +353,7 @@ class Registre { // stockage du registre
         foreach ($concept->inScheme as $inScheme) {
           //print_r($inScheme);
           if (!isset($graph->getClassResources('ConceptScheme')[$inScheme->id])) {
-            echo "<b>Erreur: Le inScheme du Concept \"",$cs->prefLabel[0]->value,"\" qui est '$inScheme->id'",
+            echo "<b>Erreur: Le inScheme du Concept \"",$concept->prefLabel[0]->value,"\" qui est '$inScheme->id'",
                  " n'est pas défini dans la classe ConceptScheme</b>\n";
           }
         }
