@@ -33,11 +33,75 @@ namespaces:
   vcard: http://www.w3.org/2006/vcard/ns#
   xsd: http://www.w3.org/2001/XMLSchema#
   
+datatypes:
+  rdf:HTML: HTML content as a possible literal value
+  rdf:XMLLiteral: XML content as a possible literal value
+  xsd:string: Character strings (but not all Unicode character strings) # Core types
+  xsd:boolean: true, false
+  xsd:decimal: Arbitrary-precision decimal numbers
+  xsd:integer: Arbitrary-size integer numbers
+  xsd:double: 64-bit floating point numbers incl. ±Inf, ±0, NaN # IEEE floating-point numbers
+  xsd:float: 32-bit floating point numbers incl. ±Inf, ±0, NaN
+  xsd:date: Dates (yyyy-mm-dd) with or without timezone #Time and date
+  xsd:time: Times (hh:mm:ss.sss…) with or without timezone
+  xsd:dateTime: Date and time with or without timezone
+  xsd:dateTimeStamp: Date and time with required timezone
+  xsd:gYear: Gregorian calendar year # Recurring and partial dates
+  xsd:gMonth: Gregorian calendar month
+  xsd:gDay: Gregorian calendar day of the month
+  xsd:gYearMonth: Gregorian calendar year and month
+  xsd:gMonthDay: Gregorian calendar month and day
+  xsd:duration: Duration of time
+  xsd:yearMonthDuration: Duration of time (months and years only)
+  xsd:dayTimeDuration: Duration of time (days, hours, minutes, seconds only)
+  xsd:byte: -128…+127 (8 bit) # Limited-range integer numbers
+  xsd:short: -32768…+32767 (16 bit)
+  xsd:int: -2147483648…+2147483647 (32 bit)
+  xsd:long: -9223372036854775808…+9223372036854775807 (64 bit)
+  xsd:unsignedByte: 0…255 (8 bit)
+  xsd:unsignedShort: 0…65535 (16 bit)
+  xsd:unsignedInt: 0…4294967295 (32 bit)
+  xsd:unsignedLong: 0…18446744073709551615 (64 bit)
+  xsd:positiveInteger: Integer numbers >0
+  xsd:nonNegativeInteger: Integer numbers ≥0
+  xsd:negativeInteger: Integer numbers <0
+  xsd:nonPositiveInteger: Integer numbers ≤0
+  xsd:hexBinary: Hex-encoded binary data # Encoded binary data
+  xsd:base64Binary: Base64-encoded binary data
+  xsd:anyURI: Absolute or relative URIs and IRIs # Miscellaneous XSD types
+  xsd:language: Language tags per [BCP47]
+  xsd:normalizedString: Whitespace-normalized strings
+  xsd:token: Tokenized strings
+  xsd:NMTOKEN: XML NMTOKENs
+  xsd:Name: XML Names
+  xsd:NCName: XML NCNames
+
 ontologies:
   rdf:
     title: RDF Ontology
     source:
       - https://www.w3.org/TR/rdf11-concepts/#vocabularies
+    classes:
+      rdf:Property:
+        definition: the class of RDF properties. rdf:Property is an instance of rdfs:Class.
+        subClassOf: []
+      rdf:langString:
+        definition: |
+          the class of language-tagged string values. rdf:langString is an instance of rdfs:Datatype and a subclass of rdfs:Literal.
+        subClassOf: [rdfs:Literal]
+      rdf:HTML:
+        definition: |
+          the class of HTML literal values. rdf:HTML is an instance of rdfs:Datatype and a subclass of rdfs:Literal.
+        subClassOf: [rdfs:Literal]
+      rdf:XMLLiteral:
+        definition: |
+          the class of XML literal values. rdf:XMLLiteral is an instance of rdfs:Datatype and a subclass of rdfs:Literal.
+        subClassOf: [rdfs:Literal]
+      rdf:JSON:
+        definition: JSON content as a possible literal value.
+        subClassOf: [rdfs:Literal]
+    properties:
+      rdf:type:
   rdfs:
     title: RDF Schema
     source:
@@ -48,20 +112,35 @@ ontologies:
           All things described by RDF are called resources, and are instances of the class rdfs:Resource.
           This is the class of everything.
         subClassOf: []
+      rdfs:Class:
+        definition: This is the class of resources that are RDF classes. rdfs:Class is an instance of rdfs:Class.
+        subClassOf: [rdfs:Resource]
+        instances:
+          - $id: rdfs:Class
+            label:
+              en: Class of resources that are RDF classes
       rdfs:Literal:
         definition: literal values such as strings and integers.
         subClassOf: []
+      rdfs:Datatype:
+        definition: |
+          the class of datatypes. All instances of rdfs:Datatype correspond to the RDF model of a datatype described in the RDF Concepts specification [RDF12-CONCEPTS]. rdfs:Datatype is both an instance of and a subclass of rdfs:Class. Each instance of rdfs:Datatype is a subclass of rdfs:Literal.
+        subClassOf: []
     properties:
+      rdfs:range:
+      rdfs:domain:
+      rdfs:subClassOf:
+      rdfs:subPropertyOf:
       rdfs:label:
         definition: provides a human-readable version of a resource's name.
         subPropertyOf: []
         range: [rdfs:Literal]
-        domain: [rdfs:label]
+        domain: [rdfs:Resource]
       rdfs:comment:
         definition: provides a human-readable description of a resource.
         subPropertyOf: []
         range: [rdfs:Literal]
-        domain: [rdfs:label]
+        domain: [rdfs:Resource]
   dcat:
     title: Data Catalog Vocabulary (DCAT) - Version 3
     source:
@@ -275,7 +354,7 @@ ontologies:
           skos: A set of concepts, optionally including statements about semantic relationships between those concepts. 
           dcat: A knowledge organization system (KOS) used to represent themes/categories of datasets in the catalog.
         subClassOf: []
-        resources:
+        instances:
           - $id: http://publications.europa.eu/resource/authority/dataset-status
             title:
               fr: Liste d'autorité nommée sur l'état d'un jeu de données
@@ -294,7 +373,7 @@ ontologies:
           skos: An abstract idea or notion; a unit of thought.
           dcat: A category or a theme used to describe datasets in the catalog.
         subClassOf: []
-        resources:
+        instances:
           - $id: http://publications.europa.eu/resource/authority/dataset-status/COMPLETED
             prefLabel:
               fr: finalisé
@@ -697,12 +776,21 @@ ontologies:
           The foaf:Organization class represents a kind of foaf:Agent corresponding to social instititutions such as companies,
           societies etc.  
         subClassOf: [foaf:Agent]
-        resources:
+        instances:
           - $id: https://op.europa.eu/
             name:
               fr: Office des publications de l'Union européenne
               en: Publications Office of the European Union
             homepage: https://op.europa.eu/
+          - $id: https://www.iso.org/
+            name:
+              fr: Organisation internationale de normalisation (ISO)
+              en: International Organization for Standardization (ISO)
+            homepage: https://www.iso.org/
+          - $id: https://www.ecologie.gouv.fr/
+            name:
+              fr: Ministère chargé de l'écologie
+            homepage: https://www.ecologie.gouv.fr/
     properties:  
       foaf:name:
       foaf:mbox:
@@ -821,7 +909,7 @@ ontologies:
         definition: A system of signs, symbols, sounds, gestures, or rules used in communication.
         comment: Written, spoken, sign, and computer languages are linguistic systems.
         subClassOf: []
-        resources:
+        instances:
           - $id: http://publications.europa.eu/resource/authority/language/FRA
             label:
               fr: Français
@@ -831,7 +919,7 @@ ontologies:
           A statement about the intellectual property rights (IPR) held in or over a resource, a legal document giving official
           permission to do something with a resource, or a statement about access rights.
         subClassOf: []
-        resources:
+        instances:
           - $id: http://inspire.ec.europa.eu/metadata-codelist/LimitationsOnPublicAccess/noLimitations
             label:
               fr: Pas de restriction d’accès public selon INSPIRE # libellé souvent utilisé
@@ -839,7 +927,7 @@ ontologies:
       dct:LicenseDocument:
         definition: A legal document giving official permission to do something with a resource.
         subClassOf: [dct:RightsStatement]
-        resources:
+        instances:
           - $id: https://spdx.org/licenses/etalab-2.0
             label:
               fr: Licence ouverte Etalab 2.0
@@ -847,7 +935,7 @@ ontologies:
       dct:Standard:
         definition: A reference point against which other things can be evaluated or compared.
         subClassOf: []
-        resources:
+        instances:
           - $id: https://tools.ietf.org/html/rfc4287
             label:
               fr: Le format de syndication Atom
@@ -875,7 +963,7 @@ ontologies:
       dct:MediaType:
         definition: A file format or physical medium.
         subClassOf: [dct:MediaTypeOrExtent]
-        resources:
+        instances:
           - $id: https://www.iana.org/assignments/media-types/text/html
             label:
               fr: Texte HTML
@@ -898,7 +986,7 @@ ontologies:
       dct:Frequency:
         definition: A rate at which something recurs.
         subClassOf: []
-        resources:
+        instances:
           - $id: http://inspire.ec.europa.eu/metadata-codelist/MaintenanceFrequency/continual
             label:
               fr: En continu

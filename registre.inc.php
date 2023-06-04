@@ -1,5 +1,20 @@
 <?php
-/*registre.inc.php - charge le registre et fournit les méthodes pour l'utiliser
+/*YamlDoc:
+title: registre.inc.php - charge le registre et fournit les méthodes pour l'utiliser
+doc: |
+  Le fichier est inclus dans exp.php pour utilisation du registre
+  Par ailleurs il peut être appélé directement en !CLI pour
+   - afficher le contenu chargé
+   - vérifier les contraintes d'intégrité mentionnées dans le registre
+
+  Les classes ConceptScheme, Concept et Organization son définies pour porter la méthode statique registre2JsonLd()
+  transformant la structure définie dans le registre en une structure JSON-LD à intégrer dans un graphe RDF.
+journal:
+ 3/6/2023:
+  - restructuration du registre
+  - adaptation de la lecture
+  - passage d'un stockage statique à stockage dans un objet
+  - ajout d la vérification des contraintes d'intégrité (en cours)
 */
 require_once __DIR__.'/vendor/autoload.php';
 require_once __DIR__.'/lib.inc.php';
@@ -127,7 +142,7 @@ class Organization extends RdfExpResource { // http://xmlns.com/foaf/0.1/Organiz
 
 
 
-class Property { // méthodes sur les propriétés - ANCIENNE DEFINITION 
+/*class Property { // méthodes sur les propriétés - ANCIENNE DEFINITION 
   static array $names = []; // stockage des noms courts des propriétés comme clé pour tester les collisions
   
   // construit les champs utiles de l'inverse pour addContextForProperty()
@@ -153,7 +168,7 @@ class Property { // méthodes sur les propriétés - ANCIENNE DEFINITION
     else
       return $context;
   }
-};
+};*/
 
 class RdfProperty {
   protected string $ciri; // compact URI 
@@ -183,24 +198,26 @@ class RdfProperty {
         items:
           type: string
           pattern: '^[a-z]+:[A-Za-z]+$'
-      resources:
-        description: liste de ressources bien connues de la classe et utiles
-        $ref: '#/definitions/resources'
+      instances:
+        description: liste d'instances bien connues de la classe et utiles
+        $ref: '#/definitions/instances'
 */}
 class RdfClass { // description d'une classe 
   protected string $ciri; // compact URI 
-  protected array $array; // description identique au fichier Yaml 
+  protected array $array; // description identique au fichier Yaml sans les instances transférées dans le graphe
   
   function __construct(string $ciri, array $array, Registre $registre, RdfExpGraph $graph) {
     $this->ciri = $ciri;
     $this->array = $array;
-    foreach ($array['resources'] ?? [] as $resource) {
-      $classUri = $registre->expandCiri($ciri);
-      if (!($className = RdfExpGraph::CLASS_URI_TO_PHP_NAME[$classUri] ?? null))
-        throw new Exception("Erreur, classe $classUri inconnue dans RdfExpGraph::CLASS_URI_TO_PHP_NAME");
-      $graph->addResource($className::registre2JsonLd($classUri, $resource), $className);
+    if (!in_array($ciri, ['rdfs:Class'])) {
+      foreach ($array['instances'] ?? [] as $instance) {
+        $classUri = $registre->expandCiri($ciri);
+        if (!($className = RdfExpGraph::CLASS_URI_TO_PHP_NAME[$classUri] ?? null))
+          throw new Exception("Erreur, classe $classUri inconnue dans RdfExpGraph::CLASS_URI_TO_PHP_NAME");
+        $graph->addResource($className::registre2JsonLd($classUri, $instance), $className);
+      }
+      unset($this->array['instances']);
     }
-    unset($this->array['resources']);
   }
   
   function asArray(): array { return $this->array; }
@@ -270,9 +287,10 @@ class Ontology {
 
 class Registre { // stockage du registre 
   protected array $namespaces=[]; // [{prefix} => {iri}]
+  protected array $datatypes=[]; // [{ciri} => {description}]
   protected array $ontologies=[]; // [{prefix} => Ontology]
   
-  function expandCiri(string $ciri): string {
+  function expandCiri(string $ciri): string { // construction de l'URI à partir du ciri
     $parts = explode(':', $ciri);
     if (!isset($this->namespaces[$parts[0]])) {
       throw new Exception("Erreur, espace de nom $parts[0] non défini");
@@ -286,9 +304,8 @@ class Registre { // stockage du registre
     } catch (ParseException $exception) {
       throw new Exception('Unable to parse the YAML file: '. $exception->getMessage());
     }
-    foreach ($registre['namespaces'] as $prefix => $iri) {
-      $this->namespaces[$prefix] = $iri;
-    }
+    $this->namespaces = $registre['namespaces'];
+    $this->datatypes = $registre['datatypes'];
     foreach ($registre['ontologies'] as $prefix => $ontology) {
       $this->ontologies[$prefix] = new Ontology($ontology, $this, $graph);
     }
@@ -300,11 +317,12 @@ class Registre { // stockage du registre
       $ontologies[$prefix] = $ontology->asArray();
     echo Yaml::dump([
       'namespaces'=> $this->namespaces,
+      'datatypes'=> $this->datatypes,
       'ontologies'=> $ontologies,
     ], 9, 4, Yaml::DUMP_MULTI_LINE_LITERAL_BLOCK);
   }
   
-  function getClass(string $ciri): ?RdfClass {
+  function getClass(string $ciri): ?RdfClass { // récupération d'une classe définie par son curi
     $parts = explode(':', $ciri);
     if (!($ont = $this->ontologies[$parts[0]] ?? null))
       throw new Exception("Erreur: prefix $parts[0] utilisé dans $ciri mais non défini");
@@ -312,7 +330,7 @@ class Registre { // stockage du registre
     return $class;
   }
   
-  function checkIntegrity(RdfExpGraph $graph): void {
+  function checkIntegrity(RdfExpGraph $graph): void { // contrôle d'intégrité du registre 
     // Les ressources bien connues doivent respecter les propriétés de leur classe
     { // le publisher d'un skos:ConceptScheme doit être un URI défini comme ressource de foaf:Organization
       echo "<h3>le publisher d'un skos:ConceptScheme doit être un URI défini comme ressource de foaf:Organization</h3>\n";
@@ -362,7 +380,7 @@ class Registre { // stockage du registre
     // chaque domain doit être le CURI d'une classe
   }
   
-  function jsonLdContext(): array { // contexte JSON-LD de allAsJsonLd() comme array Php
+  /*function jsonLdContext(): array { // contexte JSON-LD de allAsJsonLd() comme array Php
     $context = [
       '@language'=> 'fr',
       '@base'=> 'http://base/',
@@ -421,10 +439,10 @@ class Registre { // stockage du registre
         "name": "花澄",
         "occupation": "科学者"
       }
-    */
-  }
+    * /
+  }*/
   
-  function jsonLdFrame(): array {
+  /*function jsonLdFrame(): array {
     return [
       '@context'=> self::jsonLdContext(),
       '@type'=> 'Dataset',
@@ -467,13 +485,14 @@ class Registre { // stockage du registre
         }
       }
     }
-    */
-  }
+    * /
+  }*/
 };
+
+
 
 //print_r($_SERVER);
 //echo __FILE__;
-
 // Exécution de test en !CLI
 if ((php_sapi_name()=='cli') || (__FILE__ <> $_SERVER['DOCUMENT_ROOT'].$_SERVER['SCRIPT_NAME'])) return;
 

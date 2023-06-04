@@ -240,7 +240,7 @@ class RdfExpLiteral extends ExpPropVal {
 class RdfExpResRef extends ExpPropVal {
   // indique par propriété sa classe d'arrivée (range), nécessaire pour le déréférencement pour la simplification
   const PROP_RANGE = [
-    'publisher' => 'GenResource',
+    'publisher' => 'Organization',
     'creator' => 'GenResource',
     'rightsHolder' => 'GenResource',
     'spatial' => 'Location',
@@ -260,6 +260,7 @@ class RdfExpResRef extends ExpPropVal {
     'accrualPeriodicity' => 'GenResource',
     'accessService' => 'DataService',
     'distribution' => 'Distribution',
+    'inScheme' => 'ConceptScheme',
   ];
   
   public readonly ?string $id;
