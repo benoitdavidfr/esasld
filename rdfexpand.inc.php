@@ -381,6 +381,25 @@ abstract class RdfExpResource {
     //return $this->__toString();
   }
   
+  // retourne la liste [ExpPropVal] correspondant pour l'objet à la propriété définie par son nom court
+  function __get(string $name): ?array {
+    //echo "__get($name) sur "; print($this);
+    $uri = null;
+    foreach ($this->prop_key_uri() as $pUri => $pName) {
+      if ($pName == $name) {
+        $uri = $pUri;
+        break;
+      }
+    }
+    if (!$uri) {
+      echo "__get($name) retourne null\n";
+      throw new Exception("$name non défini dans GenResource::__get()");
+      //return null;
+    }
+    //echo "uri=$uri\n";
+    return $this->props[$uri] ?? [];
+  }
+  
   // corrections d'erreurs ressource par ressource et pas celles qui nécessittent un accès à d'autres ressources
   function rectification(Stats $rectifStats): void {
     // remplacer les URI erronés de propriétés
@@ -667,25 +686,6 @@ class GenResource extends RdfExpResource {
       print_r($this);
       throw new Exception("Erreur, PROP_KEY_URI non défini pour le type $type et l'objet ci-dessus");
     }
-  }
-  
-  // retourne la liste [ExpPropVal] correspondant pour l'objet à la propriété définie par son nom court
-  function __get(string $name): ?array {
-    //echo "__get($name) sur "; print($this);
-    $uri = null;
-    foreach ($this->prop_key_uri() as $pUri => $pName) {
-      if ($pName == $name) {
-        $uri = $pUri;
-        break;
-      }
-    }
-    if (!$uri) {
-      echo "__get($name) retourne null\n";
-      throw new Exception("$name non défini dans GenResource::__get()");
-      //return null;
-    }
-    //echo "uri=$uri\n";
-    return $this->props[$uri] ?? [];
   }
   
   // je fais l'hypothèse que les objets autres que Catalog quand ils sont définis plusieurs fois ont des defs identiques
@@ -1061,6 +1061,8 @@ class RdfExpGraph {
     }
   }
 
+  function getClassResources(string $className): array { return $this->resources[$className] ?? []; }
+  
   // simplification des valeurs de propriété $pvals de la forme [[{key} => {value}]], $pKey est le nom court de la prop.
   function simplifPvals(array $pvals, string $pKey): string|array {
     // $pvals ne contient qu'un seul $pval alors simplif de cette valeur

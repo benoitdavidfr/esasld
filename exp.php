@@ -107,23 +107,6 @@ use ML\JsonLD\JsonLD;
 ini_set('memory_limit', '2G');
 
 
-class StdErr { // afffichage de messages d'info, d'alerte ou d'erreur non fatale 
-  static array $messages=[]; // [{message} => {nbre}]
-  
-  static function write(string $message): void {
-    if (!defined('STDERR')) { // en non CLI les messages sont justes stockés sans répétition en gardant le nombre d'itération
-      self::$messages[$message] = (self::$messages[$message] ?? 0) + 1;
-    }
-    elseif (!isset(self::$messages[$message])) { // en CLI si le message est nouveau 
-      fwrite(STDERR, "$message\n"); // alors affichage sur STDERR
-      self::$messages[$message] = 1; // et stockage du message
-    }
-    else { // en CLI si le message est déjà apparu
-      self::$messages[$message]++; // alors le nbre d'itérations est incrémenté
-    }
-  }
-};
-
 class Constant { // Classe support de constantes 
   const FRAME_PARAM = [
         'Dataset' => [
@@ -181,16 +164,6 @@ define('JSON_OPTIONS',
         JSON_PRETTY_PRINT|JSON_UNESCAPED_LINE_TERMINATORS|JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR);
 
 $urlPrefix = 'https://preprod.data.developpement-durable.gouv.fr/dcat/catalog';
-
-class Html {
-  static function selectOptions(string $outputFormat, array $options): string {
-    $html = '';
-    foreach ($options as $key => $label) {
-      $html .= "        <option".(($outputFormat==$key) ? " selected='selected'": '')." value='$key'>$label</option>\n";
-    }
-    return $html;
-  }
-};
 
 if (php_sapi_name()=='cli') { // traitement CLI en fonction de l'action demandée 
   if ($argc == 1) {

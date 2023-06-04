@@ -5,6 +5,33 @@ use Symfony\Component\Yaml\Exception\ParseException;
 // extrait le code HTTP de retour de l'en-tête HTTP
 function httpResponseCode(array $header) { return substr($header[0], 9, 3); }
 
+class Html {
+  static function selectOptions(string $outputFormat, array $options): string {
+    $html = '';
+    foreach ($options as $key => $label) {
+      $html .= "        <option".(($outputFormat==$key) ? " selected='selected'": '')." value='$key'>$label</option>\n";
+    }
+    return $html;
+  }
+};
+
+class StdErr { // afffichage de messages d'info, d'alerte ou d'erreur non fatale 
+  static array $messages=[]; // [{message} => {nbre}]
+  
+  static function write(string $message): void {
+    if (!defined('STDERR')) { // en non CLI les messages sont justes stockés sans répétition en gardant le nombre d'itération
+      self::$messages[$message] = (self::$messages[$message] ?? 0) + 1;
+    }
+    elseif (!isset(self::$messages[$message])) { // en CLI si le message est nouveau 
+      fwrite(STDERR, "$message\n"); // alors affichage sur STDERR
+      self::$messages[$message] = 1; // et stockage du message
+    }
+    else { // en CLI si le message est déjà apparu
+      self::$messages[$message]++; // alors le nbre d'itérations est incrémenté
+    }
+  }
+};
+
 class Stats { // classe utilisée pour mémoriser des stats sous la forme [{label} => {nbre d'occurences}]
   protected array $contents=[]; // [{label}=> {nbre}]
   function __construct(array $contents=[]) { $this->contents = $contents; }

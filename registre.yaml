@@ -68,7 +68,7 @@ ontologies:
       - https://www.w3.org/TR/2023/WD-vocab-dcat-3-20230307/
       - https://www.w3.org/TR/vocab-dcat-3/
     classes:
-      dcat:Catalog: # DCAT
+      dcat:Catalog:
         definition: A curated collection of metadata about resources.
         subClassOf: [dcat:Dataset]
       dcat:Resource:
@@ -99,7 +99,7 @@ ontologies:
         definition: An association class for attaching additional information to a relationship between DCAT Resources
         subClassOf: [prov:EntityInfluence]
     properties:
-      dcat:themeTaxonomy: # DCAT
+      dcat:themeTaxonomy:
         definition: |
           A knowledge organization system (KOS) used to classify the resources documented in the catalog (e.g., datasets and
           services).
@@ -761,7 +761,17 @@ ontologies:
     title: "PROV-O: The PROV Ontology"
     source:
       - https://www.w3.org/TR/prov-o/
-    properties:  
+    classes:
+      prov:Influence:
+        definition: |
+          Influence is the capacity of an entity, activity, or agent to have an effect on the character, development, or behavior of another by means of usage, start, end, generation, invalidation, communication, derivation, attribution, association, or delegation.
+        subClassOf: []
+      prov:EntityInfluence:
+        definition: |
+          EntityInfluence is the capacity of an entity to have an effect on the character, development, or behavior of another
+          by means of usage, start, end, derivation, or other.
+        subClassOf: [prov:Influence]
+    properties:
       prov:qualifiedAttribution: # PROV
         definition: Link to an Agent having some form of responsibility for the resource
         subPropertyOf: [prov:qualifiedInfluence]
@@ -1149,6 +1159,48 @@ ontologies:
       dct:educationLevel: # divers
       dct:bibliographicCitation:
       dct:instructionalMethod:
+  dctype:
+    title: DCMI Type Vocabulary
+    source:
+      - http://purl.org/dc/dcmitype/
+    publisher: http://purl.org/dc/aboutdcmi#DCMI
+    classes:
+      dctype:Collection:
+        definition: A collection is described as a group; its parts may also be separately described.
+        subClassOf: []
+      dctype:Dataset:
+        definition: Examples include lists, tables, and databases. A dataset may be useful for direct machine processing.
+        subClassOf: []
+      dctype:Event:
+        definition: Metadata for an event provides descriptive information that is the basis for discovery of the purpose, location, duration, and responsible agents associated with an event. Examples include an exhibition, webcast, conference, workshop, open day, performance, battle, trial, wedding, tea party, conflagration.
+        subClassOf: []
+      dctype:Image:
+        definition: Examples include images and photographs of physical objects, paintings, prints, drawings, other images and graphics, animations and moving pictures, film, diagrams, maps, musical notation. Note that Image may include both electronic and physical representations.
+        subClassOf: []
+      dctype:InteractiveResource:
+        definition: Examples include forms on Web pages, applets, multimedia learning objects, chat services, or virtual reality environments.
+        subClassOf: []
+      dctype:MovingImage:
+        definition: Examples include animations, movies, television programs, videos, zoetropes, or visual output from a simulation. Instances of the type Moving Image must also be describable as instances of the broader type Image.
+        subClassOf: []
+      dctype:PhysicalObject:
+        definition: Note that digital representations of, or surrogates for, these objects should use Image, Text or one of the other types.
+        subClassOf: []
+      dctype:Service:
+        definition: Examples include a photocopying service, a banking service, an authentication service, interlibrary loans, a Z39.50 or Web server.
+        subClassOf: []
+      dctype:Software:
+        definition: Examples include a C source file, MS-Windows .exe executable, or Perl script.
+        subClassOf: []
+      dctype:Sound:
+        definition: Examples include a music playback file format, an audio compact disc, and recorded speech or sounds.
+        subClassOf: []
+      dctype:StillImage:
+        definition: Examples include paintings, drawings, graphic designs, plans and maps. Recommended best practice is to assign the type Text to images of textual materials. Instances of the type Still Image must also be describable as instances of the broader type Image.
+        subClassOf: []
+      dctype:Text:
+        definition: Examples include books, letters, dissertations, poems, newspapers, articles, archives of mailing lists. Note that facsimiles or images of texts are still of the genre Text.
+        subClassOf: []
   locn:
     title: Location Core Vocabulary
     source:

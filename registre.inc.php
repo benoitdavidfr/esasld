@@ -11,6 +11,7 @@ use Symfony\Component\Yaml\Exception\ParseException;
 class ConceptScheme extends RdfExpResource {
   const PROP_KEY_URI = [
     'http://purl.org/dc/terms/title' => 'title',
+    'http://purl.org/dc/terms/publisher' => 'publisher',
   ];
   
   static function registre2JsonLd(string $classUri, array $resource): array { // transforme la structure registre en structure JSON-LD 
@@ -36,13 +37,10 @@ class ConceptScheme extends RdfExpResource {
     $jsonLd = [
       '@id'=> $resource['$id'],
       '@type'=> [$classUri],
-      'http://purl.org/dc/terms/title' => [
-        [
-          '@language'=> 'fr',
-          '@value'=> $resource['title']['fr'],
-        ],
-      ],
+      'http://purl.org/dc/terms/title' => [['@language'=> 'fr', '@value'=> $resource['title']['fr']]],
     ];
+    if (isset($resource['publisher']))
+      $jsonLd['http://purl.org/dc/terms/publisher'] = [['@id'=> $resource['publisher']]];
     //echo 'structureJsonLd = '; print_r($jsonLd);
     return $jsonLd;
   }
@@ -266,6 +264,8 @@ class Ontology {
       'properties'=> $properties ?? [],
     ];
   }
+  
+  function classes(): array { return $this->classes; }
 };
 
 class Registre { // stockage du registre 
@@ -304,8 +304,62 @@ class Registre { // stockage du registre
     ], 9, 4, Yaml::DUMP_MULTI_LINE_LITERAL_BLOCK);
   }
   
-  function checkIntegrity(): void {
-    
+  function getClass(string $ciri): ?RdfClass {
+    $parts = explode(':', $ciri);
+    if (!($ont = $this->ontologies[$parts[0]] ?? null))
+      throw new Exception("Erreur: prefix $parts[0] utilisé dans $ciri mais non défini");
+    $class = $ont->classes()[$ciri] ?? null;
+    return $class;
+  }
+  
+  function checkIntegrity(RdfExpGraph $graph): void {
+    // Les ressources bien connues doivent respecter les propriétés de leur classe
+    { // le publisher d'un skos:ConceptScheme doit être un URI défini comme ressource de foaf:Organization
+      echo "<h3>le publisher d'un skos:ConceptScheme doit être un URI défini comme ressource de foaf:Organization</h3>\n";
+      foreach ($graph->getClassResources('ConceptScheme') as $cs) {
+        //print_r($cs);
+        foreach ($cs->publisher as $publisher) {
+          //print_r($publisher);
+          $publisherId = $publisher->id;
+          if (!isset($graph->getClassResources('Organization')[$publisherId])) {
+            echo "<b>Erreur: Le publisher du ConceptScheme \"",$cs->title[0]->value,"\" qui est '$publisherId'",
+                 " n'est pas défini dans la classe Organization</b>\n";
+          }
+        }
+      }
+    }
+    // publisher d'une ontologie doit être un URI défini comme ressource de foaf:Organization
+    { // les URI de inScheme d'un skos:Concept doivent être définis dans skos:ConceptScheme
+      echo "<h3>les URI de inScheme d'un skos:Concept doivent être définis dans skos:ConceptScheme</h3>\n";
+      foreach ($graph->getClassResources('Concept') as $concept) {
+        foreach ($concept->inScheme as $inScheme) {
+          //print_r($inScheme);
+          if (!isset($graph->getClassResources('ConceptScheme')[$inScheme->id])) {
+            echo "<b>Erreur: Le inScheme du Concept \"",$cs->prefLabel[0]->value,"\" qui est '$inScheme->id'",
+                 " n'est pas défini dans la classe ConceptScheme</b>\n";
+          }
+        }
+      }
+    }
+    { // chaque CURI de subClassOf de RdfClass doit être un CURI d'une classe
+      echo "<h3>chaque CURI de subClassOf de RdfClass doit être un CURI d'une classe</h3>\n";
+      foreach ($this->ontologies as $ont) {
+        foreach ($ont->asArray()['classes'] as $ccuri => $class) {
+          //echo "$ccuri -> "; print_r($class);
+          foreach ($class['subClassOf'] as $superClass) {
+            //echo "$ccuri subClassOf $superClass\n";
+            if (!$this->getClass($superClass)) {
+              echo "<b>Erreur: La super-classe $superClass de $ccuri n'est pas définie</b>\n";
+            }
+          }
+        }
+      }
+    }
+    // chaque subPropertyOf doit être le CURI d'une prorpriété
+    // referentialIntegrity: chaque equivalentProperty doit être le CURI d'une propriété
+    // chaque range doit être le CURI d'une classe
+    // chaque datatype doit être un type défini
+    // chaque domain doit être le CURI d'une classe
   }
   
   function jsonLdContext(): array { // contexte JSON-LD de allAsJsonLd() comme array Php
@@ -417,16 +471,45 @@ class Registre { // stockage du registre
   }
 };
 
+//print_r($_SERVER);
+//echo __FILE__;
 
 // Exécution de test en !CLI
-if ((php_sapi_name()=='cli') || ($_SERVER['REQUEST_URI'] <> $_SERVER['SCRIPT_NAME'])) return;
+if ((php_sapi_name()=='cli') || (__FILE__ <> $_SERVER['DOCUMENT_ROOT'].$_SERVER['SCRIPT_NAME'])) return;
 
-echo "<html><head><title>registre</title></head><body><pre>\n";
+$action = $_GET['action'] ?? 'showRegistre';
+
+{ // formulaire 
+  echo "<html><head><title>registre</title></head><body>
+    <form>
+    <select name='action'>\n",
+    Html::selectOptions($action, [
+      'showRegistre'=> "Affichage du registre hors ressources bien connues",
+      'showResources'=> "Affichage des ressources bien connues",
+      'checkIntegrity'=> "Vérif. de l'intégrité du registre",
+    ]),
+    "      </select>
+    <input type='submit' value='Submit' /></form><pre>\n";
+}
+
 $registre = new Registre;
 $graph = new RdfExpGraph('default');
 $registre->import($graph);
-$registre->show();
-//echo '$graph = '; print_r($graph);
-echo "<h2>Le graphe</h2>\n";
-$graph->showInYaml();
-$registre->checkIntegrity();
+
+switch ($action) {
+  case 'showRegistre': {
+    $registre->show();
+    break;
+  }
+  case 'showResources': {
+    $graph->showInYaml();
+    break;
+  }
+  case 'checkIntegrity': {
+    $registre->checkIntegrity($graph);
+    break;
+  }
+  default: {
+    throw new Exception("Action $action inconnue");
+  }
+}
