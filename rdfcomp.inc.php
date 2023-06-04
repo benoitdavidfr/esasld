@@ -7,6 +7,8 @@ doc: |
    1) de créer le graphe compacté à partir du graphe épandu en utilisant JsonLD::compact() puis en stockant le résultat
    2) de gérer le tri des propriétés pour l'affichage.
   
+  Il doit être possible de repasser à un graphe épandu en utilisant JsonLD::expand() 
+  
   Les graphes compactés sont gérés par la classe RdfCompactGraph, le contexte est défini par RdfContext
   Les ressources sont gérées au moyen de la classe RdfCompactResource ;
   Les valeurs de propriété sont gérées par la classe abstraite RdfCompactElt dont les sous classes concrètes sont:

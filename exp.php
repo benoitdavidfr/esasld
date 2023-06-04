@@ -36,10 +36,12 @@ doc: |
     - gestion des Location
     - boucler la boucle en faisant sur la sortie Yaml-LD un Yaml::parse(), expand et flattening
       et comparer le résultat avec le JSON-LD initial
+      - modifier la boucle en comparant des graphes imbriqués et non aplanis
     - mieux gérer les constantes et si possible les déduire de la déf. des ontologies
   
   Prolongations éventuelles:
    - définir des shapes SHACL pour valider le graphe DCAT en s'inspirant de ceux de DCAT-AP
+     - voir les outils proposés par Jena
 
 journal: |
  3/6/2023:

@@ -3,133 +3,17 @@ abstract: |
   Ce registre définit:
     1) les ontologies utilisées
     2) des ressources identifiées par des URI présents dans l'export Ecosphères et mais dont la définition
-       est absente de cet export.
-  Dans certains cas les ontologies sont spécialisées dans leur utilisation pour DCAT, ex. .
-$schema:
-  $id: https://georef.eu/exportESph/registre.schema.yaml
-  $schema: http://json-schema.org/schema#
-  type: object
-  additionalProperties: false
-  required: [ title, abstract, $schema, classes ]
-  properties:
-    title: { description: 'titre du document', type: string }
-    abstract: { description: 'résumé du document', type: string }
-    $schema:
-      description: 'schema JSON du document'
-      oneOf:
-        - $ref: http://json-schema.org/schema#
-        - type: string
-    namespaces:
-      description: dictionnaire des espaces de noms indexés sur leur prefixe utilisé dans ce document
-      type: object
-      additionalProperties: false
-      patternProperties:
-        '^[a-z]+$':
-          description: URI de l'espace de noms
-          type: string
-          pattern: '^https?://'
-    ontologies:
-      description: dictionnaire des ontologies indexées sur le préfixe de leur espace de noms
-      type: object
-      additionalProperties: false
-      patternProperties:
-        '^[a-z]+$':
-          description: description de l'ontologie
-          type: object
-          properties:
-            title: { description: "titre de l'ontologie", type: string }
-            source:
-              description: liste de références aux documents de référence sur cette ontologie
-              type: array
-              items: {type: string}
-    classes:
-      description: dictionnaire des classes indexées sur leur URI compact
-      type: object
-      additionalProperties: false
-      patternProperties:
-        '^[a-z]+:[A-Za-z]+$':
-          description: description de la classe et de ses ressources bien connues
-          type: object
-          additionalProperties: false
-          required: [definition, subClassOf]
-          properties:
-            label: { description: "libellé s'il ne se déduit pas facilement de son URI (rdfs:label)", type: string}
-            definition: { description: 'définition officielle de la classe (skos:definition)', type: string }
-            comment: { description: 'commentaire officiel sur la classe (rdfs:comment)', type: string }
-            subClassOf:
-              description: liste des classes parentes définies par leur URI compact (rdfs:subClassOf)
-              type: array
-              items:
-                type: string
-                pattern: '^[a-z]+:[A-Za-z]+$'
-            resources:
-              description: liste de ressources bien connues de la classe et utiles
-              type: array
-              items:
-                description: Description de chaque ressource
-                type: object
-                required: [ $id, label ]
-                additionalProperties: false
-                properties:
-                  $id:
-                    description: URI de la ressource
-                    type: string
-                  label:
-                    description: étiquettes définies par langue, '' pour langue non définie
-                    type: object
-                    additionalProperties: false
-                    patternProperties:
-                      '^|..$':
-                        type: string
-    properties:
-      description: dictionnaire des propriétés indexées sur leur URI compact
-      type: object
-      additionalProperties: false
-      patternProperties:
-        '^[a-z]+:[a-zA-Z]+$':
-          oneOf:
-            - description: description de la propriété
-              type: object
-              additionalProperties: false
-              properties:
-                label: { description: "libellé s'il ne se déduit pas facilement de son URI", type: string}
-                definition: { description: 'définition officielle de la classe', type: string }
-                definition(fr): { description: "une traduction en français de la définition", type: string }
-                subPropertyOf:
-                  description: liste des propriétés parentes (rdfs:subPropertyOf)
-                  type: array
-                  items:
-                    type: string
-                equivalentProperty:
-                  type: array
-                  items:
-                    type: string
-                range:
-                  description: cible de la propriété comme ensemble de classes définies par leur URI compact
-                  type: array
-                  items: {type: string}
-                datatype:
-                  description: liste de types de données attendus
-                  type: array
-                  items: {type: string}
-                domain:
-                  description: domaine de définition de la proprité comme ensemble de classes définies par leur URI compact
-                  type: array
-                  items: {type: string}
-                inverse:
-                  description: définition d'une proprité inverse
-                  type: string
-                  pattern: '^[a-z]+:[a-zA-Z]+$'
-                comment: { description: 'un commentaire', type: string }
-                dcatSpecialization:
-                  description: commentaire sur la spécialisation de la description pour DCAT
-                  type: string
-            - description: propriété non détaillée dont uniquement l'URI est fournie
-              type: 'null'
-    eof:
-      description: propriété marquant la fin du fichier
-      type: 'null'
-    
+       est absente de cet export. Ces ressources sont appelées ressources bien connues.
+  Dans certains cas les ontologies sont spécialisées dans leur utilisation pour DCAT, plusieurs définitions sont alors
+  fournies, exemple skos:ConceptScheme.
+lineage:
+  - date: '2023-06-04'
+    label: |
+      transformation de la structure du registre:
+        - intégration des classes et des propriétés dans leur ontologie
+        - différents schémas possibles pour les ressources bien connues
+$schema: registre
+
 namespaces:
   adms: 'http://www.w3.org/ns/adms#'
   dc: http://purl.org/dc/elements/1.1/
@@ -158,927 +42,1117 @@ ontologies:
     title: RDF Schema
     source:
       - https://www.w3.org/TR/rdf-schema/
+    classes:
+      rdfs:Resource:
+        definition: |
+          All things described by RDF are called resources, and are instances of the class rdfs:Resource.
+          This is the class of everything.
+        subClassOf: []
+      rdfs:Literal:
+        definition: literal values such as strings and integers.
+        subClassOf: []
+    properties:
+      rdfs:label:
+        definition: provides a human-readable version of a resource's name.
+        subPropertyOf: []
+        range: [rdfs:Literal]
+        domain: [rdfs:label]
+      rdfs:comment:
+        definition: provides a human-readable description of a resource.
+        subPropertyOf: []
+        range: [rdfs:Literal]
+        domain: [rdfs:label]
   dcat:
     title: Data Catalog Vocabulary (DCAT) - Version 3
     source:
       - https://www.w3.org/TR/2023/WD-vocab-dcat-3-20230307/
       - https://www.w3.org/TR/vocab-dcat-3/
+    classes:
+      dcat:Catalog: # DCAT
+        definition: A curated collection of metadata about resources.
+        subClassOf: [dcat:Dataset]
+      dcat:Resource:
+        label: Cataloged Resource
+        definition: Resource published or curated by a single agent.
+        subClassOf: []
+      dcat:CatalogRecord:
+        definition: A record in a catalog, describing the registration of a single dcat:Resource.
+        subClassOf: []
+      dcat:Dataset:
+        definition: |
+          A collection of data, published or curated by a single agent, and available for access or download in one or more
+          representations.
+        subClassOf: [dcat:Resource]
+      dcat:DatasetSeries:
+        definition: A collection of datasets that are published separately, but share some characteristics that group them.
+        subClassOf: [dcat:Dataset]
+      dcat:DataService:
+        definition: A collection of operations that provides access to one or more datasets or data processing functions.
+        subClassOf: [dcat:Resource, dctype:Service]
+      dcat:Distribution:
+        definition: |
+          A specific representation of a dataset. A dataset might be available in multiple serializations that may differ
+          in various ways, including natural language, media-type or format, schematic organization, temporal and spatial
+          resolution, level of detail or profiles (which might specify any or all of the above). 
+        subClassOf: []
+      dcat:Relationship:
+        definition: An association class for attaching additional information to a relationship between DCAT Resources
+        subClassOf: [prov:EntityInfluence]
+    properties:
+      dcat:themeTaxonomy: # DCAT
+        definition: |
+          A knowledge organization system (KOS) used to classify the resources documented in the catalog (e.g., datasets and
+          services).
+        domain: [dcat:Catalog]
+        range: [rdfs:Resource]
+        comment: |
+          It is recommended that the taxonomy is organized in a skos:ConceptScheme, skos:Collection, owl:Ontology or similar,
+          which allows each member to be denoted by an IRI and published as Linked Data. 
+      dcat:theme:
+        definition: A main category of the resource. A resource can have multiple themes.
+        subPropertyOf: [dcterms:subject]
+        range: [rdfs:Resource]
+        comment: |
+          Usage note: The set of themes used to categorize the resources are organized in a skos:ConceptScheme, skos:Collection, owl:Ontology or similar, describing all the categories and their relations in the catalog.
+      dcat:resource:
+        definition: A resource that is listed in the catalog.
+        subPropertyOf: [dcterms:hasPart]
+        domain: [dcat:Catalog]
+        range: [dcat:Resource]
+        inverse: dcat:inCatalog
+        comment: |
+          Usage note DCAT: This is the most general predicate for membership of a catalog. Use of a more specific sub-property is recommended when available.
+      dcat:dataset:
+        definition: A dataset that is listed in the catalog.
+        subPropertyOf: [dcat:resource]
+        domain: [dcat:Catalog]
+        range:	[dcat:Dataset]
+      dcat:service:
+        definition: A service that is listed in the catalog.
+        subPropertyOf: [dcat:resource]
+        domain: [dcat:Catalog]
+        range:	[dcat:DataService]
+      dcat:catalog:
+        definition: A catalog that is listed in the catalog.
+        subPropertyOf: [dcat:resource]
+        domain: [dcat:Catalog]
+        range:	[dcat:Catalog]
+      dcat:record:
+        definition: |
+          A record describing the registration of a single resource (e.g., a dataset, a data service) that is part of the catalog.
+        subPropertyOf: [dcat:resource]
+        domain: [dcat:Catalog]
+        range:	[dcat:CatalogRecord]
+      dcat:contactPoint:
+        definition: Relevant contact information for the cataloged resource. Use of vCard is recommended.
+        range: [vcard:Kind]
+      dcat:qualifiedRelation:
+        definition: Link to a description of a relationship with another resource
+        subPropertyOf: [prov:qualifiedInfluence]
+        domain: [dcat:Resource]
+        range: [dcat:Relationship]
+      dcat:keyword:
+        definition: A keyword or tag describing the resource.
+        range: [rdfs:Literal]
+      dcat:bbox:
+        definition: The geographic bounding box of a spatial thing [SDW-BP].
+        range: [rdfs:Literal]
+        comment: |
+          Usage note:	The range of this property (rdfs:Literal) is intentionally generic, with the purpose of allowing different geometry literal encodings. E.g., the geometry could be encoded as a WKT literal (geosparql:wktLiteral [GeoSPARQL]).
+      dcat:centroid:
+        definition: The geographic center (centroid) of a spatial thing [SDW-BP].
+        range: [rdfs:Literal]
+        comment: |
+          Usage note: The range of this property (rdfs:Literal) is intentionally generic, with the purpose of allowing different geometry literal encodings. E.g., the geometry could be encoded as a WKT literal (geosparql:wktLiteral [GeoSPARQL]).
+      dcat:landingPage:
+        definition: |
+          A Web page that can be navigated to in a Web browser to gain access to the catalog, a dataset, its distributions
+          and/or additional information.
+        subPropertyOf: [foaf:page]
+        range: [foaf:Document]
+        comment: |
+          Usage note: If the distribution(s) are accessible only through a landing page (i.e., direct download URLs are not known),
+            then the landing page link SHOULD be duplicated as dcat:accessURL on a distribution.
+      dcat:inSeries:
+        definition: A dataset series of which the dataset is part.
+        domain: [dcat:Dataset]
+        range: [dcat:DatasetSeries]
+        subPropertyOf: [dcterms:isPartOf]
+        inverse: dcat:seriesMember
+      dcat:distribution:
+        definition:	An available distribution of the dataset.
+        subPropertyOf: [dct:relation]
+        domain: [dcat:Dataset]
+        range: [dcat:Distribution]
+        inverse: dcat:isDistributionOf
+      dcat:accessURL:
+        definition: |
+          A URL of the resource that gives access to a distribution of the dataset. E.g., landing page, feed, SPARQL endpoint.
+        domain: [dcat:Distribution]
+        range: [rdfs:Resource]
+        comment: |
+          Usage note:	
+
+          dcat:accessURL SHOULD be used for the URL of a service or location that can provide access to this distribution, typically through a Web form, query or API call.
+
+          dcat:downloadURL is preferred for direct links to downloadable resources.
+
+          If the distribution(s) are accessible only through a landing page (i.e., direct download URLs are not known), then the landing page URL associated with the dcat:Dataset SHOULD be duplicated as access URL on a distribution (see 5.7 Dataset available only behind some Web page).
+      dcat:accessService:
+        definition: A data service that gives access to the distribution of the dataset
+        range: [dcat:DataService]
+        comment: |
+          Usage note:	dcat:accessService SHOULD be used to link to a description of a dcat:DataService that can provide access to this distribution.
+      dcat:downloadURL:
+        definition: |
+          The URL of the downloadable file in a given format. E.g., CSV file or RDF file. The format is indicated by the
+          distribution's dcterms:format and/or dcat:mediaType
+        domain: [dcat:Distribution]
+        range: [rdfs:Resource]
+        comment: |
+          Usage note: dcat:downloadURL SHOULD be used for the URL at which this distribution is available directly, typically through a HTTP Get request.
+      dcat:previousVersion:
+        definition: The previous version of a resource in a lineage [PAV].
+        equivalentProperty: [pav:previousVersion]
+        subPropertyOf: [prov:wasRevisionOf]
+        inverse: dcat:nextVersion
+        comment: |
+          This property is meant to be used to specify a version chain, consisting of snapshots of a resource.
+          The notion of version used by this property is limited to versions resulting from revisions occurring to a resource as part of its life-cycle. One of the typical cases here is representing the history of the versions of a dataset that have been released over time.
+      dcat:hasVersion:
+        definition: This resource has a more specific, versioned resource [PAV].
+        equivalentProperty: [pav:hasVersion]
+        subPropertyOf: [dcterms:hasVersion, prov:generalizationOf]
+        comment: |
+          Usage note:
+            This property is intended for relating a non-versioned or abstract resource to several versioned resources, e.g., snapshots [PAV].
+
+            The notion of version used by this property is limited to versions resulting from revisions occurring to a resource as part of its life-cycle. Therefore, its semantics is more specific than its super-property dcterms:hasVersion, which makes use of a broader notion of version, including editions and adaptations.
+      dcat:hasCurrentVersion:
+        definition: This resource has a more specific, versioned resource with equivalent content [PAV].
+        equivalentProperty: [pav:hasCurrentVersion]
+        subPropertyOf: [pav:hasVersion]
+        comment: |
+          Usage note:
+            This property is intended for relating a non-versioned or abstract resource to a single snapshot that can be used as a permalink to indicate the current version of the content [PAV].
+
+            The notion of version used by this property is limited to versions resulting from revisions occurring to a resource as part of its life-cycle.
+      dcat:version:
+        definition: The version indicator (name or identifier) of a resource.
+        equivalentProperty: [pav:version]
+        range: [rdfs:Literal]
+        comment: |
+          Usage note: 	
+            DCAT does not prescribe how a version name / identifier should be specified, and refers for guidance to [DWBP]'s Best Practice 7: Provide a version indicator.
+      dcat:first:
+        definition: The first resource in an ordered collection or series of resources, to which the current resource belongs.
+        subPropertyOf: [xhv:first]
+        comment: |
+          Usage note: 	
+            In DCAT this property is used for resources belonging to a dcat:DatasetSeries.
+      dcat:last:
+        definition: The last resource in an ordered collection or series of resources, to which the current resource belongs.
+        subPropertyOf: [xhv:last]
+        comment: |
+          Usage note: 	
+            In DCAT this property is used for resources belonging to a dcat:DatasetSeries.
+      dcat:prev:
+        definition: The previous resource (before the current one) in an ordered collection or series of resources.
+        subPropertyOf: [xhv:prev]
+        inverse: dcat:next
+        comment: |
+          Usage note: 	
+            In DCAT this property is used for resources belonging to a dcat:DatasetSeries.
+            It is important to note that this property is different from dcat:previousVersion, as it does not denote a previous version of the same resource, but a distinct resource immediately preceding the current one in an ordered collection of resources.
   skos:
     title: SKOS Simple Knowledge Organization System
     source:
       - https://www.w3.org/2004/02/skos/
+    classes:
+      skos:ConceptScheme:
+        labelFr: Schéma de concepts
+        definition:
+          skos: A set of concepts, optionally including statements about semantic relationships between those concepts. 
+          dcat: A knowledge organization system (KOS) used to represent themes/categories of datasets in the catalog.
+        subClassOf: []
+        resources:
+          - $id: http://publications.europa.eu/resource/authority/dataset-status
+            title:
+              fr: Liste d'autorité nommée sur l'état d'un jeu de données
+              en: Dataset status Named Authority List
+            publisher: https://op.europa.eu/
+          - $id: http://registre.data.developpement-durable.gouv.fr/plume/ISO19139ProgressCode
+            title:
+              fr: État du jeu de données (ISO 19139)
+              en: Status of the dataset (ISO 19139)
+            publisher: https://www.iso.org/
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres
+            title: {fr: "Thèmes Ecosphères"}
+            publisher: https://www.ecologie.gouv.fr/
+      skos:Concept:
+        definition:
+          skos: An abstract idea or notion; a unit of thought.
+          dcat: A category or a theme used to describe datasets in the catalog.
+        subClassOf: []
+        resources:
+          - $id: http://publications.europa.eu/resource/authority/dataset-status/COMPLETED
+            prefLabel:
+              fr: finalisé
+              en: completed
+            inScheme: [http://publications.europa.eu/resource/authority/dataset-status]
+          - $id: http://registre.data.developpement-durable.gouv.fr/plume/ISO19139ProgressCode/onGoing
+            prefLabel:
+              fr: en cours
+              en: on going
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/plume/ISO19139ProgressCode]
+          - $id: http://registre.data.developpement-durable.gouv.fr/plume/ISO19139ProgressCode/historicalArchive
+            prefLabel:
+              fr: archive historique
+              en: historical archive
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/plume/ISO19139ProgressCode]
+          - $id: http://registre.data.developpement-durable.gouv.fr/plume/ISO19139ProgressCode/obsolete
+            prefLabel:
+              fr: obsolète
+              en: obsolete
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/plume/ISO19139ProgressCode]
+            
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/climat # Thèmes Ecosphères 
+            prefLabel: { fr: Climat }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/changement-climatique
+            prefLabel: { fr: Changement climatique }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/meteorologie
+            prefLabel: { fr: Météorologie }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/amenagement-et-urbanisme
+            prefLabel: { fr: Aménagement et urbanisme }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/servitudes-d-utilite-publique
+            prefLabel: { fr: Servitudes d'utilité publique }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/politique-europeenne-d-amenagement
+            prefLabel: { fr: Politique européenne d'aménagement }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/zonages-d-amenagement
+            prefLabel: { fr: Zonages d'aménagement }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/planification
+            prefLabel: { fr: Planification }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/etudes
+            prefLabel: { fr: Études }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/etablissements-d-activites
+            prefLabel: { fr: Établissements d'activités }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/etablissements-d-enseignement
+            prefLabel: { fr: Etablissements d'enseignement }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/equipements-sportifs-ou-culturels
+            prefLabel: { fr: Équipements sportifs ou culturels }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/patrimoine-culturel
+            prefLabel: { fr: Patrimoine culturel }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/etablissements-de-sante-et-medico-sociaux
+            prefLabel: { fr: Établissements de santé et médico-sociaux }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/equipements-de-tourisme
+            prefLabel: { fr: Équipements de tourisme }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/autres-etablissements-recevant-du-public
+            prefLabel: { fr: Autres établissements recevant du public }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/eau
+            prefLabel: { fr: Eau }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/alimentation-en-eau-potable
+            prefLabel: { fr: Alimentation en eau potable }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/assainissement
+            prefLabel: { fr: Assainissement }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/masses-d-eau
+            prefLabel: { fr: Masses d'eau }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/ouvrages-hydrauliques
+            prefLabel: { fr: Ouvrages hydrauliques }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/peche-en-eaux-interieures
+            prefLabel: { fr: Pêche en eaux intérieures }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/surveillance-de-la-ressource-en-eau
+            prefLabel: { fr: Surveillance de la ressource en eau }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/interventions-sur-les-cours-d-eau
+            prefLabel: { fr: Interventions sur les cours d'eau }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/protection-de-l-eau
+            prefLabel: { fr: Protection de l'eau }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/foncier-et-occupation-du-sol
+            prefLabel: { fr: Foncier et occupation du sol }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/foncier-agricole
+            prefLabel: { fr: Foncier agricole }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/mutation-fonciere
+            prefLabel: { fr: Mutation foncière }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/occupation-du-sol
+            prefLabel: { fr: Occupation du sol }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/propriete-fonciere
+            prefLabel: { fr: Propriété foncière }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/habitat-et-politique-de-la-ville
+            prefLabel: { fr: Habitat et politique de la ville }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/accession-a-la-propriete
+            prefLabel: { fr: Accession à la propriété }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/besoins-en-logements
+            prefLabel: { fr: Besoins en logements }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/construction
+            prefLabel: { fr: Construction }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/habitat-indigne
+            prefLabel: { fr: Habitat indigne }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/occupation-des-logements
+            prefLabel: { fr: Occupation des logements }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/parc-locatif-social
+            prefLabel: { fr: Parc locatif social }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/parc-de-logements
+            prefLabel: { fr: Parc de logements }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/politique-de-la-ville
+            prefLabel: { fr: Politique de la ville }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/renovation-urbaine
+            prefLabel: { fr: Rénovation urbaine }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/mer-et-littoral
+            prefLabel: { fr: Mer et littoral }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/ecologie-du-littoral
+            prefLabel: { fr: Écologie du littoral }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/limite-administrative-speciale-en-mer
+            prefLabel: { fr: Limite administrative spéciale en mer et sur le littoral }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/lutte-anti-pollution-en-mer
+            prefLabel: { fr: Lutte anti-pollution en mer et sur le littoral }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/navigation-maritime
+            prefLabel: { fr: Navigation maritime }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/topographie-en-mer
+            prefLabel: { fr: Topographie en mer et sur le littoral }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/chasse-maritime
+            prefLabel: { fr: Chasse maritime }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/nature-paysages-et-biodiversite
+            prefLabel: { fr: "Nature, paysages et biodiversité" }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/inventaires-nature-et-biodiversite
+            prefLabel: { fr: Inventaires nature et biodiversité }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/inventaires-des-paysages
+            prefLabel: { fr: Inventaires des paysages }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/protection-et-gestion-de-la-nature
+            prefLabel: { fr: Protection et gestion de la nature }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/protection-et-gestion-des-paysages
+            prefLabel: { fr: Protection et gestion des paysages }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/chasse
+            prefLabel: { fr: Chasse }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/nuisances-dechets-et-pollution
+            prefLabel: { fr: "Nuisances, déchets et pollution" }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/bruit
+            prefLabel: { fr: Bruit }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/dechets
+            prefLabel: { fr: Déchets }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/perturbations-electromagnetiques
+            prefLabel: { fr: Perturbations électromagnétiques }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/pollution-des-sols
+            prefLabel: { fr: Pollution des sols }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/qualite-de-l-air
+            prefLabel: { fr: Qualité de l'air }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/reseaux-d-energie-et-de-communication
+            prefLabel: { fr: Réseaux d'énergie et de communication }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/amenagement-numerique-des-territoires
+            prefLabel: { fr: Aménagement numérique des territoires }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/reseau-electrique
+            prefLabel: { fr: Réseau électrique }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/reseau-hydrocarbures
+            prefLabel: { fr: Réseau de transport et de stockage des hydrocarbures }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/reseau-de-telecommunication
+            prefLabel: { fr: Réseau de télécommunication }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/risques
+            prefLabel: { fr: Risques }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/prevention-des-avalanches
+            prefLabel: { fr: Prévention des avalanches }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/prevention-des-eruptions-volcaniques
+            prefLabel: { fr: Prévention des éruptions volcaniques }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/prevention-des-inondations
+            prefLabel: { fr: Prévention des inondations }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/prevention-du-risque-mouvement-de-terrain
+            prefLabel: { fr: Prévention du risque mouvement de terrain }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/prevention-du-risque-radon
+            prefLabel: { fr: Prévention du risque radon }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/prevention-du-risque-minier
+            prefLabel: { fr: Prévention du risque minier }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/prevention-des-risques-technologiques
+            prefLabel: { fr: Prévention des risques technologiques }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/prevention-du-risque-sismique
+            prefLabel: { fr: Prévention du risque sismique }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/reglementation-de-prevention-des-risques-naturels
+            prefLabel: { fr: Réglementation de prévention des risques naturels }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/reglementation-de-prevention-des-risques-technologiques
+            prefLabel: { fr: Réglementation de prévention des risques technologiques }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/gestion-du-risque
+            prefLabel: { fr: Gestion du risque }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/industrie
+            prefLabel: { fr: "Industrie, production d'énergie et exploitation du sol" }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/mines
+            prefLabel: { fr: "Mines, carrières et extraction de granulats" }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/sites-industriels
+            prefLabel: { fr: Sites industriels }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/parcs-eoliens
+            prefLabel: { fr: Parcs éoliens }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/production-d-energie-hors-eolien
+            prefLabel: { fr: Production d'énergie hors éolien }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/transport-et-deplacements
+            prefLabel: { fr: Transport et déplacements }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/securite-routiere
+            prefLabel: { fr: Sécurité routière }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/trafic-routier
+            prefLabel: { fr: Trafic routier et exploitation de la route }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/transport-collectif
+            prefLabel: { fr: Transport collectif }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/transport-exceptionnel
+            prefLabel: { fr: Transport exceptionnel }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/transport-de-marchandises
+            prefLabel: { fr: Transport de marchandises }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/transport-de-matieres-dangereuses
+            prefLabel: { fr: Transport de matières dangereuses }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/infrastructures-de-transport
+            prefLabel: { fr: Infrastructures de transport }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/infrastructure-aeroportuaire
+            prefLabel: { fr: Infrastructure aéroportuaire }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/circulation-douce
+            prefLabel: { fr: Circulation douce }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/infrastructure-ferree
+            prefLabel: { fr: "Infrastructure ferrée, gares et ouvrages d'art" }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/reseau-navigable
+            prefLabel: { fr: Réseau navigable et ouvrages de navigation }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/infrastructure-portuaire
+            prefLabel: { fr: Infrastructure portuaire }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/plateformes-multi-modales
+            prefLabel: { fr: Plateformes multi-modales }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+          - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/infrastructure-routiere
+            prefLabel: { fr: Infrastructure routière }
+            inScheme: [http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres]
+        
+          - $id: http://registre.data.developpement-durable.gouv.fr/themes-hors-ecospheres/energie
+            prefLabel: {fr: Énergie}
+    properties:
+      skos:hasTopConcept:
+        domain: [skos:ConceptScheme]
+        range: [skos:Concept]
+        inverse: skos:topConceptOf
+      skos:inScheme:
+        domain: [skos:Concept]
+        range: [skos:Concept]
+      skos:prefLabel:
+        label: preferred label
+        labelFr: forme lexicale préférentielle 
+        domain: [skos:Concept]
+        range: [rdfs:Literal]
+      skos:altLabel:
+        domain: [skos:Concept]
+        range: [rdfs:Literal]
+      skos:hiddenLabel:
+        domain: [skos:Concept]
+        range: [rdfs:Literal]
+      skos:symbol:
+      skos:definition:
+        definition: A statement or formal explanation of the meaning of a concept. 
+        domain: [skos:Concept]
+        range: [rdfs:Literal]
+      skos:note:
+        definition: A general note, for any purpose.
+        domain: [skos:Concept]
+        range: [rdfs:Literal]
+      skos:scopeNote:
+        labelFr: note d'application
+        definition: A note that helps to clarify the meaning of a concept. 
+        subPropertyOf: [skos:note]
+        domain: [skos:Concept]
+        range: [rdfs:Literal]
+      skos:editorialNote:
+        labelFr: note éditoriale
+        definition: A note for an editor, translator or maintainer of the vocabulary. 
+        subPropertyOf: [skos:note]
+        domain: [skos:Concept]
+        range: [rdfs:Literal]
+      skos:changeNote:
+        labelFr: note de modification
+        definition: A note about a modification to a concept. 
+        subPropertyOf: [skos:note]
+        domain: [skos:Concept]
+        range: [rdfs:Literal]
+      skos:historyNote:
+        labelFr: note historique 
+        definition: A note about the past state/use/meaning of a concept.  
+        subPropertyOf: [skos:note]
+        domain: [skos:Concept]
+        range: [rdfs:Literal]
+      skos:example:
+      skos:broader:
+        labelFr: a pour concept générique
+        label: has broader
+        domain: [skos:Concept]
+        range: [skos:Concept]
+      skod:narrower:
+        labelFr: a pour concept spécifique
+        label: has narrower
+        domain: [skos:Concept]
+        range: [skos:Concept]
+      skos:related:
+        labelFr: oncept associé
+        label: related to
+        definition: A concept with which there is an associative semantic relationship.
+        domain: [skos:Concept]
+        range: [skos:Concept]
   foaf:
     title: FOAF Vocabulary Specification 
     source:
       - http://xmlns.com/foaf/0.1/
+    classes:
+      foaf:Agent:
+        definition: An agent (eg. person, group, software or physical artifact). 
+        subClassOf: []
+      foaf:Person:
+        definition: |
+          A person.
+          The foaf:Person class represents people. Something is a foaf:Person if it is a person. We don't nitpic about whether
+          they're alive, dead, real, or imaginary. The foaf:Person class is a sub-class of the foaf:Agent class, since all people
+          are considered 'agents' in FOAF. 
+        subClassOf: [foaf:Agent]
+      foaf:Organization:
+        definition: |
+          An organization.
+          The foaf:Organization class represents a kind of foaf:Agent corresponding to social instititutions such as companies,
+          societies etc.  
+        subClassOf: [foaf:Agent]
+        resources:
+          - $id: https://op.europa.eu/
+            name:
+              fr: Office des publications de l'Union européenne
+              en: Publications Office of the European Union
+            homepage: https://op.europa.eu/
+    properties:  
+      foaf:name:
+      foaf:mbox:
+        label: personal mailbox
+        definition: |
+          A personal mailbox, ie. an Internet mailbox associated with exactly one owner, the first owner of this mailbox.
+          This is a 'static inverse functional property', in that there is (across time and change) at most one individual
+          that ever has any particular value for foaf:mbox.
+        domain: [foaf:Agent]
+        range: [rdfs:Resource]
+      foaf:phone:
+      foaf:homepage:
+        definition: A homepage of the catalog (a public Web document usually available in HTML).
+        range: [foaf:Document]
+        comment: |
+          note DCAT:
+            foaf:homepage is an inverse functional property (IFP) which means that it MUST be unique and precisely identify
+            the Web-page for the resource. This property indicates the canonical Web-page, which might be helpful in cases
+            where there is more than one Web-page about the resource.
+      foaf:workplaceHomepage:
+      foaf:page:
+      foaf:primaryTopic:
+        definition: The dcat:Resource (dataset or service) described in the record. [DCAT]
+        range: [dcat:Resource]
+        domain: [dcat:CatalogRecord]
+        inverse: foaf:isPrimaryTopicOf
+        comment: |
+          [DCAT] Usage note:	foaf:primaryTopic property is functional: each catalog record can have at most one primary topic,
+            i.e., describes one dataset or service.
+        dcatSpecialization: Les propriétés range et domain correspondent à l'utilisation effectuée dans DCAT et pas au cas général.
   vcard:
     title: vCard Ontology - for describing People and Organizations
     source:
       - https://www.w3.org/TR/vcard-rdf/
+    classes:
+      vcard:Kind:
+        definition: The parent class for all objects
+        subClassOf: []
+      vcard:Email:
+        definition: |
+          To specify the electronic mail address for communication with the object the vCard represents.
+          Use the hasEmail object property.
+        subClassOf: []
+    properties:
+      vcard:fn:
+        definition: The full name of the object (as a single string). This is the only mandatory property.
+        range: [rdfs:Literal]
+        datatype: [xsd:string]
+      vcard:hasEmail:
+        definition: To specify the electronic mail address for communication with the object
+        range: [vcard:Email]
+      vcard:hasURL:
+        definition: To specify a uniform resource locator associated with the object
+        range: [rdfs:Resource]
   prov:
     title: "PROV-O: The PROV Ontology"
     source:
       - https://www.w3.org/TR/prov-o/
+    properties:  
+      prov:qualifiedAttribution: # PROV
+        definition: Link to an Agent having some form of responsibility for the resource
+        subPropertyOf: [prov:qualifiedInfluence]
+        domain: [prov:Entity]
+        range: [prov:Attribution]
+        comment: |
+          Usage note: Used to link to an Agent where the nature of the relationship is known but does not match one of the standard [DCTERMS] properties (dcterms:creator, dcterms:publisher). Use dcat:hadRole on the prov:Attribution to capture the responsibility of the Agent with respect to the Resource. See 15.1 Relationships between datasets and agents for usage examples.
+      prov:wasGeneratedBy:
+        inverse: prov:generated
   odrl:
     title: Open Digital Rights Language (ODRL)
     source:
       - https://www.w3.org/TR/odrl-model/
+    properties:  
+      odrl:hasPolicy:
+        definition: An ODRL conformant policy expressing the rights associated with the resource.
+        range: [odrl:Policy]
+        comment: |
+          Usage note: Information about rights expressed as an ODRL policy [ODRL-MODEL] using the ODRL vocabulary [ODRL-VOCAB] MAY be provided for the resource.
   adms:
     title: Asset Description Metadata Schema (ADMS), W3C Working Group Note
     source:
       - https://www.w3.org/TR/vocab-adms/
+    properties:  
+      adms:versionNotes:
+        definition: A description of changes between this version and the previous version of the resource [VOCAB-ADMS].
+        range:  [rdfs:Literal]
+        comment: |
+          Usage note: 	
+            In case of backward compatibility issues with the previous version of the resource, a textual description of them SHOULD be specified by using this property.
+      adms:status:
+        definition: The status of the resource in the context of a particular workflow process [VOCAB-ADMS].
+        range: [skos:Concept]
+        comment: |
+          Usage note:
+            DCAT does not prescribe the use of any specific set of life-cycle statuses, but refers to existing standards and community practices fit for the relevant application scenario.
   dct:
     title: DCMI Metadata Terms
     source:
       - https://www.dublincore.org/specifications/dublin-core/dcmi-terms/
       - https://www.dublincore.org/resources/userguide/publishing_metadata/
+    classes:
+      dct:PeriodOfTime:
+        definition: An interval of time that is named or defined by its start and end.
+        subClassOf: [dct:LocationPeriodOrJurisdiction]
+      dct:LinguisticSystem:
+        definition: A system of signs, symbols, sounds, gestures, or rules used in communication.
+        comment: Written, spoken, sign, and computer languages are linguistic systems.
+        subClassOf: []
+        resources:
+          - $id: http://publications.europa.eu/resource/authority/language/FRA
+            label:
+              fr: Français
+              en: French
+      dct:RightsStatement:
+        definition: |
+          A statement about the intellectual property rights (IPR) held in or over a resource, a legal document giving official
+          permission to do something with a resource, or a statement about access rights.
+        subClassOf: []
+        resources:
+          - $id: http://inspire.ec.europa.eu/metadata-codelist/LimitationsOnPublicAccess/noLimitations
+            label:
+              fr: Pas de restriction d’accès public selon INSPIRE # libellé souvent utilisé
+              en: no limitations to public access # source registre Inspire
+      dct:LicenseDocument:
+        definition: A legal document giving official permission to do something with a resource.
+        subClassOf: [dct:RightsStatement]
+        resources:
+          - $id: https://spdx.org/licenses/etalab-2.0
+            label:
+              fr: Licence ouverte Etalab 2.0
+              #en: Etalab Open License 2.0
+      dct:Standard:
+        definition: A reference point against which other things can be evaluated or compared.
+        subClassOf: []
+        resources:
+          - $id: https://tools.ietf.org/html/rfc4287
+            label:
+              fr: Le format de syndication Atom
+              #en: The Atom Syndication Format
+          - $id: http://www.opengis.net/def/crs/EPSG/0/4326
+            label:
+              fr: Système géodésique mondial 1984
+              #en: World Geodetic System 1984
+              #'': WGS 84
+          - $id: http://www.opengis.net/def/crs/EPSG/0/4171
+            label:
+              fr: Système géodésique RGF93
+              #'': RGF93 v1
+          - $id: http://www.opengis.net/def/crs/EPSG/0/2154
+            label:
+              fr: Projection Lambert 93
+              #'': RGF93 v1 / Lambert-93
+          - $id: http://www.opengis.net/def/crs/EPSG/0/27572
+            label:
+              fr: Projection Lambert II Étendue
+              #'': NTF (Paris) / Lambert zone II
+      dct:MediaTypeOrExtent:
+        definition: A media type or extent.
+        subClassOf: []
+      dct:MediaType:
+        definition: A file format or physical medium.
+        subClassOf: [dct:MediaTypeOrExtent]
+        resources:
+          - $id: https://www.iana.org/assignments/media-types/text/html
+            label:
+              fr: Texte HTML
+              en: HTML text
+      dct:SizeOrDuration:
+        definition: A dimension or extent, or a time taken to play or execute.
+        subClassOf: [dct:MediaTypeOrExtent]
+      dct:LocationPeriodOrJurisdiction:
+        label: Location, Period, or Jurisdiction
+        definition: A location, period of time, or jurisdiction.
+        subClassOf: []
+      dct:Location:
+        definition: A spatial region or named place.
+        subClassOf: [dct:LocationPeriodOrJurisdiction]
+        comment: |
+          Usage note DCAT:
+          For an extensive geometry (i.e., a set of coordinates denoting the vertices of the relevant geographic area), the property locn:geometry [LOCN] SHOULD be used.
+          For a geographic bounding box delimiting a spatial area the property dcat:bbox SHOULD be used.
+          For the geographic center of a spatial area, or another characteristic point, the property dcat:centroid SHOULD be used.
+      dct:Frequency:
+        definition: A rate at which something recurs.
+        subClassOf: []
+        resources:
+          - $id: http://inspire.ec.europa.eu/metadata-codelist/MaintenanceFrequency/continual
+            label:
+              fr: En continu
+              en: Continual
+          - $id: http://inspire.ec.europa.eu/metadata-codelist/MaintenanceFrequency/asNeeded
+            label:
+              fr: Comme requis
+              en: As needed
+          - $id: http://inspire.ec.europa.eu/metadata-codelist/MaintenanceFrequency/notPlanned
+            label:
+              fr: Pas prévu
+              en: Not planned
+          - $id: http://inspire.ec.europa.eu/metadata-codelist/MaintenanceFrequency/irregular
+            label:
+              fr: Irrégulier
+              en: Irregular
+          - $id: http://inspire.ec.europa.eu/metadata-codelist/MaintenanceFrequency/annually
+            label:
+              fr: Annuel
+              en: Annually
+          - $id: http://inspire.ec.europa.eu/metadata-codelist/MaintenanceFrequency/quarterly
+            label:
+              fr: Trimestriel
+              en: Quarterly
+    properties:  
+      dct:title: # MD DCMI de base: titres, id, type, résumé, ...
+        definition: A name given to the resource.
+        range: [rdfs:Literal]
+      dct:alternative:
+        definition: An alternative name for the resource.
+        subPropertyOf: [dct:title]
+      dct:identifier:
+        definition: An unambiguous reference to the resource within a given context.
+        range: [rdfs:Literal]
+      dct:type:
+        definition: The nature or genre of the resource.
+        comment: |
+          Recommended practice is to use a controlled vocabulary such as the DCMI Type Vocabulary [DCMI-TYPE].
+          To describe the file format, physical medium, or dimensions of the resource, use the property Format.
+      dct:description:
+        definition: An account of the resource.
+        definition(fr): Un compte rendu de la ressource. [GoogleTranslate]
+        comment: |
+          Description may include but is not limited to: an abstract, a table of contents, a graphical representation,
+          or a free-text account of the resource.
+      dct:abstract:
+        definition: A summary of the resource.
+        subPropertyOf: [dct:description]
+      dct:tableOfContents:
+        definition: A list of subunits of the resource.
+        subPropertyOf: [dct:description]
+      dct:language:
+        definition: A language of the resource.
+        comment: |
+          Recommended practice is to use either a non-literal value representing a language from a controlled vocabulary such as
+          ISO 639-2 or ISO 639-3, or a literal value consisting of an IETF Best Current Practice 47 [IETF-BCP47] language tag.
+        range: [dct:LinguisticSystem]
+      dct:subject:
+        definition: A topic of the resource.
+        comment: |
+          Recommended practice is to refer to the subject with a URI. If this is not possible or feasible, a literal value
+          that identifies the subject may be provided. Both should preferably refer to a subject in a controlled vocabulary.
+  
+      dct:contributor: # acteurs participants
+        definition: An entity responsible for making contributions to the resource.
+        comment: The guidelines for using names of persons or organizations as creators apply to contributors.
+        range: [dct:Agent]
+      dct:creator:
+        definition: An entity responsible for making the resource.
+        comment: |
+          Recommended practice is to identify the creator with a URI. If this is not possible or feasible, a literal value
+          that identifies the creator may be provided.
+        subPropertyOf: [dct:contributor]
+        range: [dct:Agent]
+      dct:publisher:
+        definition: An entity responsible for making the resource available.
+        range: [dct:Agent]
+      dct:rightsHolder:
+        definition: A person or organization owning or managing rights over the resource.
+        comment: |
+          Recommended practice is to refer to the rights holder with a URI. If this is not possible or feasible, a literal value
+          that identifies the rights holder may be provided.
+        range: [dct:Agent]
+      dct:audience:
+      dct:mediator:
+        definition: An entity that mediates access to the resource.
+        comment: In an educational context, a mediator might be a parent, teacher, teaching assistant, or care-giver.
+        subPropertyOf: [dct:audience]
+        range: [dct:AgentClass]
+
+      dct:rights: # droits associés
+        definition: Information about rights held in and over the resource.
+        comment: |
+          Typically, rights information includes a statement about various property rights associated with the resource,
+          including intellectual property rights. Recommended practice is to refer to a rights statement with a URI.
+          If this is not possible or feasible, a literal value (name, label, or short text) may be provided.
+        range: [dct:RightsStatement]
+      dct:accessRights:
+        definition: Information about who access the resource or an indication of its security status.
+        comment: |
+          Access Rights may include information regarding access or restrictions based on privacy, security, or other policies.
+        subPropertyOf: [dct:rights]
+        range: [dct:RightsStatement]
+      dct:license:
+        definition: A legal document giving official permission to do something with the resource.
+        comment: |
+          Recommended practice is to identify the license document with a URI. If this is not possible or feasible, a literal
+          value that identifies the license may be provided.
+        range: [dct:LicenseDocument]
+        subPropertyOf: [dct:rights]
+
+      dct:date: # dates
+        definition: A point or period of time associated with an event in the lifecycle of the resource.
+        comment: |
+          Date may be used to express temporal information at any level of granularity. Recommended practice is to express the
+          date, date/time, or period of time according to ISO 8601-1 [ISO 8601-1] or a published profile of the ISO standard,
+          such as the W3C Note on Date and Time Formats [W3CDTF] or the Extended Date/Time Format Specification [EDTF].
+          If the full date is unknown, month and year (YYYY-MM) or just year (YYYY) may be used. Date ranges may be specified
+          using ISO 8601 period of time specification in which start and end dates are separated by a '/' (slash) character.
+          Either the start or end date may be missing.
+        range: [rdfs:Literal]
+      dct:issued:
+        definition: Date of formal issuance of the resource.
+        comment: |
+          Recommended practice is to describe the date, date/time, or period of time as recommended for the property Date,
+          of which this is a subproperty.
+        subPropertyOf: [dct:date]
+      dct:created:
+        definition: Date of creation of the resource.
+        comment: |
+          Recommended practice is to describe the date, date/time, or period of time as recommended for the property Date,
+          of which this is a subproperty.
+        subPropertyOf: [dct:date]
+      dct:available:
+        definition: Date that the resource became or will become available.
+        comment: |
+          Recommended practice is to describe the date, date/time, or period of time as recommended for the property Date,
+          of which this is a subproperty.
+        subPropertyOf: [dct:date]
+      dct:valid:
+        definition: Date (often a range) of validity of a resource.
+        comment: |
+          Recommended practice is to describe the date, date/time, or period of time as recommended for the property Date,
+          of which this is a subproperty.
+        subPropertyOf: [dct:date]
+      dct:modified:
+        definition: Date on which the resource was changed.
+        comment: |
+          Recommended practice is to describe the date, date/time, or period of time as recommended for the property Date,
+          of which this is a subproperty.
+        subPropertyOf: [dct:date]
+      dct:dateAccepted:
+        definition: Date of acceptance of the resource.
+        comment: |
+          Recommended practice is to describe the date, date/time, or period of time as recommended for the property Date,
+          of which this is a subproperty. Examples of resources to which a date of acceptance may be relevant are a thesis
+          (accepted by a university department) or an article (accepted by a journal).
+        subPropertyOf: [dct:date]
+      dct:dateCopyrighted:
+        definition: Date of copyright of the resource.
+        comment: |
+          Recommended practice is to describe the date, date/time, or period of time as recommended for the property Date,
+          of which this is a subproperty.
+        subPropertyOf: [dct:date]
+      dct:dateSubmitted:
+        definition: Date on which the resource was changed.
+        comment: |
+          Recommended practice is to describe the date, date/time, or period of time as recommended for the property Date,
+          of which this is a subproperty.
+        subPropertyOf: [dct:date]
+
+      dct:coverage: # couverture
+        definition: |
+          The spatial or temporal topic of the resource, spatial applicability of the resource, or jurisdiction
+          under which the resource is relevant.
+        comment: |
+          Spatial topic and spatial applicability may be a named place or a location specified by its geographic coordinates.
+          Temporal topic may be a named period, date, or date range. A jurisdiction may be a named administrative entity
+          or a geographic place to which the resource applies. Recommended practice is to use a controlled vocabulary
+          such as the Getty Thesaurus of Geographic Names [TGN]. Where appropriate, named places or time periods may be used
+          in preference to numeric identifiers such as sets of coordinates or date ranges. Because coverage is so broadly defined,
+          it is preferable to use the more specific subproperties Temporal Coverage and Spatial Coverage.
+        range: [dct:Location, dct:Period, dct:Jurisdiction]
+      dct:temporal:
+        label: Temporal Coverage
+        definition: Temporal characteristics of the resource.
+        subPropertyOf: [dct:coverage]
+        range: [dct:PeriodOfTime]
+      dct:spatial:
+        label: Spatial Coverage
+        definition: Spatial characteristics of the resource.
+        subPropertyOf: [dct:coverage]
+        range: [dct:Location]
+ 
+      dct:format: # format, conformité
+        definition: The file format, physical medium, or dimensions of the resource.
+        comment: |
+          Recommended practice is to use a controlled vocabulary where available. For example, for file formats one could use
+          the list of Internet Media Types [MIME]. Examples of dimensions include size and duration.
+        range: [dct:MediaType, dct:Extent ]
+      dct:medium:
+        definition: The material or physical carrier of the resource.
+        range: [dct:PhysicalMedium]
+        subPropertyOf: [dct:format]
+      dct:extent:
+        definition: The size or duration of the resource.
+        comment: Recommended practice is to specify the file size in megabytes and duration in ISO 8601 format.
+      dct:conformsTo:
+        definition: An established standard to which the described resource conforms.
+        range: [dct:Standard]
+        subPropertyOf: [dct:relation]
+
+      dct:relation: # relations entre ressources
+        definition: A related resource.
+        comment: |
+          Recommended practice is to identify the related resource by means of a URI.
+          If this is not possible or feasible, a string conforming to a formal identification system may be provided.
+      dct:source:
+      dct:hasPart:
+        definition: A related resource that is included either physically or logically in the described resource.
+        comment: This property is intended to be used with non-literal values. This property is an inverse property of Is Part Of.
+        subPropertyOf: [dct:relation]
+        inverse: dct:isPartOf
+      dct:isReferencedBy:
+        inverse: dct:references
+      dct:requires:
+      dct:isRequiredBy:
+      dct:replaces:
+        inverse: dct:isReplacedBy
+      dct:hasFormat:
+        definition: A related resource that is substantially the same as the pre-existing described resource, but in another format.
+        comment: |
+          This property is intended to be used with non-literal values. This property is an inverse property of Is Format Of.
+        subPropertyOf: [dct:relation]
+      dct:isFormatOf:
+      dct:hasVersion:
+        definition: A related resource that is a version, edition, or adaptation of the described resource.
+        inverse: dct:isVersionOf
+        comment: |
+          Changes in version imply substantive changes in content rather than differences in format. This property is intended
+          to be used with non-literal values. This property is an inverse property of Is Version Of.
+
+      dct:provenance: # provenance
+        definition: |
+          A statement of any changes in ownership and custody of the resource since its creation that are significant
+          for its authenticity, integrity, and interpretation.
+        comment: The statement may include a description of any changes successive custodians made to the resource.
+        range: [dct:ProvenanceStatement]
+
+      dct:accrualMethod: # accrual
+      dct:accrualPeriodicity:
+        definition: The frequency at which a dataset is published. [DCAT]
+        range: [dcterms:Frequency]
+        comment: |
+          Usage note: The value of dcterms:accrualPeriodicity gives the rate at which the dataset-as-a-whole is updated. This may be complemented by dcat:temporalResolution to give the time between collected data points in a time series.
+      dct:accrualPolicy:
+
+      dct:educationLevel: # divers
+      dct:bibliographicCitation:
+      dct:instructionalMethod:
   locn:
     title: Location Core Vocabulary
     source:
       - http://www.w3.org/ns/locn 
-
-classes:
-  rdfs:Resource: # RDF/RDFS
-    definition: |
-      All things described by RDF are called resources, and are instances of the class rdfs:Resource.
-      This is the class of everything.
-    subClassOf: []
-  rdfs:Literal:
-    definition: literal values such as strings and integers.
-    subClassOf: []
-    
-  dcat:Catalog: # DCAT
-    definition: A curated collection of metadata about resources.
-    subClassOf: [dcat:Dataset]
-  dcat:Resource:
-    label: Cataloged Resource
-    definition: Resource published or curated by a single agent.
-    subClassOf: []
-  dcat:CatalogRecord:
-    definition: A record in a catalog, describing the registration of a single dcat:Resource.
-    subClassOf: []
-  dcat:Dataset:
-    definition: |
-      A collection of data, published or curated by a single agent, and available for access or download in one or more
-      representations.
-    subClassOf: [dcat:Resource]
-  dcat:DatasetSeries:
-    definition: A collection of datasets that are published separately, but share some characteristics that group them.
-    subClassOf: [dcat:Dataset]
-  dcat:DataService:
-    definition: A collection of operations that provides access to one or more datasets or data processing functions.
-    subClassOf: [dcat:Resource, dctype:Service]
-  dcat:Distribution:
-    definition: |
-      A specific representation of a dataset. A dataset might be available in multiple serializations that may differ
-      in various ways, including natural language, media-type or format, schematic organization, temporal and spatial
-      resolution, level of detail or profiles (which might specify any or all of the above). 
-    subClassOf: []
-  
-  dcat:Relationship:
-    definition: An association class for attaching additional information to a relationship between DCAT Resources
-    subClassOf: [prov:EntityInfluence]
-    
-  skos:ConceptScheme: # SKOS
-    definition: A knowledge organization system (KOS) used to represent themes/categories of datasets in the catalog.
-    subClassOf: []
-  skos:Concept:
-    definition: A category or a theme used to describe datasets in the catalog.
-    subClassOf: []
-    resources:
-      - $id: http://publications.europa.eu/resource/authority/dataset-status/COMPLETED
-        label:
-          fr: finalisé
-          #en: completed
-      - $id: http://registre.data.developpement-durable.gouv.fr/plume/ISO19139ProgressCode/onGoing
-        label:
-          fr: en cours
-          #en: on going
-      - $id: http://registre.data.developpement-durable.gouv.fr/plume/ISO19139ProgressCode/historicalArchive
-        label:
-          fr: archive historique
-          #en: historical archive
-      - $id: http://registre.data.developpement-durable.gouv.fr/plume/ISO19139ProgressCode/obsolete
-        label:
-          fr: obsolète
-          #en: obsolete
-      
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/climat # Thèmes Ecosphères 
-        label: { fr: Climat }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/changement-climatique
-        label: { fr: Changement climatique }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/meteorologie
-        label: { fr: Météorologie }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/amenagement-et-urbanisme
-        label: { fr: Aménagement et urbanisme }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/servitudes-d-utilite-publique
-        label: { fr: Servitudes d'utilité publique }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/politique-europeenne-d-amenagement
-        label: { fr: Politique européenne d'aménagement }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/zonages-d-amenagement
-        label: { fr: Zonages d'aménagement }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/planification
-        label: { fr: Planification }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/etudes
-        label: { fr: Études }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/etablissements-d-activites
-        label: { fr: Établissements d'activités }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/etablissements-d-enseignement
-        label: { fr: Etablissements d'enseignement }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/equipements-sportifs-ou-culturels
-        label: { fr: Équipements sportifs ou culturels }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/patrimoine-culturel
-        label: { fr: Patrimoine culturel }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/etablissements-de-sante-et-medico-sociaux
-        label: { fr: Établissements de santé et médico-sociaux }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/equipements-de-tourisme
-        label: { fr: Équipements de tourisme }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/autres-etablissements-recevant-du-public
-        label: { fr: Autres établissements recevant du public }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/eau
-        label: { fr: Eau }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/alimentation-en-eau-potable
-        label: { fr: Alimentation en eau potable }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/assainissement
-        label: { fr: Assainissement }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/masses-d-eau
-        label: { fr: Masses d'eau }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/ouvrages-hydrauliques
-        label: { fr: Ouvrages hydrauliques }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/peche-en-eaux-interieures
-        label: { fr: Pêche en eaux intérieures }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/surveillance-de-la-ressource-en-eau
-        label: { fr: Surveillance de la ressource en eau }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/interventions-sur-les-cours-d-eau
-        label: { fr: Interventions sur les cours d'eau }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/protection-de-l-eau
-        label: { fr: Protection de l'eau }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/foncier-et-occupation-du-sol
-        label: { fr: Foncier et occupation du sol }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/foncier-agricole
-        label: { fr: Foncier agricole }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/mutation-fonciere
-        label: { fr: Mutation foncière }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/occupation-du-sol
-        label: { fr: Occupation du sol }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/propriete-fonciere
-        label: { fr: Propriété foncière }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/habitat-et-politique-de-la-ville
-        label: { fr: Habitat et politique de la ville }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/accession-a-la-propriete
-        label: { fr: Accession à la propriété }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/besoins-en-logements
-        label: { fr: Besoins en logements }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/construction
-        label: { fr: Construction }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/habitat-indigne
-        label: { fr: Habitat indigne }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/occupation-des-logements
-        label: { fr: Occupation des logements }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/parc-locatif-social
-        label: { fr: Parc locatif social }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/parc-de-logements
-        label: { fr: Parc de logements }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/politique-de-la-ville
-        label: { fr: Politique de la ville }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/renovation-urbaine
-        label: { fr: Rénovation urbaine }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/mer-et-littoral
-        label: { fr: Mer et littoral }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/ecologie-du-littoral
-        label: { fr: Écologie du littoral }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/limite-administrative-speciale-en-mer
-        label: { fr: Limite administrative spéciale en mer et sur le littoral }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/lutte-anti-pollution-en-mer
-        label: { fr: Lutte anti-pollution en mer et sur le littoral }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/navigation-maritime
-        label: { fr: Navigation maritime }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/topographie-en-mer
-        label: { fr: Topographie en mer et sur le littoral }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/chasse-maritime
-        label: { fr: Chasse maritime }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/nature-paysages-et-biodiversite
-        label: { fr: "Nature, paysages et biodiversité" }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/inventaires-nature-et-biodiversite
-        label: { fr: Inventaires nature et biodiversité }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/inventaires-des-paysages
-        label: { fr: Inventaires des paysages }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/protection-et-gestion-de-la-nature
-        label: { fr: Protection et gestion de la nature }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/protection-et-gestion-des-paysages
-        label: { fr: Protection et gestion des paysages }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/chasse
-        label: { fr: Chasse }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/nuisances-dechets-et-pollution
-        label: { fr: "Nuisances, déchets et pollution" }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/bruit
-        label: { fr: Bruit }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/dechets
-        label: { fr: Déchets }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/perturbations-electromagnetiques
-        label: { fr: Perturbations électromagnétiques }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/pollution-des-sols
-        label: { fr: Pollution des sols }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/qualite-de-l-air
-        label: { fr: Qualité de l'air }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/reseaux-d-energie-et-de-communication
-        label: { fr: Réseaux d'énergie et de communication }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/amenagement-numerique-des-territoires
-        label: { fr: Aménagement numérique des territoires }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/reseau-electrique
-        label: { fr: Réseau électrique }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/reseau-hydrocarbures
-        label: { fr: Réseau de transport et de stockage des hydrocarbures }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/reseau-de-telecommunication
-        label: { fr: Réseau de télécommunication }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/risques
-        label: { fr: Risques }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/prevention-des-avalanches
-        label: { fr: Prévention des avalanches }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/prevention-des-eruptions-volcaniques
-        label: { fr: Prévention des éruptions volcaniques }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/prevention-des-inondations
-        label: { fr: Prévention des inondations }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/prevention-du-risque-mouvement-de-terrain
-        label: { fr: Prévention du risque mouvement de terrain }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/prevention-du-risque-radon
-        label: { fr: Prévention du risque radon }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/prevention-du-risque-minier
-        label: { fr: Prévention du risque minier }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/prevention-des-risques-technologiques
-        label: { fr: Prévention des risques technologiques }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/prevention-du-risque-sismique
-        label: { fr: Prévention du risque sismique }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/reglementation-de-prevention-des-risques-naturels
-        label: { fr: Réglementation de prévention des risques naturels }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/reglementation-de-prevention-des-risques-technologiques
-        label: { fr: Réglementation de prévention des risques technologiques }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/gestion-du-risque
-        label: { fr: Gestion du risque }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/industrie
-        label: { fr: "Industrie, production d'énergie et exploitation du sol" }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/mines
-        label: { fr: "Mines, carrières et extraction de granulats" }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/sites-industriels
-        label: { fr: Sites industriels }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/parcs-eoliens
-        label: { fr: Parcs éoliens }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/production-d-energie-hors-eolien
-        label: { fr: Production d'énergie hors éolien }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/transport-et-deplacements
-        label: { fr: Transport et déplacements }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/securite-routiere
-        label: { fr: Sécurité routière }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/trafic-routier
-        label: { fr: Trafic routier et exploitation de la route }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/transport-collectif
-        label: { fr: Transport collectif }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/transport-exceptionnel
-        label: { fr: Transport exceptionnel }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/transport-de-marchandises
-        label: { fr: Transport de marchandises }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/transport-de-matieres-dangereuses
-        label: { fr: Transport de matières dangereuses }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/infrastructures-de-transport
-        label: { fr: Infrastructures de transport }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/infrastructure-aeroportuaire
-        label: { fr: Infrastructure aéroportuaire }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/circulation-douce
-        label: { fr: Circulation douce }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/infrastructure-ferree
-        label: { fr: "Infrastructure ferrée, gares et ouvrages d'art" }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/reseau-navigable
-        label: { fr: Réseau navigable et ouvrages de navigation }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/infrastructure-portuaire
-        label: { fr: Infrastructure portuaire }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/plateformes-multi-modales
-        label: { fr: Plateformes multi-modales }
-      - $id: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/infrastructure-routiere
-        label: { fr: Infrastructure routière }
-        
-      - $id: http://registre.data.developpement-durable.gouv.fr/themes-hors-ecospheres/energie
-        label: {fr: Énergie}
-
-  foaf:Agent: # FOAF
-    definition: An agent (eg. person, group, software or physical artifact). 
-    subClassOf: []
-  foaf:Person:
-    definition: |
-      A person.
-      The foaf:Person class represents people. Something is a foaf:Person if it is a person. We don't nitpic about whether
-      they're alive, dead, real, or imaginary. The foaf:Person class is a sub-class of the foaf:Agent class, since all people
-      are considered 'agents' in FOAF. 
-    subClassOf: [foaf:Agent]
-  foaf:Organization:
-    definition: |
-      An organization.
-      The foaf:Organization class represents a kind of foaf:Agent corresponding to social instititutions such as companies,
-      societies etc.  
-    subClassOf: [foaf:Agent]
-
-  vcard:Kind: # VCARD
-    definition: The parent class for all objects
-    subClassOf: []
-  vcard:Email:
-    definition: |
-      To specify the electronic mail address for communication with the object the vCard represents.
-      Use the hasEmail object property.
-    subClassOf: []
-
-  dct:PeriodOfTime: # DCMI
-    definition: An interval of time that is named or defined by its start and end.
-    subClassOf: [dct:LocationPeriodOrJurisdiction]
-  dct:LinguisticSystem:
-    definition: A system of signs, symbols, sounds, gestures, or rules used in communication.
-    comment: Written, spoken, sign, and computer languages are linguistic systems.
-    subClassOf: []
-    resources:
-      - $id: http://publications.europa.eu/resource/authority/language/FRA
-        label:
-          fr: Français
-          #en: French
-  dct:RightsStatement:
-    definition: |
-      A statement about the intellectual property rights (IPR) held in or over a resource, a legal document giving official
-      permission to do something with a resource, or a statement about access rights.
-    subClassOf: []
-    resources:
-      - $id: http://inspire.ec.europa.eu/metadata-codelist/LimitationsOnPublicAccess/noLimitations
-        label:
-          fr: Pas de restriction d’accès public selon INSPIRE # libellé souvent utilisé
-          en: no limitations to public access # source registre Inspire
-  dct:LicenseDocument:
-    definition: A legal document giving official permission to do something with a resource.
-    subClassOf: [dct:RightsStatement]
-    resources:
-      - $id: https://spdx.org/licenses/etalab-2.0
-        label:
-          fr: Licence ouverte Etalab 2.0
-          #en: Etalab Open License 2.0
-  dct:Standard:
-    definition: A reference point against which other things can be evaluated or compared.
-    subClassOf: []
-    resources:
-      - $id: https://tools.ietf.org/html/rfc4287
-        label:
-          fr: Le format de syndication Atom
-          #en: The Atom Syndication Format
-      - $id: http://www.opengis.net/def/crs/EPSG/0/4326
-        label:
-          fr: Système géodésique mondial 1984
-          #en: World Geodetic System 1984
-          #'': WGS 84
-      - $id: http://www.opengis.net/def/crs/EPSG/0/4171
-        label:
-          fr: Système géodésique RGF93
-          #'': RGF93 v1
-      - $id: http://www.opengis.net/def/crs/EPSG/0/2154
-        label:
-          fr: Projection Lambert 93
-          #'': RGF93 v1 / Lambert-93
-      - $id: http://www.opengis.net/def/crs/EPSG/0/27572
-        label:
-          fr: Projection Lambert II Étendue
-          #'': NTF (Paris) / Lambert zone II
-  dct:MediaTypeOrExtent:
-    definition: A media type or extent.
-    subClassOf: []
-  dct:MediaType:
-    definition: A file format or physical medium.
-    subClassOf: [dct:MediaTypeOrExtent]
-    resources:
-      - $id: https://www.iana.org/assignments/media-types/text/html
-        label:
-          fr: Texte HTML
-          en: HTML text
-  dct:SizeOrDuration:
-    definition: A dimension or extent, or a time taken to play or execute.
-    subClassOf: [dct:MediaTypeOrExtent]
-  dct:LocationPeriodOrJurisdiction:
-    label: Location, Period, or Jurisdiction
-    definition: A location, period of time, or jurisdiction.
-    subClassOf: []
-  dct:Location:
-    definition: A spatial region or named place.
-    subClassOf: [dct:LocationPeriodOrJurisdiction]
-    comment: |
-      Usage note DCAT:
-      For an extensive geometry (i.e., a set of coordinates denoting the vertices of the relevant geographic area), the property locn:geometry [LOCN] SHOULD be used.
-      For a geographic bounding box delimiting a spatial area the property dcat:bbox SHOULD be used.
-      For the geographic center of a spatial area, or another characteristic point, the property dcat:centroid SHOULD be used.
-  dct:Frequency:
-    definition: A rate at which something recurs.
-    subClassOf: []
-    resources:
-      - $id: http://inspire.ec.europa.eu/metadata-codelist/MaintenanceFrequency/continual
-        label:
-          fr: En continu
-          en: Continual
-      - $id: http://inspire.ec.europa.eu/metadata-codelist/MaintenanceFrequency/asNeeded
-        label:
-          fr: Comme requis
-          en: As needed
-      - $id: http://inspire.ec.europa.eu/metadata-codelist/MaintenanceFrequency/notPlanned
-        label:
-          fr: Pas prévu
-          en: Not planned
-      - $id: http://inspire.ec.europa.eu/metadata-codelist/MaintenanceFrequency/irregular
-        label:
-          fr: Irrégulier
-          en: Irregular
-      - $id: http://inspire.ec.europa.eu/metadata-codelist/MaintenanceFrequency/annually
-        label:
-          fr: Annuel
-          en: Annually
-      - $id: http://inspire.ec.europa.eu/metadata-codelist/MaintenanceFrequency/quarterly
-        label:
-          fr: Trimestriel
-          en: Quarterly
-
-properties:
-  rdfs:label: # RDF/RDFS
-    definition: provides a human-readable version of a resource's name.
-    subPropertyOf: []
-    range: [rdfs:Literal]
-    domain: [rdfs:label]
-  rdfs:comment:
-    definition: provides a human-readable description of a resource.
-    subPropertyOf: []
-    range: [rdfs:Literal]
-    domain: [rdfs:label]
-
-  dcat:themeTaxonomy: # DCAT
-    definition: |
-      A knowledge organization system (KOS) used to classify the resources documented in the catalog (e.g., datasets and
-      services).
-    domain: [dcat:Catalog]
-    range: [rdfs:Resource]
-    comment: |
-      It is recommended that the taxonomy is organized in a skos:ConceptScheme, skos:Collection, owl:Ontology or similar,
-      which allows each member to be denoted by an IRI and published as Linked Data. 
-  dcat:theme:
-    definition: A main category of the resource. A resource can have multiple themes.
-    subPropertyOf: [dcterms:subject]
-    range: [rdfs:Resource]
-    comment: |
-      Usage note: The set of themes used to categorize the resources are organized in a skos:ConceptScheme, skos:Collection, owl:Ontology or similar, describing all the categories and their relations in the catalog.
-  dcat:resource:
-    definition: A resource that is listed in the catalog.
-    subPropertyOf: [dcterms:hasPart]
-    domain: [dcat:Catalog]
-    range: [dcat:Resource]
-    inverse: dcat:inCatalog
-    comment: |
-      Usage note DCAT: This is the most general predicate for membership of a catalog. Use of a more specific sub-property is recommended when available.
-  dcat:dataset:
-    definition: A dataset that is listed in the catalog.
-    subPropertyOf: [dcat:resource]
-    domain: [dcat:Catalog]
-    range:	[dcat:Dataset]
-  dcat:service:
-    definition: A service that is listed in the catalog.
-    subPropertyOf: [dcat:resource]
-    domain: [dcat:Catalog]
-    range:	[dcat:DataService]
-  dcat:catalog:
-    definition: A catalog that is listed in the catalog.
-    subPropertyOf: [dcat:resource]
-    domain: [dcat:Catalog]
-    range:	[dcat:Catalog]
-  dcat:record:
-    definition: |
-      A record describing the registration of a single resource (e.g., a dataset, a data service) that is part of the catalog.
-    subPropertyOf: [dcat:resource]
-    domain: [dcat:Catalog]
-    range:	[dcat:CatalogRecord]
-  dcat:contactPoint:
-    definition: Relevant contact information for the cataloged resource. Use of vCard is recommended.
-    range: [vcard:Kind]
-  dcat:qualifiedRelation:
-    definition: Link to a description of a relationship with another resource
-    subPropertyOf: [prov:qualifiedInfluence]
-    domain: [dcat:Resource]
-    range: [dcat:Relationship]
-  dcat:keyword:
-    definition: A keyword or tag describing the resource.
-    range: [rdfs:Literal]
-  dcat:bbox:
-    definition: The geographic bounding box of a spatial thing [SDW-BP].
-    range: [rdfs:Literal]
-    comment: |
-      Usage note:	The range of this property (rdfs:Literal) is intentionally generic, with the purpose of allowing different geometry literal encodings. E.g., the geometry could be encoded as a WKT literal (geosparql:wktLiteral [GeoSPARQL]).
-  dcat:centroid:
-    definition: The geographic center (centroid) of a spatial thing [SDW-BP].
-    range: [rdfs:Literal]
-    comment: |
-      Usage note: The range of this property (rdfs:Literal) is intentionally generic, with the purpose of allowing different geometry literal encodings. E.g., the geometry could be encoded as a WKT literal (geosparql:wktLiteral [GeoSPARQL]).
-  dcat:landingPage:
-    definition: |
-      A Web page that can be navigated to in a Web browser to gain access to the catalog, a dataset, its distributions
-      and/or additional information.
-    subPropertyOf: [foaf:page]
-    range: [foaf:Document]
-    comment: |
-      Usage note: If the distribution(s) are accessible only through a landing page (i.e., direct download URLs are not known),
-        then the landing page link SHOULD be duplicated as dcat:accessURL on a distribution.
-  dcat:inSeries:
-    definition: A dataset series of which the dataset is part.
-    domain: [dcat:Dataset]
-    range: [dcat:DatasetSeries]
-    subPropertyOf: [dcterms:isPartOf]
-    inverse: dcat:seriesMember
-  dcat:distribution:
-    definition:	An available distribution of the dataset.
-    subPropertyOf: [dct:relation]
-    domain: [dcat:Dataset]
-    range: [dcat:Distribution]
-    inverse: dcat:isDistributionOf
-  dcat:accessURL:
-    definition: |
-      A URL of the resource that gives access to a distribution of the dataset. E.g., landing page, feed, SPARQL endpoint.
-    domain: [dcat:Distribution]
-    range: [rdfs:Resource]
-    comment: |
-      Usage note:	
-
-      dcat:accessURL SHOULD be used for the URL of a service or location that can provide access to this distribution, typically through a Web form, query or API call.
-
-      dcat:downloadURL is preferred for direct links to downloadable resources.
-
-      If the distribution(s) are accessible only through a landing page (i.e., direct download URLs are not known), then the landing page URL associated with the dcat:Dataset SHOULD be duplicated as access URL on a distribution (see 5.7 Dataset available only behind some Web page).
-  dcat:accessService:
-    definition: A data service that gives access to the distribution of the dataset
-    range: [dcat:DataService]
-    comment: |
-      Usage note:	dcat:accessService SHOULD be used to link to a description of a dcat:DataService that can provide access to this distribution.
-  dcat:downloadURL:
-    definition: |
-      The URL of the downloadable file in a given format. E.g., CSV file or RDF file. The format is indicated by the
-      distribution's dcterms:format and/or dcat:mediaType
-    domain: [dcat:Distribution]
-    range: [rdfs:Resource]
-    comment: |
-      Usage note: dcat:downloadURL SHOULD be used for the URL at which this distribution is available directly, typically through a HTTP Get request.
-  dcat:previousVersion:
-    definition: The previous version of a resource in a lineage [PAV].
-    equivalentProperty: [pav:previousVersion]
-    subPropertyOf: [prov:wasRevisionOf]
-    inverse: dcat:nextVersion
-    comment: |
-      This property is meant to be used to specify a version chain, consisting of snapshots of a resource.
-      The notion of version used by this property is limited to versions resulting from revisions occurring to a resource as part of its life-cycle. One of the typical cases here is representing the history of the versions of a dataset that have been released over time.
-  dcat:hasVersion:
-    definition: This resource has a more specific, versioned resource [PAV].
-    equivalentProperty: [pav:hasVersion]
-    subPropertyOf: [dcterms:hasVersion, prov:generalizationOf]
-    comment: |
-      Usage note:
-        This property is intended for relating a non-versioned or abstract resource to several versioned resources, e.g., snapshots [PAV].
-
-        The notion of version used by this property is limited to versions resulting from revisions occurring to a resource as part of its life-cycle. Therefore, its semantics is more specific than its super-property dcterms:hasVersion, which makes use of a broader notion of version, including editions and adaptations.
-  dcat:hasCurrentVersion:
-    definition: This resource has a more specific, versioned resource with equivalent content [PAV].
-    equivalentProperty: [pav:hasCurrentVersion]
-    subPropertyOf: [pav:hasVersion]
-    comment: |
-      Usage note:
-        This property is intended for relating a non-versioned or abstract resource to a single snapshot that can be used as a permalink to indicate the current version of the content [PAV].
-
-        The notion of version used by this property is limited to versions resulting from revisions occurring to a resource as part of its life-cycle.
-  dcat:version:
-    definition: The version indicator (name or identifier) of a resource.
-    equivalentProperty: [pav:version]
-    range: [rdfs:Literal]
-    comment: |
-      Usage note: 	
-        DCAT does not prescribe how a version name / identifier should be specified, and refers for guidance to [DWBP]'s Best Practice 7: Provide a version indicator.
-  dcat:first:
-    definition: The first resource in an ordered collection or series of resources, to which the current resource belongs.
-    subPropertyOf: [xhv:first]
-    comment: |
-      Usage note: 	
-        In DCAT this property is used for resources belonging to a dcat:DatasetSeries.
-  dcat:last:
-    definition: The last resource in an ordered collection or series of resources, to which the current resource belongs.
-    subPropertyOf: [xhv:last]
-    comment: |
-      Usage note: 	
-        In DCAT this property is used for resources belonging to a dcat:DatasetSeries.
-  dcat:prev:
-    definition: The previous resource (before the current one) in an ordered collection or series of resources.
-    subPropertyOf: [xhv:prev]
-    inverse: dcat:next
-    comment: |
-      Usage note: 	
-        In DCAT this property is used for resources belonging to a dcat:DatasetSeries.
-        It is important to note that this property is different from dcat:previousVersion, as it does not denote a previous version of the same resource, but a distinct resource immediately preceding the current one in an ordered collection of resources.
-  
-  locn:geometry: # LOCN
-  
-  foaf:name: # FOAF
-  foaf:mbox:
-    label: personal mailbox
-    definition: |
-      A personal mailbox, ie. an Internet mailbox associated with exactly one owner, the first owner of this mailbox.
-      This is a 'static inverse functional property', in that there is (across time and change) at most one individual
-      that ever has any particular value for foaf:mbox.
-    domain: [foaf:Agent]
-    range: [rdfs:Resource]
-  foaf:phone:
-  foaf:homepage:
-    definition: A homepage of the catalog (a public Web document usually available in HTML).
-    range: [foaf:Document]
-    comment: |
-      note DCAT:
-        foaf:homepage is an inverse functional property (IFP) which means that it MUST be unique and precisely identify
-        the Web-page for the resource. This property indicates the canonical Web-page, which might be helpful in cases
-        where there is more than one Web-page about the resource.
-  foaf:workplaceHomepage:
-  foaf:page:
-  foaf:primaryTopic:
-    definition: The dcat:Resource (dataset or service) described in the record. [DCAT]
-    range: [dcat:Resource]
-    domain: [dcat:CatalogRecord]
-    inverse: foaf:isPrimaryTopicOf
-    comment: |
-      [DCAT] Usage note:	foaf:primaryTopic property is functional: each catalog record can have at most one primary topic,
-        i.e., describes one dataset or service.
-    dcatSpecialization: Les propriétés range et domain correspondent à l'utilisation effectuée dans DCAT et pas au cas général.
-  
-  vcard:fn: # VCARD
-    definition: The full name of the object (as a single string). This is the only mandatory property.
-    range: [rdfs:Literal]
-    datatype: [xsd:string]
-  vcard:hasEmail:
-    definition: To specify the electronic mail address for communication with the object
-    range: [vcard:Email]
-  vcard:hasURL:
-    definition: To specify a uniform resource locator associated with the object
-    range: [rdfs:Resource]
-  
-  prov:qualifiedAttribution: # PROV
-    definition: Link to an Agent having some form of responsibility for the resource
-    subPropertyOf: [prov:qualifiedInfluence]
-    domain: [prov:Entity]
-    range: [prov:Attribution]
-    comment: |
-      Usage note: Used to link to an Agent where the nature of the relationship is known but does not match one of the standard [DCTERMS] properties (dcterms:creator, dcterms:publisher). Use dcat:hadRole on the prov:Attribution to capture the responsibility of the Agent with respect to the Resource. See 15.1 Relationships between datasets and agents for usage examples.
-  prov:wasGeneratedBy:
-    inverse: prov:generated
-  
-  odrl:hasPolicy: # ODRL
-    definition: An ODRL conformant policy expressing the rights associated with the resource.
-    range: [odrl:Policy]
-    comment: |
-      Usage note: Information about rights expressed as an ODRL policy [ODRL-MODEL] using the ODRL vocabulary [ODRL-VOCAB] MAY be provided for the resource.
-  
-  adms:versionNotes: # ADMS
-    definition: A description of changes between this version and the previous version of the resource [VOCAB-ADMS].
-    range:  [rdfs:Literal]
-    comment: |
-      Usage note: 	
-        In case of backward compatibility issues with the previous version of the resource, a textual description of them SHOULD be specified by using this property.
-  adms:status:
-    definition: The status of the resource in the context of a particular workflow process [VOCAB-ADMS].
-    range: [skos:Concept]
-    comment: |
-      Usage note:
-        DCAT does not prescribe the use of any specific set of life-cycle statuses, but refers to existing standards and community practices fit for the relevant application scenario.
-  
-  dct:title: # MD DCMI de base: titres, id, type, résumé, ...
-    definition: A name given to the resource.
-    range: [rdfs:Literal]
-  dct:alternative:
-    definition: An alternative name for the resource.
-    subPropertyOf: [dct:title]
-  dct:identifier:
-    definition: An unambiguous reference to the resource within a given context.
-    range: [rdfs:Literal]
-  dct:type:
-    definition: The nature or genre of the resource.
-    comment: |
-      Recommended practice is to use a controlled vocabulary such as the DCMI Type Vocabulary [DCMI-TYPE].
-      To describe the file format, physical medium, or dimensions of the resource, use the property Format.
-  dct:description:
-    definition: An account of the resource.
-    definition(fr): Un compte rendu de la ressource. [GoogleTranslate]
-    comment: |
-      Description may include but is not limited to: an abstract, a table of contents, a graphical representation,
-      or a free-text account of the resource.
-  dct:abstract:
-    definition: A summary of the resource.
-    subPropertyOf: [dct:description]
-  dct:tableOfContents:
-    definition: A list of subunits of the resource.
-    subPropertyOf: [dct:description]
-  dct:language:
-    definition: A language of the resource.
-    comment: |
-      Recommended practice is to use either a non-literal value representing a language from a controlled vocabulary such as
-      ISO 639-2 or ISO 639-3, or a literal value consisting of an IETF Best Current Practice 47 [IETF-BCP47] language tag.
-    range: [dct:LinguisticSystem]
-  dct:subject:
-    definition: A topic of the resource.
-    comment: |
-      Recommended practice is to refer to the subject with a URI. If this is not possible or feasible, a literal value
-      that identifies the subject may be provided. Both should preferably refer to a subject in a controlled vocabulary.
-  
-  dct:contributor: # acteurs participants
-    definition: An entity responsible for making contributions to the resource.
-    comment: The guidelines for using names of persons or organizations as creators apply to contributors.
-    range: [dct:Agent]
-  dct:creator:
-    definition: An entity responsible for making the resource.
-    comment: |
-      Recommended practice is to identify the creator with a URI. If this is not possible or feasible, a literal value
-      that identifies the creator may be provided.
-    subPropertyOf: [dct:contributor]
-    range: [dct:Agent]
-  dct:publisher:
-    definition: An entity responsible for making the resource available.
-    range: [dct:Agent]
-  dct:rightsHolder:
-    definition: A person or organization owning or managing rights over the resource.
-    comment: |
-      Recommended practice is to refer to the rights holder with a URI. If this is not possible or feasible, a literal value
-      that identifies the rights holder may be provided.
-    range: [dct:Agent]
-  dct:audience:
-  dct:mediator:
-    definition: An entity that mediates access to the resource.
-    comment: In an educational context, a mediator might be a parent, teacher, teaching assistant, or care-giver.
-    subPropertyOf: [dct:audience]
-    range: [dct:AgentClass]
-
-  dct:rights: # droits associés
-    definition: Information about rights held in and over the resource.
-    comment: |
-      Typically, rights information includes a statement about various property rights associated with the resource,
-      including intellectual property rights. Recommended practice is to refer to a rights statement with a URI.
-      If this is not possible or feasible, a literal value (name, label, or short text) may be provided.
-    range: [dct:RightsStatement]
-  dct:accessRights:
-    definition: Information about who access the resource or an indication of its security status.
-    comment: |
-      Access Rights may include information regarding access or restrictions based on privacy, security, or other policies.
-    subPropertyOf: [dct:rights]
-    range: [dct:RightsStatement]
-  dct:license:
-    definition: A legal document giving official permission to do something with the resource.
-    comment: |
-      Recommended practice is to identify the license document with a URI. If this is not possible or feasible, a literal
-      value that identifies the license may be provided.
-    range: [dct:LicenseDocument]
-    subPropertyOf: [dct:rights]
-
-  dct:date: # dates
-    definition: A point or period of time associated with an event in the lifecycle of the resource.
-    comment: |
-      Date may be used to express temporal information at any level of granularity. Recommended practice is to express the
-      date, date/time, or period of time according to ISO 8601-1 [ISO 8601-1] or a published profile of the ISO standard,
-      such as the W3C Note on Date and Time Formats [W3CDTF] or the Extended Date/Time Format Specification [EDTF].
-      If the full date is unknown, month and year (YYYY-MM) or just year (YYYY) may be used. Date ranges may be specified
-      using ISO 8601 period of time specification in which start and end dates are separated by a '/' (slash) character.
-      Either the start or end date may be missing.
-    range: [rdfs:Literal]
-  dct:issued:
-    definition: Date of formal issuance of the resource.
-    comment: |
-      Recommended practice is to describe the date, date/time, or period of time as recommended for the property Date,
-      of which this is a subproperty.
-    subPropertyOf: [dct:date]
-  dct:created:
-    definition: Date of creation of the resource.
-    comment: |
-      Recommended practice is to describe the date, date/time, or period of time as recommended for the property Date,
-      of which this is a subproperty.
-    subPropertyOf: [dct:date]
-  dct:available:
-    definition: Date that the resource became or will become available.
-    comment: |
-      Recommended practice is to describe the date, date/time, or period of time as recommended for the property Date,
-      of which this is a subproperty.
-    subPropertyOf: [dct:date]
-  dct:valid:
-    definition: Date (often a range) of validity of a resource.
-    comment: |
-      Recommended practice is to describe the date, date/time, or period of time as recommended for the property Date,
-      of which this is a subproperty.
-    subPropertyOf: [dct:date]
-  dct:modified:
-    definition: Date on which the resource was changed.
-    comment: |
-      Recommended practice is to describe the date, date/time, or period of time as recommended for the property Date,
-      of which this is a subproperty.
-    subPropertyOf: [dct:date]
-  dct:dateAccepted:
-    definition: Date of acceptance of the resource.
-    comment: |
-      Recommended practice is to describe the date, date/time, or period of time as recommended for the property Date,
-      of which this is a subproperty. Examples of resources to which a date of acceptance may be relevant are a thesis
-      (accepted by a university department) or an article (accepted by a journal).
-    subPropertyOf: [dct:date]
-  dct:dateCopyrighted:
-    definition: Date of copyright of the resource.
-    comment: |
-      Recommended practice is to describe the date, date/time, or period of time as recommended for the property Date,
-      of which this is a subproperty.
-    subPropertyOf: [dct:date]
-  dct:dateSubmitted:
-    definition: Date on which the resource was changed.
-    comment: |
-      Recommended practice is to describe the date, date/time, or period of time as recommended for the property Date,
-      of which this is a subproperty.
-    subPropertyOf: [dct:date]
-
-  dct:coverage: # couverture
-    definition: |
-      The spatial or temporal topic of the resource, spatial applicability of the resource, or jurisdiction
-      under which the resource is relevant.
-    comment: |
-      Spatial topic and spatial applicability may be a named place or a location specified by its geographic coordinates.
-      Temporal topic may be a named period, date, or date range. A jurisdiction may be a named administrative entity
-      or a geographic place to which the resource applies. Recommended practice is to use a controlled vocabulary
-      such as the Getty Thesaurus of Geographic Names [TGN]. Where appropriate, named places or time periods may be used
-      in preference to numeric identifiers such as sets of coordinates or date ranges. Because coverage is so broadly defined,
-      it is preferable to use the more specific subproperties Temporal Coverage and Spatial Coverage.
-    range: [dct:Location, dct:Period, dct:Jurisdiction]
-  dct:temporal:
-    label: Temporal Coverage
-    definition: Temporal characteristics of the resource.
-    subPropertyOf: [dct:coverage]
-    range: [dct:PeriodOfTime]
-  dct:spatial:
-    label: Spatial Coverage
-    definition: Spatial characteristics of the resource.
-    subPropertyOf: [dct:coverage]
-    range: [dct:Location]
- 
-  dct:format: # format, conformité
-    definition: The file format, physical medium, or dimensions of the resource.
-    comment: |
-      Recommended practice is to use a controlled vocabulary where available. For example, for file formats one could use
-      the list of Internet Media Types [MIME]. Examples of dimensions include size and duration.
-    range: [dct:MediaType, dct:Extent ]
-  dct:medium:
-    definition: The material or physical carrier of the resource.
-    range: [dct:PhysicalMedium]
-    subPropertyOf: [dct:format]
-  dct:extent:
-    definition: The size or duration of the resource.
-    comment: Recommended practice is to specify the file size in megabytes and duration in ISO 8601 format.
-  dct:conformsTo:
-    definition: An established standard to which the described resource conforms.
-    range: [dct:Standard]
-    subPropertyOf: [dct:relation]
-
-  dct:relation: # relations entre ressources
-    definition: A related resource.
-    comment: |
-      Recommended practice is to identify the related resource by means of a URI.
-      If this is not possible or feasible, a string conforming to a formal identification system may be provided.
-  dct:source:
-  dct:hasPart:
-    definition: A related resource that is included either physically or logically in the described resource.
-    comment: This property is intended to be used with non-literal values. This property is an inverse property of Is Part Of.
-    subPropertyOf: [dct:relation]
-    inverse: dct:isPartOf
-  dct:isReferencedBy:
-    inverse: dct:references
-  dct:requires:
-  dct:isRequiredBy:
-  dct:replaces:
-    inverse: dct:isReplacedBy
-  dct:hasFormat:
-    definition: A related resource that is substantially the same as the pre-existing described resource, but in another format.
-    comment: |
-      This property is intended to be used with non-literal values. This property is an inverse property of Is Format Of.
-    subPropertyOf: [dct:relation]
-  dct:isFormatOf:
-  dct:hasVersion:
-    definition: A related resource that is a version, edition, or adaptation of the described resource.
-    inverse: dct:isVersionOf
-    comment: |
-      Changes in version imply substantive changes in content rather than differences in format. This property is intended
-      to be used with non-literal values. This property is an inverse property of Is Version Of.
-
-  dct:provenance: # provenance
-    definition: |
-      A statement of any changes in ownership and custody of the resource since its creation that are significant
-      for its authenticity, integrity, and interpretation.
-    comment: The statement may include a description of any changes successive custodians made to the resource.
-    range: [dct:ProvenanceStatement]
-
-  dct:accrualMethod: # accrual
-  dct:accrualPeriodicity:
-    definition: The frequency at which a dataset is published. [DCAT]
-    range: [dcterms:Frequency]
-    comment: |
-      Usage note: The value of dcterms:accrualPeriodicity gives the rate at which the dataset-as-a-whole is updated. This may be complemented by dcat:temporalResolution to give the time between collected data points in a time series.
-  dct:accrualPolicy:
-
-  dct:educationLevel: # divers
-  dct:bibliographicCitation:
-  dct:instructionalMethod:
-
+    properties:  
+      locn:geometry:
 eof:

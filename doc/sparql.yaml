@@ -1,0 +1,84 @@
+title: SparQl
+$schema:
+  $id: schema
+  type: object
+  properties:
+    title: {type: string}
+    $schema: http://json-schema.org/schema#
+    source: {type: array, items: {type: array, items: {type: string}}}
+    content: {type: array, items: {type: string}}
+    examples:
+      description: liste d'exemples de code
+      type: array
+      items:
+        type: object
+        properties:
+          title: {type: string}
+          query: {type: string}
+source:
+  - [SPARQL 1.1 Overview, W3C Recommendation 21 March 2013](https://www.w3.org/TR/sparql11-overview/)
+  - [SPARQL 1.1 Query Language, W3C Recommendation 21 March 2013](https://www.w3.org/TR/sparql11-query/)
+
+content:
+  - Just like in the earlier SPARQL1.0 specification [SPARQL-Query] from 2008, complex queries may include union, optional query parts, and filters; new features like value aggregation, path expressions, nested queries, etc. have been added in SPARQL 1.1. 
+  - Apart from SELECT queries - which return variable bindings
+    - SPARQL supports ASK queries - i.e. boolean "yes/no" queries
+    - and CONSTRUCT queries - by which new RDF graphs can be constructed from a query result;
+  - all the new query language features of SPARQL 1.1 are likewise usable in ASK and CONSTRUCT queries. 
+  - 
+examples:
+  - title: PREFIX pour DCAT
+    query: |
+      PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+      PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+      PREFIX dc: <http://purl.org/dc/terms/>
+      PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+      PREFIX dcat: <http://www.w3.org/ns/dcat#>
+      PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+      PREFIX loc: <http://www.w3.org/ns/locn#> 
+      PREFIX geo: <https://www.iana.org/assignments/media-types/application/vnd.geo+> 
+      PREFIX geosparql: <http://www.opengis.net/ont/geosparql#>
+      PREFIX hydra: <http://www.w3.org/ns/hydra/core#> 
+  - title: noms des publieurs et le nombre de leurs JdD
+    query: |
+      SELECT ?name (COUNT(?dataset) AS ?count)
+      WHERE {
+        ?dataset a dcat:Dataset .
+        ?dataset dc:publisher ?publisher .
+        ?publisher foaf:name ?name
+      } GROUP BY ?person ?name
+      LIMIT 2500
+  - title: query for names of persons and the number of their friends
+    query: |
+      PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+      SELECT ?name (COUNT(?friend) AS ?count)
+      WHERE { 
+          ?person foaf:name ?name . 
+          ?person foaf:knows ?friend . 
+      } GROUP BY ?person ?name
+  - title: FILTER regex
+    query: |
+      SELECT  ?title
+      WHERE   { ?x dc:title ?title
+                FILTER regex(?title, "^SPARQL") 
+              }
+  - title: FILTERs can restrict on arithmetic expressions.
+    query: |
+      SELECT  ?title ?price
+      WHERE   { ?x ns:price ?price .
+                FILTER (?price < 30.5)
+                ?x dc:title ?title . }
+  - title: Examples of literal syntax in SPARQL include
+  - literals |
+      "chat"
+      'chat'@fr with language tag "fr"
+      "xyz"^^<http://example.org/ns/userDatatype>
+      "abc"^^appNS:appDataType
+      '''The librarian said, "Perhaps you would enjoy 'War and Peace'."'''
+      1, which is the same as "1"^^xsd:integer
+      1.3, which is the same as "1.3"^^xsd:decimal
+      1.300, which is the same as "1.300"^^xsd:decimal
+      1.0e6, which is the same as "1.0e6"^^xsd:double
+      true, which is the same as "true"^^xsd:boolean
+      false, which is the same as "false"^^xsd:boolean
+eof:

@@ -36,6 +36,8 @@ journal: |
   - création par scission de exp.php
   - rectification des mbox et hasEmail qui doivent être des ressources dont l'URI commence par mailto:
 */}
+include_once __DIR__.'/rdfcomp.inc.php';
+
 use Symfony\Component\Yaml\Yaml;
 use Symfony\Component\Yaml\Exception\ParseException;
 
@@ -154,9 +156,7 @@ abstract class ExpPropVal {
       return [self::yamlToExpPropVal($yaml)];
     }
   }
-  
 };
-include 'rdfcomp.inc.php';
 
 // Classe des littéraux RDF
 class RdfExpLiteral extends ExpPropVal {
@@ -286,8 +286,9 @@ class RdfExpResRef extends ExpPropVal {
   function simplifPval(RdfExpGraph $graph, string $pKey): string|array {
     $id = $this->id;
     if (substr($id, 0, 2) <> '_:') {// si PAS blank node alors retourne l'URI + evt. déref.
-      if (!($class = (self::PROP_RANGE[$pKey] ?? null)))
+      if (!($class = (self::PROP_RANGE[$pKey] ?? null))) {
         return "<$id>";
+      }
       try {
         $simple = $graph->get($class, $id)->simplify($graph);
       } catch (Exception $e) {
@@ -356,6 +357,7 @@ abstract class RdfExpResource {
         case '@type': { $this->types = $resource['@type']; break; }
         default: {
           foreach ($pvals as $pval) {
+            //echo '$pval ='; print_r($pval);
             $this->props[$pUri][] = ExpPropVal::create($pval);
           }
         }
@@ -620,12 +622,6 @@ abstract class RdfExpResource {
 // Classe générique regroupant les ressources RDF n'ayant aucun traitement spécifique 
 class GenResource extends RdfExpResource {
   const PROP_KEY_URI_PER_TYPE = [
-    'http://xmlns.com/foaf/0.1/Organization' => [
-      'http://xmlns.com/foaf/0.1/name' => 'name',
-      'http://xmlns.com/foaf/0.1/mbox' => 'mbox',
-      'http://xmlns.com/foaf/0.1/phone' => 'phone',
-      'http://xmlns.com/foaf/0.1/workplaceHomepage' => 'workplaceHomepage',
-    ],
     'http://purl.org/dc/terms/Standard' => [
       'http://www.w3.org/2000/01/rdf-schema#label' => 'label',
     ],
@@ -658,9 +654,6 @@ class GenResource extends RdfExpResource {
       'http://www.w3.org/2006/vcard/ns#fn' => 'fn',
       'http://www.w3.org/2006/vcard/ns#hasEmail' => 'hasEmail',
       'http://www.w3.org/2006/vcard/ns#hasURL' => 'hasURL',
-    ],
-    'http://www.w3.org/2004/02/skos/core#Concept' => [
-      'http://www.w3.org/2000/01/rdf-schema#label' => 'label',
     ],
   ]; // dict. [{typeUri}=> [{propUri} => {$propName}]]
   
@@ -697,6 +690,30 @@ class GenResource extends RdfExpResource {
   
   // je fais l'hypothèse que les objets autres que Catalog quand ils sont définis plusieurs fois ont des defs identiques
   function concat(array $resource): void {}
+
+  static function registre2JsonLd(string $classUri, array $resource): array { // transforme la structure registre en structure JSON-LD 
+    {/* Structure Registre 
+        description: ressource avec une étiquette
+        type: object
+        required: [ $id, label ]
+        additionalProperties: false
+        properties:
+          $id:
+            description: URI de la ressource
+            type: string
+          label:
+            description: étiquette multi-lingue
+            $ref: '#/definitions/multiLingualLabel'
+    */}
+    //echo 'structureRegistre = '; print_r($resource);
+    $jsonLd = [
+      '@id'=> $resource['$id'],
+      '@type'=> [$classUri],
+      'http://www.w3.org/2000/01/rdf-schema#label' => [['@language'=> 'fr', '@value'=> $resource['label']['fr']]],
+    ];
+    //echo 'structureJsonLd = '; print_r($jsonLd);
+    return $jsonLd;
+  }
 };
 
 class Dataset extends RdfExpResource { // 'http://www.w3.org/ns/dcat#Dataset'||'http://www.w3.org/ns/dcat#DatasetSeries'
@@ -906,9 +923,6 @@ class PagedCollection extends RdfExpResource {
 };
 
 
-// extrait le code HTTP de retour de l'en-tête HTTP
-function httpResponseCode(array $header) { return substr($header[0], 9, 3); }
-
 /* graphe RDF épandu, cad sans contexte 
 ** ainsi que la constantes CLASS_URI_TO_PHP_NAME définissant le mapping URI du type ou liste des URI -> nom de la classe Php
 */
@@ -922,7 +936,8 @@ class RdfExpGraph {
     'http://www.w3.org/ns/dcat#DataService' => 'DataService',
     'http://www.w3.org/ns/dcat#Distribution' => 'Distribution',
     'http://www.w3.org/ns/dcat#CatalogRecord' => 'CatalogRecord',
-    'http://www.w3.org/2004/02/skos/core#Concept' => 'GenResource',
+    'http://www.w3.org/2004/02/skos/core#ConceptScheme' => 'ConceptScheme',
+    'http://www.w3.org/2004/02/skos/core#Concept' => 'Concept',
     'http://purl.org/dc/terms/Location' => 'Location',
     'http://purl.org/dc/terms/Standard' => 'GenResource',
     'http://purl.org/dc/terms/LicenseDocument' => 'GenResource',
@@ -933,7 +948,7 @@ class RdfExpGraph {
     'http://purl.org/dc/terms/PeriodOfTime' => 'GenResource',
     'http://purl.org/dc/terms/Frequency' => 'GenResource',
     'http://purl.org/dc/terms/LinguisticSystem' => 'GenResource',
-    'http://xmlns.com/foaf/0.1/Organization' => 'GenResource',
+    'http://xmlns.com/foaf/0.1/Organization' => 'Organization',
     'http://www.w3.org/2006/vcard/ns#Kind' => 'GenResource',
     'http://www.w3.org/ns/hydra/core#PagedCollection' => 'PagedCollection',
   ];
@@ -1061,7 +1076,7 @@ class RdfExpGraph {
   }
   
   // affiche en Yaml les ressources de la classe hors blank nodes ou avec
-  function showInYaml(?string $className=null, bool $echo=true, bool $includingBlankNodes=false): string {
+  function showInYaml(?string $className=null, bool $echo=true, bool $includingBlankNodes=false): ?string {
     $result = '';
     if (!$className) {
       foreach (array_keys($this->resources) as $className) {
@@ -1071,14 +1086,22 @@ class RdfExpGraph {
     else {
       foreach ($this->resources[$className] ?? [] as $id => $resource) {
         if ($includingBlankNodes || substr($id, 0, 2) <> '_:') {
-          if ($echo)
-            echo Yaml::dump([$id => $resource->simplify($this)], 7, 2, Yaml::DUMP_MULTI_LINE_LITERAL_BLOCK);
-          else
+          if (!$echo)
             $result .= Yaml::dump([$id => $resource->simplify($this)], 7, 2, Yaml::DUMP_MULTI_LINE_LITERAL_BLOCK);
+          else {
+            $result = Yaml::dump([$id => $resource->simplify($this)], 7, 2, Yaml::DUMP_MULTI_LINE_LITERAL_BLOCK);
+            if (php_sapi_name()=='cli')
+              echo $result;
+            else
+              echo htmlspecialchars($result);
+          }
         }
       }
     }
-    return $result;
+    if (!$echo)
+      return $result;
+    else
+      return null;
   }
   
   function classAsJsonLd(string $className): array { // contenu de la classe en JSON-LD comme array Php

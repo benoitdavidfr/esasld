@@ -2,6 +2,9 @@
 use Symfony\Component\Yaml\Yaml;
 use Symfony\Component\Yaml\Exception\ParseException;
 
+// extrait le code HTTP de retour de l'en-tête HTTP
+function httpResponseCode(array $header) { return substr($header[0], 9, 3); }
+
 class Stats { // classe utilisée pour mémoriser des stats sous la forme [{label} => {nbre d'occurences}]
   protected array $contents=[]; // [{label}=> {nbre}]
   function __construct(array $contents=[]) { $this->contents = $contents; }
