@@ -251,17 +251,19 @@ class Ontology {
     foreach ($array['classes'] ?? [] as $ciri => $class)
       $this->classes[$ciri] = new RdfClass($ciri, $class, $registre, $graph);
     foreach ($array['properties'] ?? [] as $ciri => $property)
-      $this->classes[$ciri] = new RdfProperty($ciri, $property, $registre);
+      $this->properties[$ciri] = new RdfProperty($ciri, $property, $registre);
   }
   
   function asArray(): array {
     foreach ($this->classes ?? [] as $ciri => $class)
       $classes[$ciri] = $class->asArray();
+    foreach ($this->properties ?? [] as $ciri => $property)
+      $properties[$ciri] = $property->asArray();
     return [
       'title'=> $this->title, 
       'source'=> $this->source,
       'classes'=> $classes ?? [],
-      'properties'=> $this->properties ?? [],
+      'properties'=> $properties ?? [],
     ];
   }
 };
