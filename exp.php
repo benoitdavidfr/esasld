@@ -32,6 +32,8 @@ doc: |
   
   
   A VOIR:
+    - ajouter dans le graphe une propriété phpClassNameOfUri contenant le mapping URI -> phpClassName
+      - pour simplifier le code, notamment get()
     - gestion des dateTime comme date
     - gestion des Location
     - boucler la boucle en faisant sur la sortie Yaml-LD un Yaml::parse(), expand et flattening
@@ -40,10 +42,19 @@ doc: |
     - mieux gérer les constantes et si possible les déduire de la déf. des ontologies
   
   Prolongations éventuelles:
+   - définir un schéma JSON sur les datasets pour contrôler leur structuration
+    - semble marcher assez bien sur les données compactées et imbriquées -> dsextract.yaml
+    - ne marche pas sur les données aplanies et épandues car
+      - elles sont volumineuses et trop longues à traiter (même une seule page)
+      - impossible de vérifier les liens entre ressources, ex qu'un accessRights réf. un ens. de RightsStatement
    - définir des shapes SHACL pour valider le graphe DCAT en s'inspirant de ceux de DCAT-AP
      - voir les outils proposés par Jena
 
 journal: |
+ 5/6/2023:
+  - ajout mapping de '@id' et '@type' pour améliorer le Yaml
+ 4/6/2023:
+  - prise en compte évols registre
  3/6/2023:
   - chargement des pages restantes
   - chargement de l'export dans Jena
@@ -109,55 +120,59 @@ ini_set('memory_limit', '2G');
 
 class Constant { // Classe support de constantes 
   const FRAME_PARAM = [
-        'Dataset' => [
-          'http://purl.org/dc/terms/publisher',
-          'http://purl.org/dc/terms/conformsTo',
-          'http://purl.org/dc/terms/accessRights',
-          'http://purl.org/dc/terms/language',
-          'http://purl.org/dc/terms/spatial',
-          'http://www.w3.org/ns/dcat#theme',
-          'http://www.w3.org/ns/dcat#distribution',
-          'http://purl.org/dc/terms/rightsHolder',
-          'http://xmlns.com/foaf/0.1/isPrimaryTopicOf',
-          'http://www.w3.org/ns/adms#status',
-        ],
-        'Distribution' => [
-          'http://purl.org/dc/terms/license',
-          'http://purl.org/dc/terms/format',
-          'http://purl.org/dc/terms/conformsTo',
-          'http://www.w3.org/ns/dcat#accessService',
-        ],
-        'CatalogRecord' => [
-          'http://purl.org/dc/terms/language',
-          'http://www.w3.org/ns/dcat#contactPoint',
-          'http://www.w3.org/ns/dcat#inCatalog',
-        ],
-        'DataService' => [
-          'http://purl.org/dc/terms/conformsTo',
-        ],
-      ]; // paramètres de la fonction frame()
+    'Dataset' => [
+      'http://purl.org/dc/terms/publisher',
+      'http://www.w3.org/ns/dcat#contactPoint',
+      'http://purl.org/dc/terms/conformsTo',
+      'http://purl.org/dc/terms/accessRights',
+      'http://purl.org/dc/terms/language',
+      'http://purl.org/dc/terms/spatial',
+      'http://www.w3.org/ns/dcat#theme',
+      'http://www.w3.org/ns/dcat#distribution',
+      'http://purl.org/dc/terms/rightsHolder',
+      'http://xmlns.com/foaf/0.1/isPrimaryTopicOf',
+      'http://www.w3.org/ns/adms#status',
+    ],
+    'Distribution' => [
+      'http://purl.org/dc/terms/license',
+      'http://purl.org/dc/terms/format',
+      'http://purl.org/dc/terms/conformsTo',
+      'http://www.w3.org/ns/dcat#accessService',
+    ],
+    'CatalogRecord' => [
+      'http://purl.org/dc/terms/language',
+      'http://www.w3.org/ns/dcat#contactPoint',
+      'http://www.w3.org/ns/dcat#inCatalog',
+    ],
+    'DataService' => [
+      'http://purl.org/dc/terms/conformsTo',
+    ],
+  ]; // paramètres de la fonction frame()
   const PROP_IDS = [
-        'title',
-        'description',
-        'publisher',
-        'status',
-        'inSeries',
-        'issued',
-        'modified',
-        'created',
-        'conformsTo',
-        'accessRights',
-        'rightsHolder',
-        'theme',
-        'keyword',
-        'landingPage',
-        'page',
-        'language',
-        'identifier',
-        'dct:spatial',
-        'isPrimaryTopicOf' => ['contactPoint','inCatalog','modified','modifiedT','language','identifier'],        
-        'distribution' => ['title','license','accessService','format','accessURL','downloadURL'],        
-      ]; // ordre des propriétés dans la sortie 
+    'title',
+    'description',
+    'publisher',
+    'contactPoint',
+    'status' => ['prefLabel','inScheme'],
+    'inSeries',
+    'issued',
+    'issuedT',
+    'modified',
+    'modifiedT',
+    'created',
+    'conformsTo',
+    'theme' => ['prefLabel','inScheme'],
+    'keyword',
+    'landingPage',
+    'page',
+    'language',
+    'accessRights',
+    'rightsHolder',
+    'identifier',
+    'spatial',
+    'isPrimaryTopicOf' => ['contactPoint','inCatalog','modified','modifiedT','language','identifier'],        
+    'distribution' => ['title','license','accessService','format','accessURL','downloadURL'],        
+  ]; // ordre des propriétés dans la sortie 
 };
   
 define('JSON_OPTIONS',
@@ -188,8 +203,8 @@ if (php_sapi_name()=='cli') { // traitement CLI en fonction de l'action demandé
   $lastPage = $argv[3] ?? 0;  // Par défaut fin à la dernière page définie dans l'import
 
   $graph = new RdfExpGraph('default');
-  $registre = new Registre;
-  $registre->import($graph);
+  $registre = new Registre(__DIR__.'/registre.yaml');
+  $registre->import($graph); // importe les ressources bien connues dans le graphe
 
   switch ($argv[1]) {
     case 'rectifStats': {
@@ -315,7 +330,8 @@ else { // affichage interactif de la version corrigée page par page en Yaml, JS
   }
   
   $graph = new RdfExpGraph('default');
-  Registre::import($graph);
+  $registre = new Registre(__DIR__.'/registre.yaml');
+  $registre->import($graph); // importe les ressources bien connues dans le graphe
   if ($errors = $graph->import($urlPrefix, true, $page, $page)) {
     echo 'errors = '; print_r($errors);
   }
@@ -377,6 +393,7 @@ else { // affichage interactif de la version corrigée page par page en Yaml, JS
     
     case 'yamlldfc': { // affiche Yaml-ld framed (RdfExpGraph::frame()) et le contexte context.yaml puis compacté avec JsonLD
       //print_r($graph);
+      if ($errors) break;
       $graph->frame(Constant::FRAME_PARAM);
       $comped = new RdfCompactGraph(new RdfContext(Yaml::parseFile('context.yaml')), $graph->classAsJsonLd('Dataset'));
       //print_r($comped);

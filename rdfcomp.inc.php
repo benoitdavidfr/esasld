@@ -16,6 +16,8 @@ doc: |
    - RdfCompactLiteral pour les littéraux et
    - RdfCompactList pour les listes de valeurs.
 journal: |
+ 5/6/2023:
+  - ajout des constantes ID et TYPE pour s'ajuster au contexte et vérif. de la cohérence de ces déf. avec le contexte
  2/6/2023:
   - scission de rdf.inc.php
 */}
@@ -23,10 +25,41 @@ use Symfony\Component\Yaml\Yaml;
 use Symfony\Component\Yaml\Exception\ParseException;
 use ML\JsonLD\JsonLD;
 
+// Les 2 constantes ID et TYPE doivent être définis en accord avec le contexte ; une vérif. est effectuée à l'init. du contexte
+//define ('ID', '@id');
+define ('ID', '$id'); // à définir ssi le contexte remplace '@id' par '$id'
+//define ('TYPE', '@type');
+define ('TYPE', 'isA'); // à définir ssi le contexte replace '@type' par 'isA'
+
 class RdfContext { // Contexte JSON-LD 
   protected array $content;
   
-  function __construct(array $content) { $this->content = $content; }
+  function __construct(array $content) {
+    $this->content = $content;
+    
+    // vérif. des valeurs des constantes ID et TYPE
+    $newIdLabel = '@id';
+    foreach ($content as $key => $value) {
+      if ($value == '@id') {
+        $newIdLabel = $key;
+        break;
+      }
+    }
+    //echo "newIdLabel=$newIdLabel\n";
+    if (ID <> $newIdLabel)
+      throw new Exception("Erreur, ID devrait être '$newIdLabel'");
+    
+    $newTypeLabel = '@type';
+    foreach ($content as $key => $value) {
+      if ($value == '@type') {
+        $newTypeLabel = $key;
+        break;
+      }
+    }
+    //echo "newTypeLabel=$newTypeLabel\n";
+    if (TYPE <> $newTypeLabel)
+      throw new Exception("Erreur, TYPE devrait être '$newTypeLabel'");
+  }
   
   function content(): array { return $this->content; }
 };
@@ -36,9 +69,9 @@ abstract class RdfCompactElt { // Une ressource, une référence ou un littéral
     if (is_array($value) && array_is_list($value)) {
       return new RdfCompactList($value);
     }
-    elseif (is_array($value) && isset($value['@type']))
+    elseif (is_array($value) && isset($value[TYPE]))
       return new RdfCompactResource($value);
-    elseif (is_array($value) && isset($value['@id']))
+    elseif (is_array($value) && isset($value[ID]))
       return new RdfCompactRefRes($value);
     else
       return new RdfCompactLiteral($value);
@@ -52,9 +85,9 @@ abstract class RdfCompactElt { // Une ressource, une référence ou un littéral
 class RdfCompactRefRes extends RdfCompactElt { // référence vers Ressource 
   protected string $id; // la référence
   
-  function __construct(array $val) { $this->id = $val['@id']; }
+  function __construct(array $val) { $this->id = $val[ID]; }
   
-  function jsonld(array $propIds): array { return ['@id'=> $this->id]; }
+  function jsonld(array $propIds): array { return [ID=> $this->id]; }
 };
 
 class RdfCompactLiteral extends RdfCompactElt {
@@ -83,15 +116,15 @@ class RdfCompactList extends RdfCompactElt {
 };
 
 class RdfCompactResource extends RdfCompactElt {
-  protected ?string $id=null; // le champ '@id' de la repr. JSON-LD, cad l'URI de la ressource, null si blank node
-  protected string|array $type; // le champ '@type' de la repr. JSON-LD
+  protected ?string $id=null; // le champ ID de la repr. JSON-LD, cad l'URI de la ressource, null si blank node
+  protected string|array $type; // le champ TYPE de la repr. JSON-LD
   protected array $props=[]; // dict. des propriétés de la ressource de la forme [{propId} => RdfCompactElt]
   
   function __construct(array $resource) {
     foreach ($resource as $propId => $value) {
       switch ($propId) {
-        case '@id': { $this->id = $value; break; }
-        case '@type': { $this->type = $value; break; }
+        case ID: { $this->id = $value; break; }
+        case TYPE: { $this->type = $value; break; }
         default: { $this->props[$propId] = RdfCompactElt::create($value); }
       }
     }
@@ -104,8 +137,8 @@ class RdfCompactResource extends RdfCompactElt {
     $jsonld = [];
     $pIds = []; // liste des propId comme liste de chaines
     if ($this->id)
-      $jsonld['@id'] = $this->id;
-    $jsonld['@type'] = $this->type;
+      $jsonld[ID] = $this->id;
+    $jsonld[TYPE] = $this->type;
     foreach ($propIds as $key => $propId) {
       //echo 'propId='; print_r($propId); echo "\n";
       if (is_string($propId)) { 
@@ -136,6 +169,7 @@ class RdfCompactGraph { // Graphe compacté, cad paramétré par un contexte
 
   function __construct(RdfContext $context, array $jsonld) { // Compacte un extrait de graphe par rapport à un contexte 
     $this->context = $context;
+    if (!is_dir('tmp')) mkdir('tmp');
     file_put_contents('tmp/context.jsonld', json_encode($context->content()));
     file_put_contents('tmp/expanded.jsonld', json_encode($jsonld));
     try {
@@ -148,11 +182,11 @@ class RdfCompactGraph { // Graphe compacté, cad paramétré par un contexte
     //echo '$comped='; print_r($comped);
     if (!isset($comped['@graph'])) { // une seule ressources 
       unset($comped['@context']);
-      $this->resources[$comped['@id']] = RdfCompactElt::create($comped);
+      $this->resources[$comped[ID]] = RdfCompactElt::create($comped);
     }
     else { // plusieurs ressources 
       foreach ($comped['@graph'] as $resource) {
-        $this->resources[$resource['@id']] = RdfCompactElt::create($resource);
+        $this->resources[$resource[ID]] = RdfCompactElt::create($resource);
         //echo "1stResource="; print_r($this->resources); die("FIN");
       }
     }

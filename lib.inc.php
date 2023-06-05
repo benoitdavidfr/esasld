@@ -3,7 +3,12 @@ use Symfony\Component\Yaml\Yaml;
 use Symfony\Component\Yaml\Exception\ParseException;
 
 // extrait le code HTTP de retour de l'en-tête HTTP
-function httpResponseCode(array $header) { return substr($header[0], 9, 3); }
+function httpResponseCode(array $header): string {
+  if (isset($header[0]))
+    return substr($header[0], 9, 3);
+  else
+    return 'unknown';
+}
 
 class Html {
   static function selectOptions(string $outputFormat, array $options): string {

@@ -6,34 +6,51 @@ pourquoi:
     - comprendre JSON-LD pour moi
 attentionCycles:
   dcat:inSeries: dcat:seriesMember
+améliorerGestionDesParamètres:
+  - c'est trop complexe
+  - je définis plusieurs fois les concepts
+  - j'ai un risque d'incohérence
+  - logique
+    - exprimer
+      - mappings
+        - uri <-> curi <-> shortName
+      - ordre des prop. d'une classe pour l'affichage d'une instance
+      - propriétés à suivre pour effectuer l'imbrication
+  - idée
+    - garder
+      - registre qui est le fondement
+      - context car c'est préférable de pouvoir l'adapter finement
+      - CLASS_URI_TO_PHP_NAME ?
+      - FRAME_PARAM
+      - PROP_IDS
 gestionDesParamètres:
   registre.yaml:
     def: |
       Définit:
        1) les ontologies utilisées
-       2) des ressources identifiées par des URI présents dans l'export Ecosphères et mais dont la définition
-          est absente de cet export. (appelées ressources bien connues)
+       2) des instances identifiées par des URI présents dans l'export Ecosphères et mais dont la définition
+          est absente de cet export. (appelées instances bien connues)
     usedFor:
-      - charger les resssources bin connues pour afficher leur définition et pas uniquement leur URI
+      - charger les instances bien connues pour afficher leur définition et pas uniquement leur URI
       - tester la génération d'un contexte utilisé par
         <option value='jsonldc'>JSON-LD compacté</option>
-  contexte.yaml:
+  context.yaml:
     def: |
       Définit le contexte JSON-LD utilisé pour le Yaml-LD
     usedFor:
       - compactage avec JsonLD::compact()
-  RdfResource::CLASS_URI_TO_PHP_NAME:
+  RdfExpGraph::CLASS_URI_TO_PHP_NAME:
     def: |
       Dict. [{URI de classe RDF ou liste d'URI} => {Nom de classe Php}]
     usedFor:
       - dans RdfGraph::import() répartition des ressources dans différentes classes Php et stockage dans différents dictionnaires
-  RdfResource::PROP_KEY_URI:
+  RdfExpResource::PROP_KEY_URI:
     def: |
       liste par classe Php correspondant aux ressources les propriétés RDF en définissant leur URI et leur raccourci,
     usedFor:
       - simplification Yaml, une forme de compactage adhoc
-      - RdfResource::frame() -> !!! (l 521) pour connaitre la rangeClass d'une propriété et savoir ou récupérer la ressource
-      - GenResource::__get() (l 598)
+      - RdfExpResource::frame() -> !!! (l 521) pour connaitre la rangeClass d'une propriété et savoir ou récupérer la ressource
+      - RdfExpResource::__get() (l 598)
   RdfResRef::PROP_RANGE:
     def: |
       indique par propriété sa classe d'arrivée (range), nécessaire pour le déréférencement pour la simplification

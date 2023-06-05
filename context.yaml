@@ -1,12 +1,27 @@
+# contexte Yaml-LD pour affichage simplifié des jeux de données DCAT
+# Benoit DAVID - MTECT/CGDD/SRI/Ecolab - 5/6/2023
 '@language': fr
+
+# namespaces
+adms: http://www.w3.org/ns/adms#
 dcat: http://www.w3.org/ns/dcat#
 dct: http://purl.org/dc/terms/
+ecospheres: http://registre.data.developpement-durable.gouv.fr/ecospheres/
 foaf: http://xmlns.com/foaf/0.1/
-vcard: http://www.w3.org/2006/vcard/ns#
-skos: http://www.w3.org/2004/02/skos/core#
-adms: http://www.w3.org/ns/adms#
+geosparql: http://www.opengis.net/ont/geosparql#
+locn: http://www.w3.org/ns/locn#
+mediatypes: https://www.iana.org/assignments/media-types/
+plume: http://registre.data.developpement-durable.gouv.fr/plume/
 rdfs: http://www.w3.org/2000/01/rdf-schema#
+skos: http://www.w3.org/2004/02/skos/core#
+themesEcospheres: http://registre.data.developpement-durable.gouv.fr/ecospheres/themes-ecospheres/
+vcard: http://www.w3.org/2006/vcard/ns#
 xsd: http://www.w3.org/2001/XMLSchema#
+
+# @id et @type
+$id: '@id'
+isA: '@type'
+
 # DCAT
 Dataset: dcat:Dataset
 Catalog: dcat:Catalog
@@ -23,16 +38,21 @@ contactPoint: dcat:contactPoint
 downloadURL: {'@id': dcat:downloadURL, '@type': '@id'}
 accessURL: {'@id': dcat:accessURL, '@type': '@id'}
 accessService: dcat:accessService
+bboxAsWktLiteral: {'@id': dcat:bbox, '@type': geosparql:wktLiteral}
+
 # DCT
+LinguisticSystem: dct:LinguisticSystem
 Standard: dct:Standard
 RightsStatement: dct:RightsStatement
 LicenseDocument: dct:LicenseDocument
 MediaTypeOrExtent: dct:MediaTypeOrExtent
+Location: dct:Location
 title: dct:title
 description: dct:description
 conformsTo: dct:conformsTo
 format: dct:format
 issued: {'@id': dct:issued, '@type': xsd:date} # PB peut-ête dateTime
+issuedT: {'@id': dct:issued, '@type': xsd:dateTime} # PB peut-ête dateTime
 modified: {'@id': dct:modified, '@type': xsd:date} # PB peut-ête dateTime
 modifiedT: {'@id': dct:modified, '@type': xsd:dateTime} # PB peut-ête dateTime
 created: {'@id': dct:created, '@type': xsd:date} # PB peut-ête dateTime
@@ -42,6 +62,8 @@ identifier: {'@id': dct:identifier, '@language': null}
 license: dct:license
 accessRights: dct:accessRights
 rightsHolder: {'@id': dct:rightsHolder, '@type': '@id'}
+spatial: dct:spatial
+
 # FOAF
 Organization: foaf:Organization
 name: foaf:name
@@ -50,14 +72,25 @@ workplaceHomepage: {'@id': foaf:workplaceHomepage, '@type': '@id'}
 homepage: {'@id': foaf:homepage, '@type': '@id'}
 page: {'@id': foaf:page, '@type': '@id'}
 isPrimaryTopicOf: foaf:isPrimaryTopicOf
-# VCARD
-Kind: vcard:Kind
+
+# vCARD
+VCard: vcard:Kind
 hasEmail: {'@id': vcard:hasEmail, '@type': '@id'}
 hasURL: {'@id': vcard:hasURL, '@type': '@id'}
+fullName: vcard:fn
+
 # SKOS
 Concept: skos:Concept
+prefLabel: skos:prefLabel
+inScheme: skos:inScheme
+
 # ADMS
 status: adms:status
+
+# LOCN
+geometryAsWktLiteral: {'@id': locn:geometry, '@type': geosparql:wktLiteral}
+geometryAsGeoJSON: {'@id': locn:geometry, '@type': mediatypes:application/vnd.geo+json}
+
 # RDFS
 label: rdfs:label
 labelLangString: {'@id': rdfs:label, '@type': 'http://www.w3.org/1999/02/22-rdf-syntax-ns#langString'}

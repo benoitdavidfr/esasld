@@ -241,16 +241,16 @@ class RdfExpResRef extends ExpPropVal {
   // indique par propriété sa classe d'arrivée (range), nécessaire pour le déréférencement pour la simplification
   const PROP_RANGE = [
     'publisher' => 'Organization',
-    'creator' => 'GenResource',
-    'rightsHolder' => 'GenResource',
+    'creator' => 'Organization',
+    'rightsHolder' => 'Organization',
     'spatial' => 'Location',
     'temporal' => 'GenResource',
     'isPrimaryTopicOf' => 'CatalogRecord',
     'inCatalog' => 'Catalog',
     'contactPoint' => 'GenResource',
     'conformsTo' => 'GenResource',
-    'status'=> 'GenResource',
-    'theme'=> 'GenResource',
+    'status'=> 'Concept',
+    'theme'=> 'Concept',
     'accessRights' => 'GenResource',
     'license' => 'GenResource',
     'provenance' => 'GenResource',
@@ -692,7 +692,7 @@ class GenResource extends RdfExpResource {
   // je fais l'hypothèse que les objets autres que Catalog quand ils sont définis plusieurs fois ont des defs identiques
   function concat(array $resource): void {}
 
-  static function registre2JsonLd(string $classUri, array $resource): array { // transforme la structure registre en structure JSON-LD 
+  static function registre2JsonLd(string $classUri, array $resource, Registre $registre): array { // transforme la structure registre en structure JSON-LD 
     {/* Structure Registre 
         description: ressource avec une étiquette
         type: object
@@ -708,7 +708,7 @@ class GenResource extends RdfExpResource {
     */}
     //echo 'structureRegistre = '; print_r($resource);
     $jsonLd = [
-      '@id'=> $resource['$id'],
+      '@id'=> $registre->expandCiriOrKeepIri($resource['$id']),
       '@type'=> [$classUri],
       'http://www.w3.org/2000/01/rdf-schema#label' => [['@language'=> 'fr', '@value'=> $resource['label']['fr']]],
     ];
@@ -1046,7 +1046,7 @@ class RdfExpGraph {
   }
 
   function rectifAllStatements(): void { // rectifie les propriétés accessRights et provenance
-    foreach ($this->resources['Dataset'] as $dataset) {
+    foreach ($this->resources['Dataset'] ?? [] as $dataset) {
       $dataset->rectifAllStatements($this);
     }
   }
@@ -1109,7 +1109,7 @@ class RdfExpGraph {
   
   function classAsJsonLd(string $className): array { // contenu de la classe en JSON-LD comme array Php
     $jsonld = [];
-    foreach ($this->resources[$className] as $id => $resource)
+    foreach ($this->resources[$className] ?? [] as $id => $resource)
       $jsonld[] = $resource->asJsonLd();
     return $jsonld;
   }

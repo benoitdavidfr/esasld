@@ -29,7 +29,7 @@ class ConceptScheme extends RdfExpResource {
     'http://purl.org/dc/terms/publisher' => 'publisher',
   ];
   
-  static function registre2JsonLd(string $classUri, array $resource): array { // transforme la structure registre en structure JSON-LD 
+  static function registre2JsonLd(string $classUri, array $resource, Registre $registre): array { // transforme la structure registre en structure JSON-LD 
     {/* Structure Registre 
         description: ressource skos:ConceptScheme
         type: object
@@ -50,7 +50,7 @@ class ConceptScheme extends RdfExpResource {
     */}
     //echo 'structureRegistre = '; print_r($resource);
     $jsonLd = [
-      '@id'=> $resource['$id'],
+      '@id'=> $registre->expandCiriOrKeepIri($resource['$id']),
       '@type'=> [$classUri],
       'http://purl.org/dc/terms/title' => [['@language'=> 'fr', '@value'=> $resource['title']['fr']]],
     ];
@@ -67,7 +67,7 @@ class Concept extends RdfExpResource {
     'http://www.w3.org/2004/02/skos/core#inScheme' => 'inScheme',
   ];
   
-  static function registre2JsonLd(string $classUri, array $resource): array {
+  static function registre2JsonLd(string $classUri, array $resource, Registre $registre): array {
     {/* Structure Registre 
         description: ressource skos:Concept
         type: object
@@ -87,7 +87,7 @@ class Concept extends RdfExpResource {
     */}
     //echo 'structureRegistre = '; print_r($resource);
     $jsonLd = [
-      '@id'=> $resource['$id'],
+      '@id'=> $registre->expandCiriOrKeepIri($resource['$id']),
       '@type'=> [$classUri],
       'http://www.w3.org/2004/02/skos/core#prefLabel' => [
         [
@@ -112,7 +112,7 @@ class Organization extends RdfExpResource { // http://xmlns.com/foaf/0.1/Organiz
     'http://xmlns.com/foaf/0.1/workplaceHomepage' => 'workplaceHomepage',
   ];
   
-  static function registre2JsonLd(string $classUri, array $resource): array {
+  static function registre2JsonLd(string $classUri, array $resource, Registre $registre): array {
     {/* structure Registre
         description: ressource foaf:Organization
         type: object
@@ -130,7 +130,7 @@ class Organization extends RdfExpResource { // http://xmlns.com/foaf/0.1/Organiz
     */}
     //echo 'structureRegistre = '; print_r($resource);
     $jsonLd = [
-      '@id'=> $resource['$id'],
+      '@id'=> $registre->expandCiriOrKeepIri($resource['$id']),
       '@type'=> [$classUri],
       'http://xmlns.com/foaf/0.1/name' => [ [ '@language'=> 'fr', '@value'=> $resource['name']['fr'] ] ],
       'http://xmlns.com/foaf/0.1/homepage' => [ [ '@id'=> $resource['homepage'] ] ],
@@ -138,6 +138,9 @@ class Organization extends RdfExpResource { // http://xmlns.com/foaf/0.1/Organiz
     //echo 'structureJsonLd = '; print_r($jsonLd);
     return $jsonLd;
   }
+
+  // je fais l'hypothèse que les objets autres que Catalog quand ils sont définis plusieurs fois ont des defs identiques
+  function concat(array $resource): void {}
 };
 
 
@@ -214,7 +217,7 @@ class RdfClass { // description d'une classe
         $classUri = $registre->expandCiri($ciri);
         if (!($className = RdfExpGraph::CLASS_URI_TO_PHP_NAME[$classUri] ?? null))
           throw new Exception("Erreur, classe $classUri inconnue dans RdfExpGraph::CLASS_URI_TO_PHP_NAME");
-        $graph->addResource($className::registre2JsonLd($classUri, $instance), $className);
+        $graph->addResource($className::registre2JsonLd($classUri, $instance, $registre), $className);
       }
       unset($this->array['instances']);
     }
@@ -286,9 +289,12 @@ class Ontology {
 };
 
 class Registre { // stockage du registre 
+  protected string $filename; // nom du fichier yaml contenant le registre 
   protected array $namespaces=[]; // [{prefix} => {iri}]
   protected array $datatypes=[]; // [{ciri} => {description}]
   protected array $ontologies=[]; // [{prefix} => Ontology]
+  
+  function __construct(string $filename) { $this->filename = $filename; }
   
   function expandCiri(string $ciri): string { // construction de l'URI à partir du ciri
     $parts = explode(':', $ciri);
@@ -298,9 +304,16 @@ class Registre { // stockage du registre
     return $this->namespaces[$parts[0]].$parts[1];
   }
   
+  function expandCiriOrKeepIri(string $ciriOrIri): string {
+    if ((substr($ciriOrIri, 0, 7)=='http://') || (substr($ciriOrIri, 0, 8)=='https://'))
+      return $ciriOrIri;
+    else
+      return $this->expandCiri($ciriOrIri);
+  }
+  
   function import(RdfExpGraph $graph): array { // importe le registre dans le graphe 
     try {
-      $registre = Yaml::parseFile(__DIR__.'/registre.yaml');
+      $registre = Yaml::parseFile($this->filename);
     } catch (ParseException $exception) {
       throw new Exception('Unable to parse the YAML file: '. $exception->getMessage());
     }
@@ -350,6 +363,8 @@ class Registre { // stockage du registre
     { // les URI de inScheme d'un skos:Concept doivent être définis dans skos:ConceptScheme
       echo "<h3>les URI de inScheme d'un skos:Concept doivent être définis dans skos:ConceptScheme</h3>\n";
       foreach ($graph->getClassResources('Concept') as $concept) {
+        echo 'prefLabel: ', $concept->prefLabel[0]->value,"\n";
+        echo 'prefLabel: ', $concept->skos_prefLabel[0]->value,"\n";
         foreach ($concept->inScheme as $inScheme) {
           //print_r($inScheme);
           if (!isset($graph->getClassResources('ConceptScheme')[$inScheme->id])) {
@@ -511,7 +526,7 @@ $action = $_GET['action'] ?? 'showRegistre';
     <input type='submit' value='Submit' /></form><pre>\n";
 }
 
-$registre = new Registre;
+$registre = new Registre(__DIR__.'/registre.yaml');
 $graph = new RdfExpGraph('default');
 $registre->import($graph);
 
