@@ -34,8 +34,6 @@ doc: |
   A VOIR:
     - ajouter dans le graphe une propriété phpClassNameOfUri contenant le mapping URI -> phpClassName
       - pour simplifier le code, notamment get()
-    - gestion des dateTime comme date
-    - gestion des Location
     - boucler la boucle en faisant sur la sortie Yaml-LD un Yaml::parse(), expand et flattening
       et comparer le résultat avec le JSON-LD initial
       - modifier la boucle en comparant des graphes imbriqués et non aplanis
@@ -53,6 +51,7 @@ doc: |
 journal: |
  5/6/2023:
   - ajout mapping de '@id' et '@type' pour améliorer le Yaml
+  - ajout construction de l'index URI -> page et affichage d'un JdD sur son URI
  4/6/2023:
   - prise en compte évols registre
  3/6/2023:
@@ -125,6 +124,7 @@ class Constant { // Classe support de constantes
       'http://www.w3.org/ns/dcat#contactPoint',
       'http://purl.org/dc/terms/conformsTo',
       'http://purl.org/dc/terms/accessRights',
+      'http://purl.org/dc/terms/provenance',
       'http://purl.org/dc/terms/language',
       'http://purl.org/dc/terms/spatial',
       'http://www.w3.org/ns/dcat#theme',
@@ -160,6 +160,7 @@ class Constant { // Classe support de constantes
     'modified',
     'modifiedT',
     'created',
+    'provenance',
     'conformsTo',
     'theme' => ['prefLabel','inScheme'],
     'keyword',
@@ -193,6 +194,7 @@ if (php_sapi_name()=='cli') { // traitement CLI en fonction de l'action demandé
     echo "  - catalogs - lecture du catalogue puis affichage des catalogues\n";
     echo "  - datasets - lecture du catalogue puis affichage des jeux de données\n";
     echo "  - yamlldfc - affiche Yaml-ld framed (RdfExpGraph::frame()) et le contexte context.yaml puis compacté avec JsonLD\n";
+    echo "  - buildIndex - construit l'index des URI des fiches de MD\n";
     foreach (array_unique(array_values(RdfExpGraph::CLASS_URI_TO_PHP_NAME)) as $className)
       echo "  - $className - affiche les objets de la classe $className y compris les blank nodes\n";
     die();
@@ -232,7 +234,8 @@ if (php_sapi_name()=='cli') { // traitement CLI en fonction de l'action demandé
       for ($page = $firstPage; ($lastPage == 0) || ($page <= $lastPage); $page++) {
         if (is_file("json/export$page.json")) { // le fichier existe
           $graph = new RdfExpGraph('default');
-          Registre::import($graph);
+          $registre = new Registre(__DIR__.'/registre.yaml');
+          $registre->import($graph); // importe les ressources bien connues dans le graphe
           $content = file_get_contents("json/export$page.json");
           $content = json_decode($content, true, 512, JSON_THROW_ON_ERROR);
           foreach ($content as $no => $resource) {
@@ -253,6 +256,35 @@ if (php_sapi_name()=='cli') { // traitement CLI en fonction de l'action demandé
           echo 'body=',$result['body'];
         }
       }
+      break;
+    }
+    case 'buildIndex': { // construction de l'index des datasets
+      $index = []; // [{URI}=> {noPage}]
+      $stats = new Stats;
+      for ($page = $firstPage; ($lastPage == 0) || ($page <= $lastPage); $page++) {
+        if (!is_file("json/export$page.json")) continue; // le fichier n'existe pas
+        $graph = new RdfExpGraph('default');
+        $registre = new Registre(__DIR__.'/registre.yaml');
+        $registre->import($graph); // importe les ressources bien connues dans le graphe
+        $content = file_get_contents("json/export$page.json");
+        $content = json_decode($content, true, 512, JSON_THROW_ON_ERROR);
+        foreach ($content as $no => $resource) {
+          $stats->increment("nbre de ressources lues");
+          $types = implode(', ', $resource['@type']); 
+          if (!($className = (RdfExpGraph::CLASS_URI_TO_PHP_NAME[$types] ?? null)))
+            throw new Exception("Types $types non traité");
+          $resource = $graph->addResource($resource, $className);
+          if (($className == 'PagedCollection') && ($lastPage == 0)) {
+            $lastPage = $resource->lastPage();
+            StdErr::write("Info: lastPage=$lastPage\n");
+          }
+        }
+        foreach ($graph->getClassResources('Dataset') as $dataset) {
+          //echo 'dataset ='; print_r($dataset);
+          $index[$dataset->asJsonLd()['@id']] = $page;
+        }
+      }
+      file_put_contents(__DIR__.'/json/index.pser', serialize($index));
       break;
     }
     case 'errors': {
@@ -324,6 +356,7 @@ else { // affichage interactif de la version corrigée page par page en Yaml, JS
         'yamlldfc'=> "Yaml-ld framed et compacté",
         'flatten'=> "flatten(expand(Yaml-ld framed et compacté))",
         'boucle'=> "boucle",
+        'showOneDS'=> "showOneDS",
       ]),
       "      </select>
       <input type='submit' value='Submit' /></form><pre>\n";
@@ -441,6 +474,45 @@ else { // affichage interactif de la version corrigée page par page en Yaml, JS
           'http://purl.org/dc/terms/title', 0, "Titre modifié");
       }
       $flattened->includedIn($graph);
+      break;
+    }
+    
+    case 'showOneDS': { // affiche une fiche particulière 
+      if ($dsuri = $_GET['dsuri'] ?? '') {
+        $index = unserialize(file_get_contents(__DIR__.'/json/index.pser'));
+        //print_r($index);
+        $page = $index[$dsuri] ?? 1;
+      }
+      echo "</pre><form>
+        <input type='hidden' name='outputFormat' value='$_GET[outputFormat]' />
+        <input type='hidden' name='page' value='$page' />
+        <input type='text' name='dsuri' size='150' value='$dsuri' />
+      </form><pre>\n";
+      if (!$dsuri) break;
+      //print_r($index);
+      if (!($page = $index[$dsuri] ?? null)) {
+        echo "URI $dsuri ne correspond pas à un Dataset\n";
+        break;
+      }
+      $graph = new RdfExpGraph('default');
+      $registre = new Registre(__DIR__.'/registre.yaml');
+      $registre->import($graph); // importe les ressources bien connues dans le graphe
+      if ($errors = $graph->import($urlPrefix, true, $page, $page)) {
+        echo 'errors = '; print_r($errors);
+        break;
+      }
+      $graph->frame(Constant::FRAME_PARAM);
+      $comped = new RdfCompactGraph(new RdfContext(Yaml::parseFile('context.yaml')), $graph->classAsJsonLd('Dataset'));
+      $comped = $comped->jsonld(Constant::PROP_IDS);
+      $resource = null;
+      foreach ($comped['@graph'] as $r) {
+        if ($r['$id'] == $dsuri) {
+          $resource = $r;
+          break;
+        }
+      }
+      if ($resource)
+        echo htmlspecialchars(Yaml::dump($resource, 9, 2, Yaml::DUMP_MULTI_LINE_LITERAL_BLOCK)); // convertit en Yaml
       break;
     }
     

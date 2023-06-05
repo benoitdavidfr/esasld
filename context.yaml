@@ -44,6 +44,7 @@ bboxAsWktLiteral: {'@id': dcat:bbox, '@type': geosparql:wktLiteral}
 LinguisticSystem: dct:LinguisticSystem
 Standard: dct:Standard
 RightsStatement: dct:RightsStatement
+ProvenanceStatement: dct:ProvenanceStatement
 LicenseDocument: dct:LicenseDocument
 MediaTypeOrExtent: dct:MediaTypeOrExtent
 Location: dct:Location
@@ -57,6 +58,7 @@ modified: {'@id': dct:modified, '@type': xsd:date} # PB peut-ête dateTime
 modifiedT: {'@id': dct:modified, '@type': xsd:dateTime} # PB peut-ête dateTime
 created: {'@id': dct:created, '@type': xsd:date} # PB peut-ête dateTime
 publisher: dct:publisher
+provenance: dct:provenance
 language: dct:language
 identifier: {'@id': dct:identifier, '@language': null}
 license: dct:license
