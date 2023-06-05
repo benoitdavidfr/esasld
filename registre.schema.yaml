@@ -1,0 +1,244 @@
+$id: https://georef.eu/exportESph/registre.schema.yaml
+$schema: http://json-schema.org/schema#
+definitions:
+  multiLingualLabel:
+    type: object
+    additionalProperties: false
+    patternProperties:
+      '^|..$':
+        type: string
+  instance:
+    description: Description d'une instance bien connue
+    oneOf:
+      - description: instance avec une étiquette
+        type: object
+        required: [ $id, label ]
+        additionalProperties: false
+        properties:
+          $id:
+            description: URI de la ressource
+            type: string
+          label:
+            description: étiquette multi-lingue
+            $ref: '#/definitions/multiLingualLabel'
+      - description: instance skos:ConceptScheme
+        type: object
+        required: [ $id, title ]
+        additionalProperties: false
+        properties:
+          $id:
+            description: URI de la ressource
+            type: string
+            format: uri
+          title:
+            description: titre du schéma de concepts
+            $ref: '#/definitions/multiLingualLabel'
+          publisher:
+            description: éditeur défini comme URI défini comme ressource de foaf:Organization
+            referentialIntegrity: publisher doit être un URI défini comme ressource de foaf:Organization
+            type: string
+            format: uri
+      - description: instance skos:Concept
+        type: object
+        required: [ $id, prefLabel ]
+        additionalProperties: false
+        properties:
+          $id:
+            description: URI de la ressource
+            type: string
+          prefLabel:
+            description: étiquette préférentielle multi-lingue
+            $ref: '#/definitions/multiLingualLabel'
+          inScheme:
+            description: schémas de concepts dans lesquels le concept est défini
+            referentialIntegrity: les URI de inScheme doivent être chacun un URI défini comme ressource de skos:ConceptScheme
+            type: array
+            items: {type: string, format: uri}
+      - description: instance foaf:Organization
+        type: object
+        required: [ $id, name, homepage ]
+        additionalProperties: false
+        properties:
+          $id:
+            description: URI de la ressource
+            type: string
+            format: uri
+          name:
+            description: nom de l'organisation
+            $ref: '#/definitions/multiLingualLabel'
+          homepage:
+            description: page internet d'accueil de l'organisation
+            type: string
+            format: uri
+  instances:
+    description: liste de instances bien connues de la classe et utiles
+    type: array
+    items:
+      description: Description de chaque instance
+      $ref: '#/definitions/instance'
+  definition:
+    description: définition(s) officielle(s) de la classe
+    oneOf:
+      - description: définition officielle de la classe
+        type: string
+      - description: |
+          différentes définitions définies dans différentes ontologies définies par leur prefixe d'espace de nom.
+          Par exemple un élément peut être éfini par son ontologie et redéfini par une autre l'utilisant en définissant
+          plutôt l'usage qui en est fait dans cette seconde ontologie.
+        type: object
+        additionalProperties: false
+        patternProperties:
+          '^[a-zA-Z]+$':
+            type: string
+  class:
+    description: description d'une classe et de ses ressources bien connues
+    type: object
+    additionalProperties: false
+    required: [definition, subClassOf]
+    properties:
+      label: { description: "libellé s'il ne se déduit pas facilement de son URI (rdfs:label)", type: string}
+      labelFr: { description: "libellé en français", type: string}
+      definition:
+        description: 'définition officielle de la classe (skos:definition)'
+        $ref: '#/definitions/definition'
+      comment: { description: 'commentaire officiel sur la classe (rdfs:comment)', type: string }
+      subClassOf:
+        description: liste des classes parentes définies par leur URI compact (rdfs:subClassOf)
+        referentialIntegrity: chaque CURI de subClassOf doit un CURI d'une classe
+        type: array
+        items:
+          type: string
+          pattern: '^[a-z]+:[A-Za-z]+$'
+      instances:
+        description: liste d'instances bien connues de la classe et utiles
+        $ref: '#/definitions/instances'
+  property:
+    description: description d'une propriété
+    type: object
+    additionalProperties: false
+    properties:
+      label: { description: "libellé en anglais s'il ne se déduit pas facilement de son URI", type: string}
+      labelFr: { description: "libellé en français", type: string}
+      definition:
+        $ref: '#/definitions/definition'
+      definition(fr): { description: "une traduction en français de la définition", type: string }
+      subPropertyOf:
+        description: liste des propriétés parentes (rdfs:subPropertyOf)
+        referentialIntegrity: chaque subPropertyOf doit être le CURI d'une propriété
+        type: array
+        items: {type: string, pattern: '^[a-z]+:[a-zA-Z]+$'}
+      equivalentProperty:
+        referentialIntegrity: chaque equivalentProperty doit être le CURI d'une propriété
+        type: array
+        items: {type: string, pattern: '^[a-z]+:[a-zA-Z]+$'}
+      range:
+        description: cible de la propriété comme ensemble de classes définies par leur URI compact
+        referentialIntegrity: chaque range doit être le CURI d'une classe
+        type: array
+        items: {type: string, pattern: '^[a-z]+:[a-zA-Z]+$'}
+      datatype:
+        description: liste de types de données attendus
+        referentialIntegrity: chaque datatype doit être un type défini
+        type: array
+        items: {type: string}
+      domain:
+        description: domaine de définition de la proprité comme ensemble de classes définies par leur URI compact
+        referentialIntegrity: chaque domain doit être le CURI d'une classe
+        type: array
+        items: {type: string, pattern: '^[a-z]+:[a-zA-Z]+$'}
+      inverse:
+        description: définition d'une propriété inverse, cette propriété inverse n'est pas définie comme propriété
+        type: string
+        pattern: '^[a-z]+:[a-zA-Z]+$'
+      comment: { description: 'un commentaire', type: string }
+      dcatSpecialization:
+        description: commentaire sur la spécialisation de la description pour DCAT
+        type: string
+  ontology:
+    description: description de l'ontologie
+    type: object
+    additionalProperties: false
+    properties:
+      title: { description: "titre de l'ontologie", type: string }
+      source:
+        description: liste de références aux documents de référence sur cette ontologie
+        type: array
+        items: {type: string}
+      publisher:
+        description: éditeur défini comme URI défini comme ressource de foaf:Organization
+        referentialIntegrity: publisher doit être un URI défini comme ressource de foaf:Organization
+        type: string
+        format: uri
+      classes:
+        description: dictionnaire de classes indexées sur leur URI compact
+        type: object
+        additionalProperties: false
+        patternProperties:
+          '^[a-z]+:[A-Za-z]+$':
+            description: description d'une classe et de ses ressources bien connues
+            $ref: '#/definitions/class'
+      properties:
+        description: dictionnaire de propriétés indexées sur leur URI compact
+        type: object
+        additionalProperties: false
+        patternProperties:
+          '^[a-z]+:[a-zA-Z]+$':
+            oneOf:
+              - description: description de la propriété
+                $ref: '#/definitions/property'
+              - description: propriété non détaillée dont uniquement l'URI est fournie
+                type: 'null'
+type: object
+additionalProperties: false
+required: [ title, abstract, $schema, namespaces, ontologies ]
+properties:
+  title: { description: 'titre du document', type: string }
+  abstract: { description: 'résumé du document', type: string }
+  lineage:
+    description: historique des évolutions sous la forme d'une liste de déclarations datées
+    type: array
+    items:
+      type: object
+      properties:
+        date:
+          description: date de la déclaration
+          type: string
+          format: date
+        label:
+          description: déclaration associée à la date
+          type: string
+  $schema:
+    description: 'schema JSON du document'
+    oneOf:
+      - $ref: http://json-schema.org/schema#
+      - type: string
+  namespaces:
+    description: dictionnaire des espaces de noms indexés sur leur prefixe utilisé dans ce document
+    type: object
+    additionalProperties: false
+    patternProperties:
+      '^[a-zA-Z]+$':
+        description: URI de l'espace de noms
+        type: string
+        pattern: '^https?://'
+  datatypes:
+    description: |
+      dictionnaire des types de données RDF (https://www.w3.org/TR/2014/REC-rdf11-concepts-20140225/#section-Datatypes)
+      indexés sur leur URI compact
+    type: object
+    additionalProperties: false
+    patternProperties:
+      '^[a-z]+:[a-zA-Z0-9]+$':
+        description: description du type de données
+        type: string
+  ontologies:
+    description: dictionnaire des ontologies indexées sur le préfixe de leur espace de noms
+    type: object
+    additionalProperties: false
+    patternProperties:
+      '^[a-z]+$':
+        description: description de l'ontologie
+        $ref: '#/definitions/ontology'
+  eof:
+    description: propriété marquant la fin du fichier
+    type: 'null'
