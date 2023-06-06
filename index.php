@@ -32,4 +32,4 @@ Le quatrième objectif est de charger le contenu du catalogue Ecosphères dans J
 Cela est réalisé mais un hébergement d'un moteur SPARQL est nécessaire pour le montrer.
 Un hébergement d'Apache Jena est en cours d'étude sur EcoCompose.
 </p>
-Le code développé est dispo. sur 
+Le code développé est dispo. sur <a href='https://github.com/benoitdavidfr/esasld'>https://github.com/benoitdavidfr/esasld</a>.
