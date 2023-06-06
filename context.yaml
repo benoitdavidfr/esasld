@@ -66,6 +66,7 @@ temporal: dct:temporal
 startDate: {'@id': dcat:startDate, '@type': xsd:date} # défini comme date
 endDate: {'@id': dcat:endDate, '@type': xsd:date} # défini comme date
 publisher: dct:publisher
+creator: dct:creator
 provenance: dct:provenance
 accrualPeriodicity: dct:accrualPeriodicity
 language: dct:language

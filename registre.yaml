@@ -691,6 +691,10 @@ ontologies:
         
           - $id: http://registre.data.developpement-durable.gouv.fr/themes-hors-ecospheres/energie
             prefLabel: {fr: Énergie}
+          - $id: http://registre.data.developpement-durable.gouv.fr/themes-hors-ecospheres/transports
+            prefLabel: {fr: Transports}
+          - $id: http://registre.data.developpement-durable.gouv.fr/themes-hors-ecospheres/Environnement
+            prefLabel: {fr: Environnement}
     properties:
       skos:hasTopConcept:
         domain: [skos:ConceptScheme]

@@ -1,7 +1,7 @@
 definitions:
   dateTime:
     type: string
-    format: dateTime
+    pattern: ^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}
   date:
     type: string
     format: date
@@ -127,11 +127,25 @@ definitions:
       - type: array
         items: {$ref: '#/definitions/Distribution'}
       - $ref: '#/definitions/Distribution'
+  Catalog:
+    type: object
+    additionalProperties: false
+    required: [isA]
+    properties:
+      isA: {enum: [Catalog]}
+      title: {type: string}
+      homepage: {type: string, format: uri}
   CatalogRecord:
     type: object
+    additionalProperties: false
     required: [isA]
     properties:
       isA: {enum: [CatalogRecord]}
+      contactPoint: {$ref: '#/definitions/VCards'}
+      inCatalog: {$ref: '#/definitions/Catalog'}
+      modifiedT: {type: string}
+      language: {$ref: '#/definitions/LinguisticSystem'}
+      identifierL: {type: string}
 type: object
 additionalProperties: false
 required: [$id, isA, title]
@@ -146,6 +160,7 @@ properties:
   title: {type: string}
   description: {type: string}
   publisher: {$ref: '#/definitions/Organization'}
+  creator: {$ref: '#/definitions/Organization'}
   contactPoint: {$ref: '#/definitions/VCards'}
   status: {$ref: '#/definitions/Concept'}
   inSeries: {$ref: '#/definitions/UriOrArrayOfUris'}

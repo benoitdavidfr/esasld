@@ -532,6 +532,16 @@ abstract class RdfExpResource {
                 '@id'=> 'http://registre.data.developpement-durable.gouv.fr/themes-hors-ecospheres/energie']);
                $rectifStats->increment("Theme Énergie remplacé par un URI");
             }
+            if ($pval->id == 'Transports') {
+              $pvals[$i] = ExpPropVal::create([
+                '@id'=> 'http://registre.data.developpement-durable.gouv.fr/themes-hors-ecospheres/transports']);
+               $rectifStats->increment("Theme Transports remplacé par un URI");
+            }
+            if ($pval->id == 'Environnement') {
+              $pvals[$i] = ExpPropVal::create([
+                '@id'=> 'http://registre.data.developpement-durable.gouv.fr/themes-hors-ecospheres/Environnement']);
+               $rectifStats->increment("Theme Environnement remplacé par un URI");
+            }
           }
         }
       }

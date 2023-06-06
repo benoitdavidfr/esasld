@@ -118,6 +118,7 @@ class Constant { // Classe support de constantes
   const FRAME_PARAM = [
     'Dataset' => [
       'http://purl.org/dc/terms/publisher',
+      'http://purl.org/dc/terms/creator',
       'http://www.w3.org/ns/dcat#contactPoint',
       'http://purl.org/dc/terms/temporal',
       'http://purl.org/dc/terms/accrualPeriodicity',
@@ -151,6 +152,7 @@ class Constant { // Classe support de constantes
     'title',
     'description',
     'publisher',
+    'creator',
     'contactPoint',
     'status' => ['prefLabel','inScheme'],
     'inSeries',
@@ -319,6 +321,125 @@ if (php_sapi_name()=='cli') { // traitement CLI en fonction de l'action demandé
       $comped = new RdfCompactGraph(new RdfContext(Yaml::parseFile('context.yaml')), $graph->classAsJsonLd('Dataset'));
       //print_r($comped);
       echo Yaml::dump($comped->jsonld(Constant::PROP_IDS), 9, 2, Yaml::DUMP_MULTI_LINE_LITERAL_BLOCK); // convertit en Yaml
+      break;
+    }
+    case 'checkSchema': { // test de conformité au schéma JSON
+      require_once __DIR__.'/../../schema/jsonschema.inc.php';
+      
+      $stats = new Stats;
+      $errorNbres = []; // [{errorMd5} => {nbre}]
+      $errorLabels = []; // [errorMd5 => ['label'=> {errorLabel}, 'nbre'=>{nbre}, 'uris'=> [{uri}]]]
+      $warningNbres = []; // [{errorMd5} => {nbre}]
+      $warningLabels = []; // [errorMd5 => ['label'=> {errorLabel}, 'nbre'=>{nbre}, 'uris'=> [{uri}]]]
+      for ($page = $firstPage; ($lastPage == 0) || ($page <= $lastPage); $page++) {
+        // chargement de la page dans $graph
+        if (!is_file("json/export$page.json")) continue; // le fichier n'existe pas
+        $graph = new RdfExpGraph('default');
+        $registre = new Registre(__DIR__.'/registre.yaml');
+        $registre->import($graph); // importe les ressources bien connues dans le graphe
+        $content = file_get_contents("json/export$page.json");
+        $content = json_decode($content, true, 512, JSON_THROW_ON_ERROR);
+        foreach ($content as $no => $resource) {
+          $stats->increment("nbre de ressources lues");
+          $types = implode(', ', $resource['@type']); 
+          if (!($className = (RdfExpGraph::CLASS_URI_TO_PHP_NAME[$types] ?? null)))
+            throw new Exception("Types $types non traité");
+          $resource = $graph->addResource($resource, $className);
+          if (($className == 'PagedCollection') && ($lastPage == 0)) {
+            $lastPage = $resource->lastPage();
+            StdErr::write("Info: lastPage=$lastPage\n");
+          }
+        }
+        $graph->rectifAllStatements();
+        
+        // Frame et Compact
+        $graph->frame(Constant::FRAME_PARAM);
+        $comped = new RdfCompactGraph(new RdfContext(Yaml::parseFile('context.yaml')), $graph->classAsJsonLd('Dataset'));
+        //print_r($comped);
+        $comped = $comped->jsonld(Constant::PROP_IDS); // formattage en JSON-LD
+        //print_r($comped);
+        
+        // test de conformité des JdD de la page au schéma JSON
+        $schema = new JsonSchema(__DIR__.'/dataset.schema.yaml');
+        foreach ($comped['@graph'] as $dataset) {
+          //echo $dataset['$id']," :\n";
+          $status = $schema->check($dataset);
+          //print_r($status->errors());
+          foreach ($status->errors() as $error) {
+            $md5 = md5(json_encode($error));
+            $errorNbres[$md5] = 1 + ($errorNbres[$md5] ?? 0);
+            $errorLabels[$md5]['label'] = $error;
+            $errorLabels[$md5]['nbre'] = $errorNbres[$md5];
+            $errorLabels[$md5]['uris'][] = $dataset['$id'];
+          }
+          foreach ($status->warnings() as $warning) {
+            $md5 = md5(json_encode($warning));
+            $warningNbres[$md5] = 1 + ($warningNbres[$md5] ?? 0);
+            $warningLabels[$md5]['label'] = $warning;
+            $warningLabels[$md5]['nbre'] = $warningNbres[$md5];
+            $warningLabels[$md5]['uris'][] = $dataset['$id'];
+          }
+        }
+      }
+      if ($errorNbres) {
+        arsort($errorNbres);
+        foreach ($errorNbres as $errorMd5 => $nbre) {
+          print_r($errorLabels[$errorMd5]);
+        }
+      }
+      else {
+        echo "No error\n";
+        if ($warningNbres) {
+          arsort($warningNbres);
+          foreach ($warningNbres as $md5 => $nbre) {
+            print_r($warningLabels[$md5]);
+          }
+        }
+        else {
+          echo "No warning\n";
+        }
+      }
+      break;
+    }
+    case 'showOneDS': { // affichage d'une fiche définie par son URI
+      if ($dsuri = $_GET['dsuri'] ?? '') {
+        $index = unserialize(file_get_contents(__DIR__.'/json/index.pser'));
+        //print_r($index);
+        $page = $index[$dsuri] ?? 1;
+      }
+      echo "</pre><form>
+        <input type='hidden' name='outputFormat' value='$_GET[outputFormat]' />
+        <input type='hidden' name='page' value='$page' />
+        <input type='text' name='dsuri' size='150' value='$dsuri' />
+      </form><pre>\n";
+      if (!$dsuri) break;
+      //print_r($index);
+      if (!($page = $index[$dsuri] ?? null)) {
+        echo "URI $dsuri ne correspond pas à un Dataset\n";
+        break;
+      }
+      $graph = new RdfExpGraph('default');
+      $registre = new Registre(__DIR__.'/registre.yaml');
+      $registre->import($graph); // importe les ressources bien connues dans le graphe
+      if ($errors = $graph->import($urlPrefix, true, $page, $page)) {
+        echo 'errors = '; print_r($errors);
+        break;
+      }
+      $graph->frame(Constant::FRAME_PARAM);
+      $comped = new RdfCompactGraph(new RdfContext(Yaml::parseFile('context.yaml')), $graph->classAsJsonLd('Dataset'));
+      $comped = $comped->jsonld(Constant::PROP_IDS);
+      $resource = null;
+      foreach ($comped['@graph'] as $r) {
+        if ($r['$id'] == $dsuri) {
+          $resource = $r;
+          break;
+        }
+      }
+      if ($resource) {
+        $scriptUrl = "$_SERVER[REQUEST_SCHEME]://$_SERVER[SERVER_NAME]$_SERVER[SCRIPT_NAME]";
+        $resource = array_merge(['@context'=> "$scriptUrl?outputFormat=context.jsonld"], $resource);
+        echo htmlspecialchars(Yaml::dump($resource, 9, 2, Yaml::DUMP_MULTI_LINE_LITERAL_BLOCK)); // convertit en Yaml
+      }
       break;
     }
     
