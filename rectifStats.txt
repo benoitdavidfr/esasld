@@ -1,0 +1,36 @@
+$stats = Stats Object
+(
+    [contents:protected] => Array
+        (
+            [nbre de ressources lues] => 79608
+            [nbre de ressources pour ConceptScheme] => 3
+            [nbre de ressources pour Concept] => 101
+            [nbre de ressources pour Organization] => 750
+            [nbre de ressources pour GenResource] => 40868
+            [nbre de ressources pour Dataset] => 19016
+            [nbre de ressources pour Location] => 18486
+            [nbre de ressources pour Distribution] => 37953
+            [nbre de ressources pour PagedCollection] => 191
+            [nbre de ressources pour Catalog] => 456
+            [nbre de ressources pour DataService] => 519
+            [nbre de ressources pour CatalogRecord] => 265
+        )
+
+)
+$rectifStats = Stats Object
+(
+    [contents:protected] => Array
+        (
+            [rectification langue] => 19018
+            [propriété contenant une chaine encodée en Yaml] => 205791
+            [http://purl.org/dc/terms/description est par défaut en français] => 18751
+            [http://purl.org/dc/terms/title est par défaut en français] => 18752
+            [http://xmlns.com/foaf/0.1/name est par défaut en français] => 290
+            [rectification mbox] => 1305
+            [duplication littéral avec et sans langue] => 530
+            [dates dupliquées avec un élément dateTime et l'autre date] => 508
+            [Theme Énergie remplacé par un URI] => 1200
+            [propriété contenant un Littéral alors qu'elle exige une Resource] => 39701
+        )
+
+)
