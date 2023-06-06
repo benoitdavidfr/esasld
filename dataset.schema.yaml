@@ -1,0 +1,173 @@
+definitions:
+  dateTime:
+    type: string
+    format: dateTime
+  date:
+    type: string
+    format: date
+  UriOrArrayOfUris:
+    oneOf:
+      - {type: string, format: uri}
+      - type: array
+        items: {type: string, format: uri}
+  resRef:
+    type: object
+    additionalProperties: false
+    required: [$id]
+    properties:
+      $id: {type: string}
+  Frequency:
+    type: object
+    additionalProperties: false
+    required: [isA, label]
+    properties:
+      $id: {type: string}
+      isA: {enum: [Frequency]}
+      label: {type: string}
+  Organization:
+    type: object
+    additionalProperties: false
+    required: [isA, name]
+    properties:
+      $id: {type: string}
+      isA: {enum: [Organization]}
+      name: {type: string}
+      mbox: {type: string}
+      workplaceHomepage: {type: string}
+  Organizations:
+    oneOf:
+      - $ref: '#/definitions/Organization'
+      - type: array
+        items: {$ref: '#/definitions/Organization'}
+  VCard:
+    type: object
+    additionalProperties: false
+    required: [isA, hasEmail]
+    properties:
+      $id: {type: string}
+      isA: {enum: [VCard]}
+      hasEmail: {type: string}
+      hasURL: {type: string}
+      fullName: {type: string}
+  VCards:
+    oneOf:
+      - $ref: '#/definitions/VCard'
+      - type: array
+        items: {$ref: '#/definitions/VCard'}
+  PeriodOfTime:
+    type: object
+    additionalProperties: false
+    required: [isA]
+    properties:
+      $id: {type: string}
+      isA: {enum: [PeriodOfTime]}
+      startDate: {type: string, format: date}
+      endDate: {type: string, format: date}
+  Concept:
+    type: object
+    additionalProperties: false
+    required: [$id, isA, prefLabel]
+    properties:
+      $id: {type: string}
+      isA: {enum: [Concept]}
+      prefLabel: {type: string}
+      inScheme: {$ref: '#/definitions/resRef'}
+  Concepts:
+    oneOf:
+      - $ref: '#/definitions/Concept'
+      - type: array
+        items: {$ref: '#/definitions/Concept'}
+  Statement:
+    type: object
+    additionalProperties: false
+    required: [isA, label]
+    properties:
+      $id: {type: string}
+      isA: {enum: [RightsStatement, ProvenanceStatement]}
+      label: {type: string}
+  Statements:
+    oneOf:
+      - $ref: '#/definitions/Statement'
+      - type: array
+        items: {$ref: '#/definitions/Statement'}
+  LinguisticSystem:
+    type: object
+    required: [$id, isA, label]
+    properties:
+      $id: {type: string}
+      isA: {enum: [LinguisticSystem]}
+      label: {type: string}
+  Standard:
+    type: object
+    required: [$id, isA, label]
+    properties:
+      $id: {type: string}
+      isA: {enum: [Standard]}
+      label: {type: string}
+  Keywords:
+    type: array
+    items: {type: string}
+  Location:
+    type: object
+    required: [isA]
+    properties:
+      isA: {enum: [Location]}
+  Locations:
+    oneOf:
+      - $ref: '#/definitions/Location'
+      - type: array
+        items: {$ref: '#/definitions/Location'}
+  Distribution:
+    type: object
+    required: [isA]
+    properties:
+      isA: {enum: [Distribution]}
+  Distributions:
+    oneOf:
+      - type: array
+        items: {$ref: '#/definitions/Distribution'}
+      - $ref: '#/definitions/Distribution'
+  CatalogRecord:
+    type: object
+    required: [isA]
+    properties:
+      isA: {enum: [CatalogRecord]}
+type: object
+additionalProperties: false
+required: [$id, isA, title]
+properties:
+  $id: {type: string}
+  isA:
+    oneOf:
+      - enum: [Dataset]
+      - type: array
+        items:
+          enum: [Dataset, DatasetSeries]
+  title: {type: string}
+  description: {type: string}
+  publisher: {$ref: '#/definitions/Organization'}
+  contactPoint: {$ref: '#/definitions/VCards'}
+  status: {$ref: '#/definitions/Concept'}
+  inSeries: {$ref: '#/definitions/UriOrArrayOfUris'}
+  seriesMember: {$ref: '#/definitions/UriOrArrayOfUris'}
+  issued: {$ref: '#/definitions/date'}
+  issuedT: {$ref: '#/definitions/dateTime'}
+  modified: {type: string}
+  modifiedT: {type: string}
+  created: {type: string}
+  temporal: {$ref: '#/definitions/PeriodOfTime'}
+  accrualPeriodicity:  {$ref: '#/definitions/Frequency'}
+  provenance: {$ref: '#/definitions/Statements'}
+  conformsTo: {$ref: '#/definitions/Standard'}
+  theme: {$ref: '#/definitions/Concepts'}
+  keyword: {$ref: '#/definitions/Keywords'}
+  landingPage: {type: string}
+  page: {type: string}
+  language: {$ref: '#/definitions/LinguisticSystem'}
+  accessRights: {$ref: '#/definitions/Statements'}
+  rightsHolder: {$ref: '#/definitions/Organizations'}
+  identifier: {$ref: '#/definitions/resRef'}
+  identifierL: string
+  spatial: {$ref: '#/definitions/Locations'}
+  isPrimaryTopicOf: {$ref: '#/definitions/CatalogRecord'}
+  distribution: {$ref: '#/definitions/Distributions'}
