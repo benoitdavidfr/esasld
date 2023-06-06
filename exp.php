@@ -40,15 +40,12 @@ doc: |
     - mieux gérer les constantes et si possible les déduire de la déf. des ontologies
   
   Prolongations éventuelles:
-   - définir un schéma JSON sur les datasets pour contrôler leur structuration
-    - semble marcher assez bien sur les données compactées et imbriquées -> dsextract.yaml
-    - ne marche pas sur les données aplanies et épandues car
-      - elles sont volumineuses et trop longues à traiter (même une seule page)
-      - impossible de vérifier les liens entre ressources, ex qu'un accessRights réf. un ens. de RightsStatement
    - définir des shapes SHACL pour valider le graphe DCAT en s'inspirant de ceux de DCAT-AP
      - voir les outils proposés par Jena
 */}
 {/*journal: |
+ 6/6/2023:
+  - mise au point du schema JSON sur les datasets pour contrôler leur structuration et test partiel
  5/6/2023:
   - ajout mapping de '@id' et '@type' pour améliorer le Yaml
   - ajout construction de l'index URI -> page et affichage d'un JdD sur son URI
@@ -122,6 +119,8 @@ class Constant { // Classe support de constantes
     'Dataset' => [
       'http://purl.org/dc/terms/publisher',
       'http://www.w3.org/ns/dcat#contactPoint',
+      'http://purl.org/dc/terms/temporal',
+      'http://purl.org/dc/terms/accrualPeriodicity',
       'http://purl.org/dc/terms/conformsTo',
       'http://purl.org/dc/terms/accessRights',
       'http://purl.org/dc/terms/provenance',
@@ -160,6 +159,8 @@ class Constant { // Classe support de constantes
     'modified',
     'modifiedT',
     'created',
+    'temporal'=> ['startDate','endDate'],
+    'accrualPeriodicity' => ['prefLabel','inScheme'],
     'provenance',
     'conformsTo',
     'theme' => ['prefLabel','inScheme'],
@@ -352,6 +353,7 @@ else { // affichage interactif de la version corrigée page par page en Yaml, JS
         'jsonld'=> "JSON-LD corrigé",
         'print_r'=> "print_r(graph)",
         'turtle'=> "Turtle créé à partir du JSON-LD avec EasyRdf",
+        'checkSchema'=> "Test de conformité du Yaml-LD au schema JSON",
         //'jsonLdContext'=> "contexte JSON-LD généré par le Registre - abandonné",
         'JsonLD::compact'=> "JSON-LD compacté avec JsonLD::compact() - abandonné",
         //'JsonLD::frame'=> "JSON-LD imbriqué avec JsonLD::frame(), ne fonctionne pas correctement",
@@ -477,6 +479,37 @@ else { // affichage interactif de la version corrigée page par page en Yaml, JS
       $flattened->includedIn($graph);
       break;
     }*/
+    case 'checkSchema': { // test de conformité à un schéma JSON
+      require_once __DIR__.'/../../schema/jsonschema.inc.php';
+      if ($errors) break;
+      $graph->frame(Constant::FRAME_PARAM);
+      $comped = new RdfCompactGraph(new RdfContext(Yaml::parseFile('context.yaml')), $graph->classAsJsonLd('Dataset'));
+      //print_r($comped);
+      $comped = $comped->jsonld(Constant::PROP_IDS); // formattage en JSON-LD
+      //print_r($comped);
+      $errorNbres = []; // [{errorMd5} => {nbre}]
+      $errorLabels = []; // [errorMd5 => ['label'=> {errorLabel}, 'nbre'=>{nbre}, 'uris'=> [{uri}]]]
+      $schema = new JsonSchema(__DIR__.'/dataset.schema.yaml');
+      foreach ($comped['@graph'] as $dataset) {
+        //echo $dataset['$id']," :\n";
+        $status = $schema->check($dataset);
+        //print_r($status->errors());
+        foreach ($status->errors() as $error) {
+          $md5 = md5(json_encode($error));
+          $errorNbres[$md5] = 1 + ($errorNbres[$md5] ?? 0);
+          $errorLabels[$md5]['label'] = $error;
+          $errorLabels[$md5]['nbre'] = $errorNbres[$md5];
+          $errorLabels[$md5]['uris'][] = $dataset['$id'];
+        }
+        //print_r($errorNbres);
+        //print_r($errorLabels);
+      }
+      arsort($errorNbres);
+      foreach ($errorNbres as $errorMd5 => $nbre) {
+        print_r($errorLabels[$errorMd5]);
+      }
+      break;
+    }
     case 'showOneDS': { // affichage d'une fiche définie par son URI
       if ($dsuri = $_GET['dsuri'] ?? '') {
         $index = unserialize(file_get_contents(__DIR__.'/json/index.pser'));

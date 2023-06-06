@@ -936,7 +936,11 @@ ontologies:
           - $id: https://spdx.org/licenses/etalab-2.0
             label:
               fr: Licence ouverte Etalab 2.0
-              #en: Etalab Open License 2.0
+              en: Etalab Open License 2.0
+          - $id: https://spdx.org/licenses/ODbL-1.0
+            label:
+              fr: Licence de base de données ouverte Open Data Commons v1.0
+              en: Open Data Commons Open Database License v1.0
       dct:Standard:
         definition: A reference point against which other things can be evaluated or compared.
         subClassOf: []

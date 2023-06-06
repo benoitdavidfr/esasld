@@ -24,11 +24,13 @@ isA: '@type'
 
 # DCAT
 Dataset: dcat:Dataset
+DatasetSeries: dcat:DatasetSeries
 Catalog: dcat:Catalog
 CatalogRecord: dcat:CatalogRecord
 DataService: dcat:DataService
 Distribution: dcat:Distribution
 inSeries: {'@id': dcat:inSeries, '@type': '@id'}
+seriesMember: {'@id': dcat:seriesMember, '@type': '@id'}
 inCatalog: dcat:inCatalog
 theme: dcat:theme
 keyword: dcat:keyword
@@ -43,10 +45,12 @@ bboxAsWktLiteral: {'@id': dcat:bbox, '@type': geosparql:wktLiteral}
 # DCT
 LinguisticSystem: dct:LinguisticSystem
 Standard: dct:Standard
+Frequency: dct:Frequency
 RightsStatement: dct:RightsStatement
 ProvenanceStatement: dct:ProvenanceStatement
 LicenseDocument: dct:LicenseDocument
 MediaTypeOrExtent: dct:MediaTypeOrExtent
+PeriodOfTime: dct:PeriodOfTime
 Location: dct:Location
 title: dct:title
 description: dct:description
@@ -58,8 +62,12 @@ modified: {'@id': dct:modified, '@type': xsd:date} # défini comme date
 modifiedT: {'@id': dct:modified, '@type': xsd:dateTime} # défini comme dateTime
 created: {'@id': dct:created, '@type': xsd:date} # défini comme date
 createdT: {'@id': dct:created, '@type': xsd:dateTime} # défini comme dateTime
+temporal: dct:temporal
+startDate: {'@id': dcat:startDate, '@type': xsd:date} # défini comme date
+endDate: {'@id': dcat:endDate, '@type': xsd:date} # défini comme date
 publisher: dct:publisher
 provenance: dct:provenance
+accrualPeriodicity: dct:accrualPeriodicity
 language: dct:language
 identifier: {'@id': dct:identifier, '@type': '@id'} # défini comme Uri
 identifierL: {'@id': dct:identifier, '@language': null} # défini comme littéral sans langue

@@ -2,8 +2,8 @@
 <h2>Ecosphères en données liées (esasld)</h2>
 
 Le premier objectif de ce projet est de lire l'export DCAT d'Ecosphères en JSON-LD afin d'y détecter d'éventuelles erreurs.<br>
-Le résultat est formalisé ci-dessous qui est le résultat de la commande rectifStats et qui est la liste des erreurs
-rencontrées et corrigées.
+Le résultat est formalisé ci-dessous par les erreurs rencontrées et corrigées obtenues par la commande rectifStats.
+
 <pre>
 <?php echo file_get_contents('rectifStats.txt'); ?>
 </pre>
