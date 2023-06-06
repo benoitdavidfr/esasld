@@ -52,18 +52,20 @@ title: dct:title
 description: dct:description
 conformsTo: dct:conformsTo
 format: dct:format
-issued: {'@id': dct:issued, '@type': xsd:date} # PB peut-ête dateTime
-issuedT: {'@id': dct:issued, '@type': xsd:dateTime} # PB peut-ête dateTime
-modified: {'@id': dct:modified, '@type': xsd:date} # PB peut-ête dateTime
-modifiedT: {'@id': dct:modified, '@type': xsd:dateTime} # PB peut-ête dateTime
-created: {'@id': dct:created, '@type': xsd:date} # PB peut-ête dateTime
+issued: {'@id': dct:issued, '@type': xsd:date} # défini comme date
+issuedT: {'@id': dct:issued, '@type': xsd:dateTime} # défini comme dateTime
+modified: {'@id': dct:modified, '@type': xsd:date} # défini comme date
+modifiedT: {'@id': dct:modified, '@type': xsd:dateTime} # défini comme dateTime
+created: {'@id': dct:created, '@type': xsd:date} # défini comme date
+createdT: {'@id': dct:created, '@type': xsd:dateTime} # défini comme dateTime
 publisher: dct:publisher
 provenance: dct:provenance
 language: dct:language
-identifier: {'@id': dct:identifier, '@language': null}
+identifier: {'@id': dct:identifier, '@type': '@id'} # défini comme Uri
+identifierL: {'@id': dct:identifier, '@language': null} # défini comme littéral sans langue
 license: dct:license
 accessRights: dct:accessRights
-rightsHolder: {'@id': dct:rightsHolder, '@type': '@id'}
+rightsHolder: dct:rightsHolder
 spatial: dct:spatial
 
 # FOAF

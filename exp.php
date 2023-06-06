@@ -47,8 +47,8 @@ doc: |
       - impossible de vérifier les liens entre ressources, ex qu'un accessRights réf. un ens. de RightsStatement
    - définir des shapes SHACL pour valider le graphe DCAT en s'inspirant de ceux de DCAT-AP
      - voir les outils proposés par Jena
-
-journal: |
+*/}
+{/*journal: |
  5/6/2023:
   - ajout mapping de '@id' et '@type' pour améliorer le Yaml
   - ajout construction de l'index URI -> page et affichage d'un JdD sur son URI
@@ -335,8 +335,8 @@ if (php_sapi_name()=='cli') { // traitement CLI en fonction de l'action demandé
 else { // affichage interactif de la version corrigée page par page en Yaml, JSON-LD ou Turtle
   set_time_limit(60);
   $page = $_GET['page'] ?? 1;
-  $outputFormat = $_GET['outputFormat'] ?? 'yaml';
-  { // formulaire 
+  $outputFormat = $_GET['outputFormat'] ?? 'yamlldfc';
+  if (!in_array($outputFormat, ['context.jsonld'])) { // formulaire 
     echo "<html><head><title>exp $outputFormat</title></head><body>
       <form>
       <a href='?page=",$page-1,isset($_GET['outputFormat']) ? "&outputFormat=$_GET[outputFormat]" : '',"'>&lt;</a>
@@ -346,17 +346,18 @@ else { // affichage interactif de la version corrigée page par page en Yaml, JS
       <a href='?page=",$page+1,isset($_GET['outputFormat']) ? "&outputFormat=$_GET[outputFormat]" : '',"'>&gt;</a>
       <select name='outputFormat' id='outputFormat'>\n",
       Html::selectOptions($outputFormat, [
-        'yaml'=> "Yaml",
-        'jsonld'=> "JSON-LD",
+        'yamlldfc'=> "Yaml-LD imbriqué (framed) et compacté utilisant le contexte ci-dessous",
+        'context.jsonld'=> "contexte en JSON-LD utilisé pour le Yaml-LD ci-dessus",
+        'yaml'=> "Yaml simplifié spécifique NON conforme Yaml-LD",
+        'jsonld'=> "JSON-LD corrigé",
         'print_r'=> "print_r(graph)",
-        'jsonLdContext'=> "contexte JSON-LD généré par le Registre",
-        'JsonLD::compact'=> "JSON-LD compacté avec JsonLD::compact()",
-        'JsonLD::frame'=> "JSON-LD imbriqué avec JsonLD::frame(), ne fonctionne pas correctement",
-        'turtle'=> "Turtle",
-        'yamlldfc'=> "Yaml-ld framed et compacté",
-        'flatten'=> "flatten(expand(Yaml-ld framed et compacté))",
-        'boucle'=> "boucle",
-        'showOneDS'=> "showOneDS",
+        'turtle'=> "Turtle créé à partir du JSON-LD avec EasyRdf",
+        //'jsonLdContext'=> "contexte JSON-LD généré par le Registre - abandonné",
+        'JsonLD::compact'=> "JSON-LD compacté avec JsonLD::compact() - abandonné",
+        //'JsonLD::frame'=> "JSON-LD imbriqué avec JsonLD::frame(), ne fonctionne pas correctement",
+        //'flatten'=> "flatten(expand(Yaml-ld framed et compacté))",
+        //'boucle'=> "boucle cad flatten(expand(yamlldfc)) == JSON-LD ?",
+        'showOneDS'=> "showOneDS", // affichage d'une fiche définie par son URI
       ]),
       "      </select>
       <input type='submit' value='Submit' /></form><pre>\n";
@@ -367,8 +368,8 @@ else { // affichage interactif de la version corrigée page par page en Yaml, JS
   $registre->import($graph); // importe les ressources bien connues dans le graphe
   if ($errors = $graph->import($urlPrefix, true, $page, $page)) {
     echo 'errors = '; print_r($errors);
+    echo "---\n";
   }
-  echo "---\n";
   switch ($outputFormat) {
     case 'yaml': { // affichage simplifié des datasets en Yaml 
       if (0) { // Test de update, ne fonctionne que sur une page particulière 
@@ -383,22 +384,24 @@ else { // affichage interactif de la version corrigée page par page en Yaml, JS
       echo htmlspecialchars($output); // affichage Yaml
       break;
     }
-    
     case 'jsonld': { // affiche le JSON-LD rectifié généré par $graph 
       echo htmlspecialchars(json_encode($graph->allAsJsonLd(), JSON_OPTIONS));
       break;
     }
-    
     case 'print_r': { // affichage du graphe avec print_r()
       print_r($graph);
       break;
     }
-    
-    case 'jsonLdContext': { // affiche le JSON-LD contexte généré par le registre 
-      echo htmlspecialchars(json_encode(Registre::jsonLdContext(), JSON_OPTIONS));
+    case 'turtle': { // traduction en Turtle avec EasyRdf
+      $erGraph = new \EasyRdf\Graph('https://preprod.data.developpement-durable.gouv.fr/');
+      $erGraph->parse(json_encode($graph->allAsJsonLd()), 'jsonld', 'https://preprod.data.developpement-durable.gouv.fr/');
+      echo htmlspecialchars($erGraph->serialise('turtle'));
       break;
     }
-    
+    /*case 'jsonLdContext': { // affiche le JSON-LD contexte généré par le registre 
+      echo htmlspecialchars(json_encode(Registre::jsonLdContext(), JSON_OPTIONS));
+      break;
+    }*/
     case 'JsonLD::compact': { // affiche le JSON-LD compacté avec JsonLD et le contexte déduit du registre
       if (!is_dir('tmp')) mkdir('tmp');
       file_put_contents('tmp/document.jsonld', json_encode($graph->allAsJsonLd(), JSON_OPTIONS));
@@ -407,34 +410,33 @@ else { // affichage interactif de la version corrigée page par page en Yaml, JS
       echo htmlspecialchars(json_encode($compacted, JSON_OPTIONS));
       break;
     }
-    
-    case 'JsonLD::frame': { // affiche le JSON-LD imbriqué (framed) avec JsonLD - ne fonctionne pas correctement
+    /*case 'JsonLD::frame': { // affiche le JSON-LD imbriqué (framed) avec JsonLD - ne fonctionne pas correctement
       if (!is_dir('tmp')) mkdir('tmp');
       file_put_contents('tmp/document.jsonld', json_encode($graph->allAsJsonLd(), JSON_OPTIONS));
       file_put_contents('tmp/frame.jsonld', json_encode(Registre::jsonLdFrame(), JSON_OPTIONS));
       $framed = JsonLD::frame('tmp/document.jsonld', 'tmp/frame.jsonld');
       echo htmlspecialchars(json_encode($framed, JSON_OPTIONS));
       break;
+    }*/
+    case 'context.jsonld': { // context adhoc en JSON-LD
+      header('Content-type: application/json');
+      die(json_encode(Yaml::parseFile('context.yaml'), JSON_OPTIONS));
     }
-    
-    case 'turtle': { // traduction en Turtle avec EasyRdf
-      $erGraph = new \EasyRdf\Graph('https://preprod.data.developpement-durable.gouv.fr/');
-      $erGraph->parse(json_encode($graph->allAsJsonLd()), 'jsonld', 'https://preprod.data.developpement-durable.gouv.fr/');
-      echo htmlspecialchars($erGraph->serialise('turtle'));
-      break;
-    }
-    
     case 'yamlldfc': { // affiche Yaml-ld framed (RdfExpGraph::frame()) et le contexte context.yaml puis compacté avec JsonLD
       //print_r($graph);
       if ($errors) break;
       $graph->frame(Constant::FRAME_PARAM);
       $comped = new RdfCompactGraph(new RdfContext(Yaml::parseFile('context.yaml')), $graph->classAsJsonLd('Dataset'));
       //print_r($comped);
-      echo htmlspecialchars(Yaml::dump($comped->jsonld(Constant::PROP_IDS), 9, 2, Yaml::DUMP_MULTI_LINE_LITERAL_BLOCK)); // convertit en Yaml
+      $comped = $comped->jsonld(Constant::PROP_IDS); // formattage en JSON-LD
+      //print_r($comped);
+      //print_r($_SERVER);
+      $scriptUrl = "$_SERVER[REQUEST_SCHEME]://$_SERVER[SERVER_NAME]$_SERVER[SCRIPT_NAME]";
+      $comped['@context'] = "$scriptUrl?outputFormat=context.jsonld";
+      echo htmlspecialchars(Yaml::dump($comped, 9, 2, Yaml::DUMP_MULTI_LINE_LITERAL_BLOCK)); // convertit en Yaml
       break;
     }
-    
-    case 'flatten': { // 
+    /*case 'flatten': { // flatten(expand(Yaml-ld framed et compacté)) - ne semble pas fonctionner
       //print_r($graph);
       $graph->frame(Constant::FRAME_PARAM);
       $comped = new RdfCompactGraph(new RdfContext(Yaml::parseFile('context.yaml')), $graph->classAsJsonLd('Dataset'));
@@ -449,9 +451,8 @@ else { // affichage interactif de la version corrigée page par page en Yaml, JS
       $flattened = new RdfExpGraph('flattened', $flattened);
       echo htmlspecialchars(json_encode($flattened->allAsJsonLd(), JSON_OPTIONS));
       break;
-    }
-    
-    case 'boucle': { // 
+    }*/
+    /*case 'boucle': { // boucle cad flatten(expand(yamlldfc)) == JSON-LD ? - ne fonctionne pas
       //print_r($graph);
       $graph->frame(Constant::FRAME_PARAM);
       $comped = new RdfCompactGraph(new RdfContext(Yaml::parseFile('context.yaml')), $graph->classAsJsonLd('Dataset'));
@@ -475,9 +476,8 @@ else { // affichage interactif de la version corrigée page par page en Yaml, JS
       }
       $flattened->includedIn($graph);
       break;
-    }
-    
-    case 'showOneDS': { // affiche une fiche particulière 
+    }*/
+    case 'showOneDS': { // affichage d'une fiche définie par son URI
       if ($dsuri = $_GET['dsuri'] ?? '') {
         $index = unserialize(file_get_contents(__DIR__.'/json/index.pser'));
         //print_r($index);
@@ -511,8 +511,11 @@ else { // affichage interactif de la version corrigée page par page en Yaml, JS
           break;
         }
       }
-      if ($resource)
+      if ($resource) {
+        $scriptUrl = "$_SERVER[REQUEST_SCHEME]://$_SERVER[SERVER_NAME]$_SERVER[SCRIPT_NAME]";
+        $resource = array_merge(['@context'=> "$scriptUrl?outputFormat=context.jsonld"], $resource);
         echo htmlspecialchars(Yaml::dump($resource, 9, 2, Yaml::DUMP_MULTI_LINE_LITERAL_BLOCK)); // convertit en Yaml
+      }
       break;
     }
     
