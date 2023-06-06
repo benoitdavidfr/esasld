@@ -166,8 +166,8 @@ properties:
   language: {$ref: '#/definitions/LinguisticSystem'}
   accessRights: {$ref: '#/definitions/Statements'}
   rightsHolder: {$ref: '#/definitions/Organizations'}
-  identifier: {$ref: '#/definitions/resRef'}
-  identifierL: string
+  identifier: {type: string, format: uri}
+  identifierL: {type: string}
   spatial: {$ref: '#/definitions/Locations'}
   isPrimaryTopicOf: {$ref: '#/definitions/CatalogRecord'}
   distribution: {$ref: '#/definitions/Distributions'}
