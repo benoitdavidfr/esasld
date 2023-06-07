@@ -1,5 +1,14 @@
+title: Schema JSON d'une fiche de MD de dataset imbriqué (framed) et compactée le contexte défini
+$id: https://raw.githubusercontent.com/benoitdavidfr/esasld/main/dataset.schema.yaml
+decription: |
+  Ce schéma permet de vérifier la structure de l'export Yaml-LD imbriqué et compacté fabriqué dans le cadre
+  du projet https://github.com/benoitdavidfr/esasld
+creator: https://github.com/benoitdavidfr
+created: '2023-06-06'
+modified: '2023-06-07'
 definitions:
   dateTime:
+    description: date et heure comme défini dans l'export, cad sans timezone et avec une précision variable
     type: string
     pattern: ^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}
   date:
@@ -11,12 +20,14 @@ definitions:
       - type: array
         items: {type: string, format: uri}
   resRef:
+    description: référence à une ressource
     type: object
     additionalProperties: false
     required: [$id]
     properties:
       $id: {type: string}
   Frequency:
+    description: dct:Frequency
     type: object
     additionalProperties: false
     required: [isA, label]
@@ -25,6 +36,7 @@ definitions:
       isA: {enum: [Frequency]}
       label: {type: string}
   Organization:
+    description: foaf:Organization
     type: object
     additionalProperties: false
     required: [isA, name]
@@ -40,6 +52,7 @@ definitions:
       - type: array
         items: {$ref: '#/definitions/Organization'}
   VCard:
+    decription: vcard:Kind
     type: object
     additionalProperties: false
     required: [isA, hasEmail]
@@ -55,6 +68,7 @@ definitions:
       - type: array
         items: {$ref: '#/definitions/VCard'}
   PeriodOfTime:
+    description: dct:PeriodOfTime
     type: object
     additionalProperties: false
     required: [isA]
@@ -64,6 +78,7 @@ definitions:
       startDate: {type: string, format: date}
       endDate: {type: string, format: date}
   Concept:
+    description: skos:Concept
     type: object
     additionalProperties: false
     required: [$id, isA, prefLabel]
@@ -78,6 +93,7 @@ definitions:
       - type: array
         items: {$ref: '#/definitions/Concept'}
   Statement:
+    description: dct:RightsStatement | dct:ProvenanceStatement
     type: object
     additionalProperties: false
     required: [isA, label]
@@ -91,14 +107,27 @@ definitions:
       - type: array
         items: {$ref: '#/definitions/Statement'}
   LinguisticSystem:
+    description: dct:LinguisticSystem
     type: object
+    additionalProperties: false
     required: [$id, isA, label]
     properties:
       $id: {type: string}
       isA: {enum: [LinguisticSystem]}
       label: {type: string}
-  Standard:
+  LicenseDocument:
+    description: dct:LicenseDocument
     type: object
+    additionalProperties: false
+    required: [$id, isA, label]
+    properties:
+      $id: {type: string}
+      isA: {enum: [LicenseDocument]}
+      label: {type: string}
+  Standard:
+    description: dct:Standard
+    type: object
+    additionalProperties: false
     required: [$id, isA, label]
     properties:
       $id: {type: string}
@@ -107,27 +136,78 @@ definitions:
   Keywords:
     type: array
     items: {type: string}
+  GeoJSONPolygon:
+    description: TODO pattern
+    type: string
+  WktLitteral:
+    description: TODO pattern
+    type: string
   Location:
-    type: object
-    required: [isA]
-    properties:
-      isA: {enum: [Location]}
+    description: dct:Location
+    oneOf:
+      - decription: définition par un rectangle encodé comme polygone
+        type: object
+        additionalProperties: false
+        required: [isA]
+        properties:
+          isA: {enum: [Location]}
+          geometryAsGeoJSON: {$ref: '#/definitions/GeoJSONPolygon'}
+          geometryAsWktLiteral:  {$ref: '#/definitions/WktLitteral'}
+          bboxAsWktLiteral:  {$ref: '#/definitions/WktLitteral'}
+      - description: utilisation du référentiel Code officiel géographique INSEE
+        type: object
+        additionalProperties: false
+        required: [$id, isA, label]
+        properties:
+          $id:
+            type: string
+            pattern: ^http://id.insee.fr/geo/(commune/\d{5}|departement/\d{2,3}|region/\d{2})$
+          isA: {enum: [Location]}
+          label: {type: string}
   Locations:
     oneOf:
       - $ref: '#/definitions/Location'
       - type: array
         items: {$ref: '#/definitions/Location'}
-  Distribution:
+  DataService:
+    description: dcat:DataService
     type: object
+    additionalProperties: false
     required: [isA]
     properties:
+      isA: {enum: [DataService]}
+      conformsTo: {$ref: '#/definitions/Standard'}
+  MediaTypeOrExtent:
+    description: dct:MediaTypeOrExtent
+    type: object
+    additionalProperties: false
+    required: [isA]
+    properties:
+      isA: {enum: [MediaTypeOrExtent]}
+      labelLangString: {type: string}
+  Distribution:
+    description: dcat:Distribution
+    type: object
+    additionalProperties: false
+    required: [isA]
+    properties:
+      $id: {type: string, format: uri}
       isA: {enum: [Distribution]}
+      title: {type: string}
+      license: {$ref: '#/definitions/LicenseDocument'}
+      accessService: {$ref: '#/definitions/DataService'}
+      format: {$ref: '#/definitions/MediaTypeOrExtent'}
+      accessURL: {type: string, format: uri}
+      downloadURL: {type: string, format: uri}
+      issuedT: {$ref: '#/definitions/dateTime'}
+      modifiedT: {$ref: '#/definitions/dateTime'}
   Distributions:
     oneOf:
       - type: array
         items: {$ref: '#/definitions/Distribution'}
       - $ref: '#/definitions/Distribution'
   Catalog:
+    description: dcat:Catalog
     type: object
     additionalProperties: false
     required: [isA]
@@ -136,6 +216,7 @@ definitions:
       title: {type: string}
       homepage: {type: string, format: uri}
   CatalogRecord:
+    description: dcat:CatalogRecord
     type: object
     additionalProperties: false
     required: [isA]
